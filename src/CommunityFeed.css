@@ -1373,3 +1373,19 @@ body.showcase-page {
 .showcase-header nav a[aria-current="page"] {
   color: var(--lime);
 }
+
+.website-edit-toggle {
+  border: 1px solid #647447;
+  background: #252e1d;
+  color: #d9e8c2;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font: 600 12px system-ui;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.website-edit-toggle[aria-pressed="true"] {
+  background: #d1f77b;
+  color: #19210e;
+  border-color: #d1f77b;
+}

@@ -11,9 +11,17 @@ import { SITE_COPY } from "../shared/site-copy.js";
 type Entry = { value: string; version: number };
 const TextContext = createContext<{
   owner: boolean;
+  editing: boolean;
+  toggleEditing: () => void;
   entries: Record<string, Entry>;
   edit: (key: string) => void;
-}>({ owner: false, entries: {}, edit: () => {} });
+}>({
+  owner: false,
+  editing: false,
+  toggleEditing: () => {},
+  entries: {},
+  edit: () => {},
+});
 export function SiteTextProvider({
   children,
   owner,
@@ -27,6 +35,22 @@ export function SiteTextProvider({
     [version, setVersion] = useState(0),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [editing, setEditing] = useState(() => {
+    try {
+      return sessionStorage.getItem("con.websiteEditing") === "true";
+    } catch {
+      return false;
+    }
+  });
+  function toggleEditing() {
+    const next = !editing;
+    setEditing(next);
+    try {
+      sessionStorage.setItem("con.websiteEditing", String(next));
+    } catch {
+      /* Editing still works without browser storage. */
+    }
+  }
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -55,7 +79,7 @@ export function SiteTextProvider({
     }
   }, [selected]);
   function edit(key: string) {
-    if (!owner) return;
+    if (!owner || !editing) return;
     trigger.current = document.activeElement as HTMLElement;
     setValue(entries[key]?.value ?? SITE_COPY[key]);
     setVersion(entries[key]?.version ?? 0);
@@ -86,7 +110,9 @@ export function SiteTextProvider({
     }
   }
   return (
-    <TextContext.Provider value={{ owner, entries, edit }}>
+    <TextContext.Provider
+      value={{ owner, editing, toggleEditing, entries, edit }}
+    >
       {children}
       {owner &&
         createPortal(
@@ -136,11 +162,11 @@ export function SiteTextProvider({
   );
 }
 export function Editable({ id }: { id: string }) {
-  const { owner, entries, edit } = useContext(TextContext);
+  const { owner, editing, entries, edit } = useContext(TextContext);
   return (
     <span className="editable-copy">
       {entries[id]?.value ?? SITE_COPY[id]}
-      {owner && (
+      {owner && editing && (
         <button
           type="button"
           className="site-edit-button"
@@ -166,8 +192,8 @@ export function Copy({ id }: { id: string }) {
   return <>{text(id)}</>;
 }
 export function EditButton({ id }: { id: string }) {
-  const { owner, edit } = useContext(TextContext);
-  return owner ? (
+  const { owner, editing, edit } = useContext(TextContext);
+  return owner && editing ? (
     <button
       type="button"
       className="site-edit-button"
@@ -177,4 +203,19 @@ export function EditButton({ id }: { id: string }) {
       edit
     </button>
   ) : null;
+}
+
+export function WebsiteEditToggle() {
+  const { owner, editing, toggleEditing } = useContext(TextContext);
+  if (!owner) return null;
+  return (
+    <button
+      type="button"
+      className="website-edit-toggle"
+      aria-pressed={editing}
+      onClick={toggleEditing}
+    >
+      {editing ? "Done editing" : "Edit website"}
+    </button>
+  );
 }
