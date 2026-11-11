@@ -1,8 +1,9 @@
+import { PERMISSIONS, hasPermission } from "../shared/permissions.js";
 import { createHash } from "node:crypto";
 import { EncryptJWT, jwtDecrypt } from "jose";
 import { parseCookie as parse, stringifySetCookie } from "cookie";
 import * as oauth from "oauth4webapi";
-import { lookupStaff, assignedAccess } from "./staff.js";
+import { lookupStaff, assignedAccess, registerApplicant } from "./staff.js";
 
 // HEADER 001: Canonical origin and private, encrypted cookies.
 export const ORIGIN = "https://c0n.ivansays.com";
@@ -94,7 +95,7 @@ export async function login(req, res) {
       client_id: c.client_id,
       redirect_uri: callback,
       response_type: "code",
-      scope: "identify guilds.members.read",
+      scope: "identify",
       state,
     }).toString();
     redirect(res, url.toString());
@@ -151,7 +152,6 @@ export async function discordCallback(req, res) {
           username: user.username,
           avatar: user.avatar || null,
         },
-        accessToken: tokens.access_token,
       },
       seconds,
     );
@@ -167,43 +167,29 @@ export async function discordCallback(req, res) {
   }
 }
 
-// HEADER 004: Explicit account/role authorization; no first-user takeover.
+// HEADER 004: Owners retain recovery access. Every other account requires approval.
 export async function accessFor(session, lookup = lookupStaff) {
   if (list("DISCORD_ADMIN_IDS").includes(session.user.id))
-    return { authorized: true, access: "admin", owner: true };
+    return {
+      authorized: true,
+      access: "admin",
+      owner: true,
+      permissions: [...PERMISSIONS],
+      all_channels: true,
+      channel_ids: [],
+    };
   if (process.env.DATABASE_URL) {
     const assigned = assignedAccess(await lookup(session.user.id));
     if (assigned) return assigned;
   }
-  const guild = process.env.DISCORD_GUILD_ID;
-  const adminRoles = list("DISCORD_ADMIN_ROLE_IDS");
-  const modRoles = list("DISCORD_MOD_ROLE_IDS");
-  if (!guild || !(adminRoles.length || modRoles.length))
-    return { authorized: false, access: "pending" };
-  const response = await fetch(
-    `https://discord.com/api/v10/users/@me/guilds/${encodeURIComponent(guild)}/member`,
-    {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
-      signal: AbortSignal.timeout(10000),
-    },
-  );
-  if (response.status === 404 || response.status === 403)
-    return { authorized: false, access: "denied" };
-  if (!response.ok) throw new Error("Discord role verification unavailable");
-  const member = await response.json();
-  const roles = Array.isArray(member.roles) ? member.roles : [];
-  if (adminRoles.some((role) => roles.includes(role)))
-    return { authorized: true, access: "admin" };
-  if (modRoles.some((role) => roles.includes(role)))
-    return { authorized: true, access: "moderator" };
-  return { authorized: false, access: "denied" };
+  return { authorized: false, access: "pending", permissions: [] };
 }
 export async function readSession(req) {
   try {
     const token = cookies(req)[SESSION];
     if (!token) return null;
     const session = await unseal(token);
-    if (!session.user?.id || !session.accessToken) return null;
+    if (!session.user?.id) return null;
     return session;
   } catch {
     return null;
@@ -214,10 +200,17 @@ export async function sessionInfo(req, res) {
   const session = await readSession(req);
   if (!session) return json(res, 200, { user: null, authorized: false });
   try {
-    json(res, 200, { user: session.user, ...(await accessFor(session)) });
+    const requestRegistered = process.env.DATABASE_URL
+      ? await registerApplicant(session.user)
+      : false;
+    json(res, 200, {
+      user: session.user,
+      requestRegistered,
+      ...(await accessFor(session)),
+    });
   } catch {
     json(res, 503, {
-      error: "Could not verify your Discord roles. Try again shortly.",
+      error: "Could not verify your staff access. Try again shortly.",
     });
   }
 }
@@ -229,7 +222,10 @@ export async function requireStaff(req, res, adminOnly = false) {
     return null;
   }
   const access = await accessFor(session);
-  if (!access.authorized || (adminOnly && access.access !== "admin")) {
+  if (
+    !access.authorized ||
+    (adminOnly && !hasPermission(access, "staff.manage"))
+  ) {
     json(res, 403, { error: "Staff access required" });
     return null;
   }

@@ -1,0 +1,456 @@
+/* HEADER 001: Destination-first updates with a persistent top action row. */
+.con-posts-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.7fr);
+  gap: 28px;
+  align-items: start;
+}
+.con-post-directory {
+  position: sticky;
+  top: 103px;
+  max-height: calc(100vh - 126px);
+  overflow: auto;
+  border: 1px solid #42565f;
+  border-radius: 10px;
+  background: #16222b;
+}
+.con-admin .con-post-record {
+  display: block;
+  width: 100%;
+  padding: 24px 21px;
+  border: 0;
+  border-bottom: 1px solid #3a4e58;
+  border-radius: 0;
+  text-align: left;
+  color: #e5ecee;
+  background: transparent;
+}
+.con-admin .con-post-record.selected {
+  background: #2b3c44;
+  box-shadow: inset 3px 0 #bed99c;
+}
+.con-post-record > strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.con-post-destinations {
+  display: grid;
+  gap: 13px;
+  margin-top: 16px;
+}
+.con-post-destinations > span {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  gap: 3px 7px;
+  align-items: center;
+  color: #bcd6b0;
+}
+.con-post-destinations b {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.con-post-destinations time {
+  grid-column: 2;
+  font-size: 12px;
+  color: #b7c9d2;
+  line-height: 1.6;
+  font-weight: 400;
+}
+.con-post-destinations em {
+  grid-column: 2;
+  font-size: 11px;
+  color: #e4c798;
+  font-style: normal;
+  text-transform: capitalize;
+}
+.con-post-destinations .needs-attention {
+  color: #e2c596;
+}
+.con-post-compose {
+  min-width: 0;
+  display: grid;
+  gap: 25px;
+}
+.con-compose-toolbar {
+  position: sticky;
+  top: 94px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+  background: #24352b;
+  border: 1px solid #5b7455;
+  border-radius: 9px;
+  box-shadow: 0 6px 22px #0003;
+}
+.con-compose-toolbar > div:first-child {
+  min-width: 0;
+}
+.con-compose-toolbar strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.5;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.con-compose-toolbar small {
+  display: block;
+  color: #e0c68d;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.con-compose-toolbar .con-button-row {
+  flex-shrink: 0;
+  gap: 10px;
+}
+.con-compose-toolbar .con-button-row button {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.con-destination-panel {
+  padding: 24px 27px;
+  background: #203329;
+  border: 1px solid #526e58;
+  border-radius: 9px;
+}
+.con-destination-panel > div:first-child p {
+  color: #c4d6c5;
+  margin: 7px 0 22px;
+  font-size: 14px;
+}
+.con-destination-controls {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+.con-destination-controls .con-check {
+  flex-shrink: 0;
+  margin: 0;
+}
+.con-destination-controls > label:last-child {
+  flex: 1;
+  margin: 0;
+}
+.con-destination-controls select {
+  background: #122218;
+  border-color: #5c7963;
+}
+.con-current-target {
+  border-top: 1px solid #4f6b56;
+  padding-top: 17px;
+  margin: 21px 0 0 !important;
+  color: #d0e2bc;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.con-post-fields {
+  padding: 30px;
+  background: #1a2832;
+  border: 1px solid #445c6a;
+  border-radius: 10px;
+}
+.con-post-fields h2 {
+  margin-bottom: 27px;
+}
+.con-post-fields textarea {
+  min-height: 240px;
+}
+.con-post-extras {
+  margin-top: 12px;
+}
+.con-post-extras summary {
+  cursor: pointer;
+  font-size: 14px;
+  color: #b9d0dd;
+  margin-bottom: 24px;
+}
+.con-post-history {
+  background: #1b2932;
+  border: 1px solid #445a67;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.con-post-history > article {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 25px;
+  border-top: 1px solid #3d515c;
+}
+.con-post-history > article > svg {
+  color: #b8d3a3;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.con-post-history > article > div {
+  flex: 1;
+  min-width: 0;
+}
+.con-post-history strong {
+  display: block;
+  font-size: 16px;
+}
+.con-post-history p {
+  font-size: 13px;
+  color: #b8cbd5;
+  margin: 7px 0 0;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.con-post-history a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c4ddab;
+  font-size: 13px;
+  padding-top: 5px;
+}
+.con-post-history > .con-danger {
+  margin: 0 22px 22px;
+}
+.con-post-history > article button {
+  min-height: 34px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.con-post-compose > .con-recovery {
+  padding: 23px 27px;
+  margin: 0;
+}
+.con-preview-link {
+  color: #b0cdeb;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+/* HEADER 002: Pending splash and checkbox-based account review. */
+.con-pending-status {
+  border-top: 1px solid #445e46;
+  padding-top: 25px;
+  margin-top: 30px;
+}
+.con-pending-status p {
+  color: #c3d3bd;
+  font-size: 15px;
+  margin: 12px 0 20px;
+}
+.con-pending-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #dfc58a;
+}
+.con-approval-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 17px;
+  padding: 25px;
+  margin-bottom: 28px;
+  background: #29243a;
+  border: 1px solid #65577e;
+  border-radius: 10px;
+}
+.con-approval-intro > svg {
+  color: #cfbce7;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.con-approval-intro > div {
+  flex: 1;
+}
+.con-approval-intro h2 {
+  font-size: 22px;
+  margin: 0 0 10px;
+}
+.con-approval-intro p {
+  font-size: 15px;
+  color: #ccc4d7;
+  line-height: 1.8;
+  margin: 0;
+}
+.con-request-filters {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 15px;
+  border-bottom: 1px solid #5a4c69;
+  background: #302838;
+}
+.con-request-filters button {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 9px 12px;
+  font-size: 13px;
+  min-height: 37px;
+}
+.con-request-filters button[aria-pressed="true"] {
+  background: #463654;
+  border-color: #8b72a1;
+}
+.con-request-filters b {
+  background: #6b517b;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.con-staff-row small {
+  display: block;
+  font-size: 11px;
+  color: #bfb0cc;
+  margin-top: 11px;
+}
+.con-staff-row.selected {
+  background: #332a40;
+}
+.con-request-username {
+  display: block;
+  font-size: 13px;
+  color: #c2b5cf;
+  margin-top: 3px;
+}
+.con-staff-form > .con-tool-empty {
+  padding: 12px;
+}
+.con-staff-form > .con-tool-empty h2 {
+  font-size: 22px;
+  margin-top: 22px;
+}
+.con-permission-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 18px 0;
+  border-top: 1px solid #615071;
+  border-bottom: 1px solid #615071;
+  margin: 4px 0 25px;
+}
+.con-permission-presets > span {
+  display: block;
+  width: 100%;
+  font-size: 13px;
+  color: #cebedb;
+  margin-bottom: 3px;
+}
+.con-permission-presets button {
+  font-size: 12px;
+  min-height: 35px;
+  padding: 8px 11px;
+}
+.con-permission-checklist > fieldset {
+  margin-bottom: 24px;
+  padding: 21px;
+  border: 1px solid #665375;
+  border-radius: 7px;
+  background: #211b2b;
+}
+.con-permission-checklist legend {
+  padding: 0 8px;
+  color: #ddcbed;
+  font-size: 15px;
+  font-weight: 600;
+}
+.con-permission-checklist .con-check {
+  font-size: 14px;
+  margin-bottom: 15px;
+  line-height: 1.7;
+  align-items: flex-start;
+}
+.con-permission-checklist .con-check input {
+  margin-top: 4px;
+}
+.con-permission-checklist .con-check:last-child {
+  margin-bottom: 0;
+}
+.con-channel-workspace > .con-tool-error,
+.con-channel-workspace > .con-tool-notice {
+  grid-column: 1/-1;
+}
+@media (max-width: 1450px) {
+  .con-posts-grid {
+    grid-template-columns: 265px minmax(0, 1fr);
+    gap: 22px;
+  }
+  .con-compose-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .con-compose-toolbar .con-button-row {
+    width: 100%;
+  }
+  .con-compose-toolbar .con-button-row button {
+    flex: 1;
+  }
+  .con-post-fields {
+    padding: 26px;
+  }
+}
+@media (max-width: 1150px) {
+  .con-posts-grid {
+    grid-template-columns: 1fr;
+  }
+  .con-post-directory {
+    position: static;
+    max-height: 360px;
+  }
+  .con-post-record .con-post-destinations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .con-staff-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .con-compose-toolbar {
+    top: 82px;
+    padding: 17px;
+  }
+  .con-destination-controls {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .con-destination-panel,
+  .con-post-fields {
+    padding: 22px 18px;
+  }
+  .con-post-record .con-post-destinations {
+    grid-template-columns: 1fr;
+  }
+  .con-post-history > article {
+    padding: 20px 17px;
+    flex-wrap: wrap;
+  }
+  .con-post-history > article > div {
+    flex-basis: calc(100% - 35px);
+  }
+  .con-post-history a {
+    margin-left: 33px;
+  }
+  .con-approval-intro {
+    padding: 22px 18px;
+    flex-wrap: wrap;
+  }
+  .con-approval-intro > div {
+    flex-basis: calc(100% - 45px);
+  }
+  .con-approval-intro > button {
+    margin-left: 40px;
+  }
+  .con-permission-checklist > fieldset {
+    padding: 18px 14px;
+  }
+  .con-staff-form {
+    padding: 22px 18px;
+  }
+}
+.con-toolbar-target {
+  display: block;
+  color: #c3dba8;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 7px;
+}

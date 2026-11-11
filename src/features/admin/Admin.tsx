@@ -3,6 +3,7 @@ import { ArrowRight, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
 import Publishing from "./Publishing";
 import type { Access } from "./adminApi";
 import "./Admin.css";
+import { PERMISSIONS, presetPermissions } from "../../../shared/permissions.js";
 
 type Session = {
   user: {
@@ -14,6 +15,10 @@ type Session = {
   authorized: boolean;
   access?: Access | "pending" | "denied";
   owner?: boolean;
+  permissions?: string[];
+  requestRegistered?: boolean;
+  all_channels?: boolean;
+  channel_ids?: string[];
 };
 
 // HEADER 001: Fixed identity bar. Login and logout remain in the top right.
@@ -50,6 +55,15 @@ export default function Admin() {
     void load();
     return () => controller.abort();
   }, [attempt]);
+  useEffect(() => {
+    if (!session?.user || session.authorized || session.access !== "pending")
+      return;
+    const timer = window.setInterval(
+      () => setAttempt((value) => value + 1),
+      15000,
+    );
+    return () => window.clearInterval(timer);
+  }, [session?.user?.id, session?.authorized, session?.access]);
   async function signOut() {
     if (!window.confirm("Sign out? Save any draft changes first.")) return;
     setBusy(true);
@@ -103,13 +117,7 @@ export default function Admin() {
                 {avatar && <img src={avatar} alt="" />}
                 <span>
                   {user.name}
-                  <small>
-                    {session?.owner
-                      ? "Owner"
-                      : session?.access === "report"
-                        ? "Report · read only"
-                        : session?.access}
-                  </small>
+                  <small>{session?.owner ? "Owner" : session?.access}</small>
                 </span>
               </div>
               <button disabled={busy} onClick={() => void signOut()}>
@@ -133,29 +141,51 @@ export default function Admin() {
         )}
         {authorized && user ? (
           <Publishing
-            access={session.access as Access}
+            permissions={
+              session.owner
+                ? PERMISSIONS
+                : (session.permissions ??
+                  presetPermissions(session.access || ""))
+            }
             authorName={user.name}
             currentId={user.id}
+            allChannels={session.owner || session.all_channels || false}
+            channelIds={session.channel_ids || []}
           />
         ) : (
           <section className="con-login-card">
             <span className="con-label">CULT OF nix0n // STAFF ACCESS</span>
             <ShieldCheck className="con-login-icon" size={36} />
             <h1>
-              {user ? "You’re signed in." : "Welcome to the control room."}
+              {user
+                ? session?.access === "denied"
+                  ? "Access is not enabled."
+                  : "Your access is pending approval."
+                : "Welcome to the control room."}
             </h1>
             <p>
               {user
-                ? "Your account needs an approved staff access level before you can open the workspace."
+                ? session?.access === "denied"
+                  ? "An administrator has not enabled access for this account. Contact the community team if you think this is a mistake."
+                  : session?.requestRegistered
+                    ? "Your Discord account is in the approval queue. An administrator will choose which tools you can use."
+                    : "Staff approval is being set up. Check again shortly."
                 : "One place for updates, featured projects, Discord channels, and your community team."}
             </p>
             {user ? (
-              <div className="con-login-user-id">
-                <span>Your Discord user ID</span>
-                <code>{user.id}</code>
-                <small>
-                  Give this ID to an administrator to enable your access.
-                </small>
+              <div className="con-pending-status">
+                <span className="con-pending-dot" />
+                <p>
+                  {session?.access === "pending"
+                    ? "We check for approval automatically. You can leave this page open."
+                    : "Your account remains signed in."}
+                </p>
+                <button
+                  disabled={loading}
+                  onClick={() => setAttempt((value) => value + 1)}
+                >
+                  {loading ? "Checking…" : "Check status"}
+                </button>
               </div>
             ) : (
               !loading && (
