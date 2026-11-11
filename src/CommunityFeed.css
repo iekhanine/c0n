@@ -1735,4 +1735,22 @@ body.showcase-page {
 .project-detail .rail-button {
   display: inline-flex;
 }
-.member-workspace>.rail-button{display:inline-flex;width:auto;padding:10px 18px;margin:18px 0 10px}
+.member-workspace > .rail-button {
+  display: inline-flex;
+  width: auto;
+  padding: 10px 18px;
+  margin: 18px 0 10px;
+}
+.project-git-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+.project-preview img[src$="/con-logo.png"] {
+  object-fit: contain;
+  background: #030403;
+}
+.server-panel > .rail-button {
+  margin-top: 16px;
+}

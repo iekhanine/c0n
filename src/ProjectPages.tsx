@@ -1,4 +1,3 @@
-import { samples } from "./sampleProjects";
 import { useEffect, useState } from "react";
 import { ArrowUp, MessageCircle, ArrowUpRight } from "lucide-react";
 export type Project = {
@@ -7,18 +6,19 @@ export type Project = {
   body: string;
   category: string;
   image_url: string;
+  git_url: string;
   link_url: string;
   author_name: string;
   votes: number;
   comments: number;
   voted?: boolean;
-  demo?: boolean;
 };
 type Draft = {
   title: string;
   body: string;
   category: string;
   image_url: string;
+  git_url: string;
   link_url: string;
 };
 type Owned = {
@@ -123,16 +123,6 @@ export function ProjectPage({ id }: { id: string }) {
     [busy, setBusy] = useState(false);
   async function load() {
     try {
-      if (id.startsWith("demo-")) {
-        const sample = samples.find((p) => p.id === id.slice(5));
-        if (!sample) throw Error("Sample project not found.");
-        setData({
-          project: { ...sample, demo: true } as Project,
-          comments: [],
-          canEdit: false,
-        });
-        return;
-      }
       setData(await projectApi("detail", "GET", undefined, id));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load project.");
@@ -189,19 +179,18 @@ export function ProjectPage({ id }: { id: string }) {
           </a>
         )}
       </div>
-      {(p.demo || safe(p.image_url)) && (
+      {safe(p.image_url) && (
         <img
           className="project-detail-image"
-          src={p.demo ? p.image_url : safe(p.image_url)}
+          src={safe(p.image_url)}
           alt={p.title}
         />
       )}
       <p className="project-detail-body">{p.body}</p>
       <div className="project-detail-actions">
-        {p.demo || !data.isPublished ? (
+        {!data.isPublished ? (
           <p>
-            Sample project preview. Publish your own project to enable voting
-            and comments.
+            Draft preview. Publish your project to enable voting and comments.
           </p>
         ) : (
           <VoteButton
@@ -221,10 +210,17 @@ export function ProjectPage({ id }: { id: string }) {
           </a>
         )}
       </div>
+      {safe(p.git_url) && (
+        <p className="project-git-link">
+          <a href={safe(p.git_url)} target="_blank" rel="noreferrer">
+            View Git repository <ArrowUpRight size={18} />
+          </a>
+        </p>
+      )}
       <section id="comments">
         <h2>Comments</h2>
         {error && <p role="alert">{error}</p>}
-        {p.demo || !data.isPublished ? (
+        {!data.isPublished ? (
           <a href="/my-projects">Create your own project page</a>
         ) : user ? (
           <form
@@ -275,6 +271,7 @@ const empty: Draft = {
   category: "Apps",
   link_url: "",
   image_url: "",
+  git_url: "",
 };
 export function MemberProjects() {
   const [mine, setMine] = useState<Owned[]>([]),
@@ -290,6 +287,7 @@ export function MemberProjects() {
     [loading, setLoading] = useState(true),
     [note, setNote] = useState("");
   async function load() {
+    setError("");
     try {
       const d = await projectApi("mine");
       setMine(d.projects);
@@ -301,7 +299,7 @@ export function MemberProjects() {
         const p = d.projects.find((p: Owned) => p.id === edit);
         if (p) {
           setSelected(p);
-          setDraft(p.draft);
+          setDraft({ ...empty, ...p.draft });
         }
         history.replaceState(null, "", location.pathname);
       }
@@ -318,6 +316,10 @@ export function MemberProjects() {
       .then((d) => {
         setOwner(Boolean(d.owner));
         setMember(Boolean(d.user));
+        if (d.owner)
+          void projectApi("seed", "POST", {})
+            .then(() => load())
+            .catch((e) => setError(e.message));
       })
       .catch(() => {});
   }, []);
@@ -456,7 +458,7 @@ export function MemberProjects() {
               key={p.id}
               onClick={() => {
                 setSelected(p);
-                setDraft(p.draft);
+                setDraft({ ...empty, ...p.draft });
                 setMessage("");
               }}
             >
@@ -487,6 +489,7 @@ export function MemberProjects() {
             ["body", "Description and project page text"],
             ["link_url", "App / website URL (HTTPS)"],
             ["image_url", "Preview image URL (HTTPS)"],
+            ["git_url", "Git repository URL (HTTPS)"],
           ].map(([key, label]) => (
             <label key={key}>
               {label}
@@ -574,6 +577,17 @@ export function MemberProjects() {
                   </a>
                 )}
               </p>
+              {safe(p.draft.git_url) && (
+                <p>
+                  <a
+                    href={safe(p.draft.git_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Review Git repository ↗
+                  </a>
+                </p>
+              )}
               <div className="workspace-actions">
                 <button
                   disabled={busy}

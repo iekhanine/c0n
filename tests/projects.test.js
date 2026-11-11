@@ -31,14 +31,25 @@ const draft = {
   category: "Apps",
   link_url: "https://example.com",
   image_url: "",
+  git_url: "https://github.com/example/app",
 };
 test("project input validates categories, length and safe links", () => {
   assert.deepEqual(projectInput(draft), draft);
+  assert.equal(
+    projectInput({ ...draft, git_url: "https://gitlab.com/example/app" })
+      .git_url,
+    "https://gitlab.com/example/app",
+  );
+  const legacy = { ...draft };
+  delete legacy.git_url;
+  assert.equal(projectInput(legacy).git_url, "");
   for (const change of [
     { title: "" },
     { body: "a".repeat(10001) },
     { category: "Other" },
     { link_url: "javascript:alert(1)" },
+    { git_url: "javascript:alert(1)" },
+    { git_url: "https://user:pass@github.com/example/repo" },
     { image_url: "https://user:pass@example.com" },
   ])
     assert.throws(() => projectInput({ ...draft, ...change }));
@@ -205,6 +216,10 @@ test("project lifecycle keeps authorship, approval snapshots, votes and comments
         assert.equal(
           (await call(null, "detail", "GET", {}, id)).body.project.title,
           draft.title,
+        );
+        assert.equal(
+          (await call(null, "detail", "GET", {}, id)).body.project.git_url,
+          draft.git_url,
         );
       },
     );

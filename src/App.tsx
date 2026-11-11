@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
-import { ProjectPage, MemberProjects } from "./ProjectPages";
+import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import CommunityFeed from "./CommunityFeed";
 import {
   Editable,
@@ -28,6 +28,21 @@ export default function App() {
       document.body.classList.remove("showcase-page");
     };
   }, []);
+  const [seedError, setSeedError] = useState("");
+  async function prepareProjects() {
+    try {
+      await projectApi("seed", "POST", {});
+      setSeedError("");
+      window.dispatchEvent(new Event("con-projects-changed"));
+    } catch (e) {
+      setSeedError(
+        e instanceof Error ? e.message : "Could not create starter projects.",
+      );
+    }
+  }
+  useEffect(() => {
+    if (account?.owner) void prepareProjects();
+  }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
   const page = path.startsWith("/projects/")
     ? "detail"
@@ -116,6 +131,14 @@ export default function App() {
           </div>
         </header>
         <main className="showcase-main">
+          {account?.owner && seedError && (
+            <p role="alert" className="workspace-error">
+              {seedError}{" "}
+              <button onClick={() => void prepareProjects()}>
+                Retry starter project setup
+              </button>
+            </p>
+          )}
           {page === "detail" ? (
             <ProjectPage id={path.split("/")[2]} />
           ) : page === "workspace" ? (

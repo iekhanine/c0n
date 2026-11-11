@@ -1,5 +1,11 @@
 // Owner-editable public copy. Keys are stable and allowlisted by the server.
 export const SITE_COPY = {
+  "discord.connection": "Join the conversation in our Discord server.",
+  "members.connection":
+    "New member announcements will appear when Discord is connected.",
+  "activity.connection":
+    "Live server activity will appear when the Discord bot is connected.",
+  "projects.empty": "Published community projects will appear here.",
   "discord.join": "Join Discord",
   "account.projects": "My projects",
   "account.admin": "Open admin",
@@ -37,15 +43,14 @@ export const SITE_COPY = {
     "Apps, websites, and beautifully unnecessary experiments from our corner of the internet.",
   "copy.5": "Most upvoted",
   "copy.6": "Newest first",
-  "copy.7": "Preview includes sample projects",
-  "copy.8":
-    "Live projects are temporarily unavailable. Sample projects are shown below.",
-  "copy.9": "No projects match your search.",
-  "copy.10": "The server is alive.",
+  "copy.7": "Community projects",
+  "copy.8": "Updates are temporarily unavailable. Please try again shortly.",
+  "copy.9": "No published projects match your search yet.",
+  "copy.10": "Join the community.",
   "copy.11": "Sign in",
   "copy.12": "Top submissions",
   "copy.13": ".",
-  "copy.14": "Building this week",
+  "copy.14": "Community builders",
   "copy.15": "Fresh faces",
   "copy.16": "Welcome to the cult! Say hi in Discord. 👋",
   "copy.17": "Recent server activity",

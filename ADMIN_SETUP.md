@@ -73,3 +73,12 @@ Any signed-in Discord member can create their own projects in `/my-projects` and
 Approved projects have `/projects/<uuid>` pages, one reversible upvote per Discord account, and comments with a 15-second per-account cooldown. Default listings sort by upvotes, then publication date. Comment authors and authorized project reviewers can delete comments. Disabled/rejected accounts cannot mutate projects, votes or comments. Anonymous users can read only approved snapshots and comments. Bodies are plain text, not HTML.
 
 Sample projects remain frontend-only previews with illustrative counts; they do not accept votes/comments. Real projects replace sample cards. The server membership/activity panels are still labeled demonstrations pending the Discord bot connection. The Join Discord link points to `https://discord.gg/dSHMeZ4ETJ`.
+
+
+## Real starter projects and repository links
+
+The static showcase examples and illustrative member/activity entries have been removed. Project listings, vote buttons, comment links and rankings use persisted community project records only. Empty Discord panels wait for the bot connection.
+
+On the site owner's next authenticated visit, the public app calls the owner-only starter action. It adds Cult of nix0n and OneTime Labs as approved projects owned by that authenticated Discord account, with zero votes/comments. It initializes CoN project storage if required through the same validated migration helper. A private durable marker prevents duplicating records or republishing them after an owner edit/unpublish. No user accounts, votes or comments are fabricated. Owner-side errors expose a retry action.
+
+Project drafts now accept an optional HTTPS Git repository URL. GitHub, GitLab, Codeberg and other HTTPS hosts are supported. It is validated alongside other project URLs, shown to reviewers, and displayed on the approved project page. Older projects without this field remain editable.
