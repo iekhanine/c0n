@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
 import CommunityFeed from "./CommunityFeed";
-import { Editable, SiteTextProvider, Copy, EditButton } from "./SiteText";
+import {
+  Editable,
+  SiteTextProvider,
+  Copy,
+  EditButton,
+  WebsiteEditToggle,
+} from "./SiteText";
 import "./CommunityFeed.css";
 export default function App() {
   const [account, setAccount] = useState<{
@@ -73,6 +79,7 @@ export default function App() {
           >
             <Search size={23} />
           </a>
+          <WebsiteEditToggle />
           <div className="account-entry">
             <a
               className="showcase-login"
