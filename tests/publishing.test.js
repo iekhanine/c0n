@@ -153,7 +153,7 @@ test("database migration and delivery lifecycle", async (t) => {
         assert.deepEqual(await databaseStatus(db), {
           connected: true,
           initialized: true,
-          schema_version: 3,
+          schema_version: 4,
           needs_upgrade: false,
         });
         assert.equal(

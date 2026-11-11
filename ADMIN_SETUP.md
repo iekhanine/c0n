@@ -62,3 +62,14 @@ Updating a linked older message replaces its embed and uploaded attachments with
 - `node --test tests/*.test.js`
 
 Tests use isolated in-memory PostgreSQL and stubbed Discord responses. They never query/migrate the shared production database or send real Discord posts. Preview deployments do not receive production database credentials. Authenticated browser QA needs an actual Discord session; the cloud browser's session is separate from the owner's browser.
+
+
+## Community projects (storage version 4)
+
+After this deployment, the owner must open **Admin → Database → Apply storage update**, or choose **Owner: apply project storage update** in `/my-projects`. The additive transaction creates private `con.projects`, `con.project_votes`, and `con.project_comments` tables and imports existing project posts without changing updates or Discord deliveries. No production migration runs during deployment.
+
+Any signed-in Discord member can create their own projects in `/my-projects` and access that workspace from `/admin`. Staff approval is separate. New projects and edits are drafts until submitted and reviewed. Existing approved snapshots stay public during editing/rejection. Approvers need both `projects.publish` and `website.publish` (owners always qualify); review controls appear in the project workspace. Owners of projects cannot edit another person's project. The site owner alone retains fixed website-copy editing.
+
+Approved projects have `/projects/<uuid>` pages, one reversible upvote per Discord account, and comments with a 15-second per-account cooldown. Default listings sort by upvotes, then publication date. Comment authors and authorized project reviewers can delete comments. Disabled/rejected accounts cannot mutate projects, votes or comments. Anonymous users can read only approved snapshots and comments. Bodies are plain text, not HTML.
+
+Sample projects remain frontend-only previews with illustrative counts; they do not accept votes/comments. Real projects replace sample cards. The server membership/activity panels are still labeled demonstrations pending the Discord bot connection. The Join Discord link points to `https://discord.gg/dSHMeZ4ETJ`.

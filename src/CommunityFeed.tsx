@@ -1,3 +1,5 @@
+import { samples } from "./sampleProjects";
+import { VoteButton, type Project } from "./ProjectPages";
 import { Editable, Copy, EditButton, useSiteCopy } from "./SiteText";
 import { useEffect, useState } from "react";
 import {
@@ -26,77 +28,8 @@ type Post = {
   votes?: number;
   comments?: number;
   demo?: boolean;
+  voted?: boolean;
 };
-const samples: Post[] = [
-  [
-    "otles",
-    "OTLES",
-    "A better home for technical documentation.",
-    "Tools",
-    "otlesdev",
-    416,
-    27,
-  ],
-  [
-    "loopboard",
-    "Loopboard",
-    "Make a little noise with your friends.",
-    "Apps",
-    "loopboard",
-    298,
-    18,
-  ],
-  [
-    "pixel-pantry",
-    "Pixel Pantry",
-    "A cozy recipe site for everyday cooking and kitchen experiments.",
-    "Websites",
-    "pixelpantry",
-    372,
-    24,
-  ],
-  [
-    "retroterm",
-    "RetroTerm",
-    "A focused terminal for tasks, notes, and everyday productivity.",
-    "Tools",
-    "retroterm",
-    521,
-    31,
-  ],
-  [
-    "night-shift",
-    "Night Shift",
-    "A simple, flexible scheduler for teams, events, and weird hours.",
-    "Apps",
-    "nightshift",
-    265,
-    12,
-  ],
-  [
-    "tiny-worlds",
-    "Tiny Worlds",
-    "A tiny browser game for building and exploring pixel terrains.",
-    "Experiments",
-    "tinyworlds",
-    405,
-    29,
-  ],
-].map(([id, title, body, category, author, votes, comments]) => ({
-  id: String(id),
-  title: String(title),
-  body: String(body),
-  category: String(category),
-  author_name: String(author),
-  votes: Number(votes),
-  comments: Number(comments),
-  kind: "project",
-  link_url: "",
-  image_url: `/placeholders/${id}.svg`,
-  featured: true,
-  published_at: "2026-11-11",
-  demo: true,
-}));
 const safe = (s: string) => {
   try {
     const u = new URL(s, window.location.origin);
@@ -118,6 +51,15 @@ export default function CommunityFeed({
     [category, setCategory] = useState("All projects"),
     [query, setQuery] = useState(""),
     [sort, setSort] = useState("featured");
+  const [community, setCommunity] = useState<Post[]>([]);
+  useEffect(() => {
+    const c = new AbortController();
+    void fetch("/api/projects", { signal: c.signal, cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { projects: [] }))
+      .then((d) => setCommunity(d.projects))
+      .catch(() => {});
+    return () => c.abort();
+  }, []);
   useEffect(() => {
     const c = new AbortController();
     void fetch("/api/feed", { signal: c.signal, cache: "no-store" })
@@ -131,7 +73,9 @@ export default function CommunityFeed({
       });
     return () => c.abort();
   }, []);
-  const real = posts.filter((p) => p.kind === "project");
+  const real = community.length
+    ? community
+    : posts.filter((p) => p.kind === "project");
   const projects = [...real, ...samples.slice(0, Math.max(0, 6 - real.length))]
     .filter(
       (p) =>
@@ -143,7 +87,9 @@ export default function CommunityFeed({
     .sort((a, b) =>
       sort === "newest"
         ? Date.parse(b.published_at) - Date.parse(a.published_at)
-        : Number(b.featured) - Number(a.featured),
+        : Number(Boolean(a.demo)) - Number(Boolean(b.demo)) ||
+          (b.votes || 0) - (a.votes || 0) ||
+          Date.parse(b.published_at) - Date.parse(a.published_at),
     );
   return (
     <>
@@ -172,6 +118,9 @@ export default function CommunityFeed({
               <Editable id="copy.4" />
             </p>
           </section>
+          <a className="submission-cta" href="/my-projects">
+            + Submit your project
+          </a>
           <div className="showcase-toolbar" id="projects">
             <div className="showcase-filters">
               {["All projects", "Apps", "Websites", "Tools", "Experiments"].map(
@@ -254,33 +203,38 @@ export default function CommunityFeed({
                           <MessageCircle size={17} />
                           {p.comments}
                         </span>
-                        <button
-                          className="project-arrow"
-                          aria-label={`Preview ${p.title}`}
-                          onClick={() => {
-                            const el =
-                              document.getElementById("demo-explanation");
-                            el?.scrollIntoView({ behavior: "smooth" });
-                          }}
-                        >
-                          <ArrowRight size={18} />
-                        </button>
                       </>
                     ) : (
                       <>
-                        {safe(p.link_url) && (
-                          <a
-                            className="project-arrow"
-                            href={safe(p.link_url)}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={`Explore ${p.title}`}
-                          >
-                            <ArrowUpRight size={18} />
-                          </a>
-                        )}
+                        <VoteButton
+                          project={p as Project}
+                          onChange={(votes, voted) =>
+                            setCommunity((prev) =>
+                              prev.map((item) =>
+                                item.id === p.id
+                                  ? { ...item, votes, voted }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                        <a
+                          className="sample-comments"
+                          href={`/projects/${p.id}#comments`}
+                          aria-label={`Comments on ${p.title}`}
+                        >
+                          <MessageCircle size={17} />
+                          {p.comments || 0}
+                        </a>
                       </>
                     )}
+                    <a
+                      className="project-arrow"
+                      href={`/projects/${p.demo ? "demo-" : ""}${p.id}`}
+                      aria-label={`View ${p.title}`}
+                    >
+                      <ArrowRight size={18} />
+                    </a>
                   </div>
                 </div>
               </article>
@@ -314,11 +268,11 @@ export default function CommunityFeed({
                 ● ● ● ● <span>+37</span>
               </div>
               <div className="editable-link">
-                <a className="rail-button" href="/api/auth/discord/login">
-                  <Copy id="copy.11" />
+                <a className="rail-button" href="https://discord.gg/dSHMeZ4ETJ">
+                  <Copy id="discord.join" />
                   <ArrowUpRight size={17} />
                 </a>
-                <EditButton id="copy.11" />
+                <EditButton id="discord.join" />
               </div>
             </div>
           </section>
@@ -326,10 +280,19 @@ export default function CommunityFeed({
             <h2>
               <Trophy size={23} />
               <Editable id="copy.12" />
-              <small>DEMO</small>
+              {!real.length && <small>DEMO</small>}
             </h2>
-            {[samples[3], samples[0], samples[5]].map((p, i) => (
-              <a href="/projects" className="spotlight-row" key={p.id}>
+            {(real.length
+              ? [...real]
+                  .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                  .slice(0, 3)
+              : [samples[3], samples[0], samples[5]]
+            ).map((p, i) => (
+              <a
+                href={`/projects/${p.demo ? "demo-" : ""}${p.id}`}
+                className="spotlight-row"
+                key={p.id}
+              >
                 <span>{i + 1}.</span>
                 <strong>{p.title}</strong>
                 <span className="sample-votes">

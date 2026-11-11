@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
+import { ProjectPage, MemberProjects } from "./ProjectPages";
 import CommunityFeed from "./CommunityFeed";
 import {
   Editable,
@@ -28,16 +29,19 @@ export default function App() {
     };
   }, []);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page =
-    path === "/projects"
-      ? "projects"
-      : path === "/members"
-        ? "members"
-        : path === "/community"
-          ? "community"
-          : path === "/"
-            ? "explore"
-            : "missing";
+  const page = path.startsWith("/projects/")
+    ? "detail"
+    : path === "/my-projects"
+      ? "workspace"
+      : path === "/projects"
+        ? "projects"
+        : path === "/members"
+          ? "members"
+          : path === "/community"
+            ? "community"
+            : path === "/"
+              ? "explore"
+              : "missing";
   return (
     <SiteTextProvider owner={account?.owner === true}>
       <div className={`showcase page-${page}`}>
@@ -79,16 +83,30 @@ export default function App() {
           >
             <Search size={23} />
           </a>
+          <a
+            className="discord-invite"
+            href="https://discord.gg/dSHMeZ4ETJ"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Copy id="discord.join" />
+          </a>
           <WebsiteEditToggle />
           <div className="account-entry">
             <a
               className="showcase-login"
-              href={account?.user ? "/admin" : "/api/auth/discord/login"}
+              href={
+                account?.authorized
+                  ? "/admin"
+                  : account?.user
+                    ? "/my-projects"
+                    : "/api/auth/discord/login"
+              }
             >
               {account?.authorized ? (
                 <Copy id="account.admin" />
               ) : account?.user ? (
-                account.user.name
+                <Copy id="account.projects" />
               ) : (
                 <Copy id="login" />
               )}
@@ -98,7 +116,11 @@ export default function App() {
           </div>
         </header>
         <main className="showcase-main">
-          {page === "missing" ? (
+          {page === "detail" ? (
+            <ProjectPage id={path.split("/")[2]} />
+          ) : page === "workspace" ? (
+            <MemberProjects />
+          ) : page === "missing" ? (
             <section className="showcase-about">
               <h1>
                 <Editable id="notfound.title" />

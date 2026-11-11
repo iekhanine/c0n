@@ -1,4 +1,5 @@
 import pg from "pg";
+import { projectMigration } from "./project-schema.js";
 import { presetPermissions } from "../shared/permissions.js";
 
 // HEADER 001: Server-only pooled database connection. No credentials in logs.
@@ -125,7 +126,7 @@ export async function databaseStatus(db = database()) {
     connected: true,
     initialized: marker.rows[0]?.app === "cult-of-nix0n",
     schema_version: latest.rows[0].version,
-    needs_upgrade: latest.rows[0].version < 3,
+    needs_upgrade: latest.rows[0].version < 4,
   };
 }
 export async function initializeDatabase(db = database()) {
@@ -170,11 +171,15 @@ export async function initializeDatabase(db = database()) {
       "SELECT 1 FROM con.schema_migrations WHERE version=3",
     );
     if (!approval.rowCount) await client.query(approvalMigration);
+    const projects = await client.query(
+      "SELECT 1 FROM con.schema_migrations WHERE version=4",
+    );
+    if (!projects.rowCount) await client.query(projectMigration);
     await client.query("COMMIT");
     return {
       connected: true,
       initialized: true,
-      schema_version: 3,
+      schema_version: 4,
       needs_upgrade: false,
     };
   } catch (error) {

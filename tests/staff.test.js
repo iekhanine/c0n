@@ -143,7 +143,7 @@ test("pending approval, checkbox grants, legacy upgrade and revocation", async (
         assert.equal((await databaseStatus(db)).needs_upgrade, true);
         await initializeDatabase(db);
         await initializeDatabase(db);
-        assert.equal((await databaseStatus(db)).schema_version, 3);
+        assert.equal((await databaseStatus(db)).schema_version, 4);
         assert.equal(
           (await db.query("SELECT count(*)::int AS n FROM con.posts")).rows[0]
             .n,
