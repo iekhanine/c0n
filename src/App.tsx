@@ -1,72 +1,137 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
 import CommunityFeed from "./CommunityFeed";
+import { Editable, SiteTextProvider, Copy, EditButton } from "./SiteText";
 import "./CommunityFeed.css";
-
-// HEADER 001: Public discovery has its own layout and styles.
 export default function App() {
   const [account, setAccount] = useState<{
     user: { name: string } | null;
     authorized: boolean;
+    owner?: boolean;
   } | null>(null);
-  
   useEffect(() => {
     document.body.classList.add("showcase-page");
-    const controller = new AbortController();
-    void fetch("/api/auth/session", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
+    const c = new AbortController();
+    void fetch("/api/auth/session", { cache: "no-store", signal: c.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then(setAccount)
       .catch(() => {});
     return () => {
-      controller.abort();
+      c.abort();
       document.body.classList.remove("showcase-page");
     };
   }, []);
+  const path = window.location.pathname.replace(/\/$/, "") || "/";
+  const page =
+    path === "/projects"
+      ? "projects"
+      : path === "/members"
+        ? "members"
+        : path === "/community"
+          ? "community"
+          : path === "/"
+            ? "explore"
+            : "missing";
   return (
-    <div className="showcase">
-      <header className="showcase-header">
-        <a className="showcase-brand" href="/" aria-label="Cult of nix0n home">
-          <img src="/con-logo.png" alt="" />
-          <span>CULT OF NIX0N</span>
-        </a>
-        <nav aria-label="Community">
-          <a href="#projects">Explore</a>
-          <a href="#projects">Projects</a>
-          <a href="#members">Members</a>
-          <a href="#community">Community</a>
-        </nav>
-        <a href="#project-search" aria-label="Search projects" className="header-search"><Search size={23}/></a>
-        <a
-          className="showcase-login"
-          href={account?.user ? "/admin" : "/api/auth/discord/login"}
-        >
-          {account?.authorized
-            ? "Open admin"
-            : account?.user
-              ? account.user.name
-              : "Discord sign-in"}
-          <ArrowRight size={16} />
-        </a>
-      </header>
-      <main className="showcase-main">
-        <CommunityFeed />
-        <details className="showcase-about" id="community"><summary>About the community</summary>
-          <span className="eyebrow">YOU HAVE FOUND YOUR PEOPLE.</span>
-          <h2>Our condolences.</h2>
-          <p>
-            A gathering of friends, gamers, professional lurkers, and people who
-            were absolutely supposed to be doing something else.
-          </p>
-          <p>Build things. Share what you know. Preserve the weird internet.</p>
-          <a href="/api/auth/discord/login">
-            Sign in with Discord <ArrowRight size={17} />
+    <SiteTextProvider owner={account?.owner === true}>
+      <div className={`showcase page-${page}`}>
+        <header className="showcase-header">
+          <div className="brand-group">
+            <a
+              className="showcase-brand"
+              href="/"
+              aria-label="Cult of nix0n home"
+            >
+              <img src="/con-logo.png" alt="Cult of nix0n" />
+            </a>
+            <span className="brand-name">
+              <Editable id="brand" />
+            </span>
+          </div>
+          <nav aria-label="Community">
+            {[
+              ["/", "nav.explore"],
+              ["/projects", "nav.projects"],
+              ["/members", "nav.members"],
+              ["/community", "nav.community"],
+            ].map(([href, id]) => (
+              <div className="nav-entry" key={id}>
+                <a
+                  aria-current={path === href ? "page" : undefined}
+                  href={href}
+                >
+                  <Copy id={id} />
+                </a>
+                <EditButton id={id} />
+              </div>
+            ))}
+          </nav>
+          <a
+            href="/projects?search=1"
+            aria-label="Search projects"
+            className="header-search"
+          >
+            <Search size={23} />
           </a>
-        </details>
-        <footer>BUILD. SHARE. PRESERVE. QUESTION. SHIP.</footer>
-      </main>
-    </div>
+          <div className="account-entry">
+            <a
+              className="showcase-login"
+              href={account?.user ? "/admin" : "/api/auth/discord/login"}
+            >
+              {account?.authorized ? (
+                <Copy id="account.admin" />
+              ) : account?.user ? (
+                account.user.name
+              ) : (
+                <Copy id="login" />
+              )}
+              <ArrowRight size={16} />
+            </a>
+            <EditButton id={account?.authorized ? "account.admin" : "login"} />
+          </div>
+        </header>
+        <main className="showcase-main">
+          {page === "missing" ? (
+            <section className="showcase-about">
+              <h1>
+                <Editable id="notfound.title" />
+              </h1>
+              <a href="/">
+                <Copy id="notfound.back" />
+              </a>
+              <EditButton id="notfound.back" />
+            </section>
+          ) : (
+            <CommunityFeed page={page} />
+          )}
+          {page === "community" && (
+            <section className="showcase-about">
+              <span className="eyebrow">
+                <Editable id="about.eyebrow" />
+              </span>
+              <h2>
+                <Editable id="about.title" />
+              </h2>
+              <p>
+                <Editable id="about.body" />
+              </p>
+              <p>
+                <Editable id="about.beliefs" />
+              </p>
+              <div className="editable-link">
+                <a href="/api/auth/discord/login">
+                  <Copy id="about.login" />
+                  <ArrowRight size={17} />
+                </a>
+                <EditButton id="about.login" />
+              </div>
+            </section>
+          )}
+          <footer>
+            <Editable id="footer" />
+          </footer>
+        </main>
+      </div>
+    </SiteTextProvider>
   );
 }
