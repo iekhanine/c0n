@@ -10,6 +10,14 @@
       "destination": "/index.html"
     },
     {
+      "source": "/projects/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-projects",
+      "destination": "/index.html"
+    },
+    {
       "source": "/members",
       "destination": "/index.html"
     },

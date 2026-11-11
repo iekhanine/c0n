@@ -1,0 +1,335 @@
+import { randomUUID } from "node:crypto";
+import { database } from "./db.js";
+import { json, ORIGIN, readSession, accessFor } from "./auth.js";
+import { lookupStaff } from "./staff.js";
+import { hasPermission } from "../shared/permissions.js";
+const fail = (status, message) => {
+  throw Object.assign(Error(message), { status });
+};
+export const canReview = (grant) =>
+  Boolean(
+    grant?.owner ||
+    (grant?.authorized &&
+      hasPermission(grant, "projects.publish") &&
+      hasPermission(grant, "website.publish")),
+  );
+export function projectInput(b) {
+  const result = {};
+  for (const [k, max, required] of [
+    ["title", 160, true],
+    ["body", 10000, true],
+    ["link_url", 2000, false],
+    ["image_url", 2000, false],
+    ["category", 30, true],
+  ]) {
+    if (
+      typeof b[k] !== "string" ||
+      b[k].length > max ||
+      (required && !b[k].trim())
+    )
+      fail(400, "Enter a title, description and category within the limits.");
+    result[k] = b[k].trim();
+  }
+  if (!["Apps", "Websites", "Tools", "Experiments"].includes(result.category))
+    fail(400, "Choose a valid project category.");
+  for (const k of ["link_url", "image_url"])
+    if (result[k]) {
+      let u;
+      try {
+        u = new URL(result[k]);
+      } catch {
+        fail(400, "Links must be valid HTTPS URLs.");
+      }
+      if (u.protocol !== "https:" || u.username || u.password)
+        fail(400, "Links must use HTTPS without credentials.");
+    }
+  return result;
+}
+const idOf = (s) => {
+  if (
+    typeof s !== "string" ||
+    !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(s)
+  )
+    fail(400, "Invalid project ID.");
+  return s;
+};
+export async function publicProjects(db, userId = "") {
+  return (
+    await db.query(
+      `SELECT p.id,p.published,p.published_at,p.owner_id,p.owner_name,(SELECT count(*)::int FROM con.project_votes v WHERE v.project_id=p.id) AS votes,(SELECT count(*)::int FROM con.project_comments c WHERE c.project_id=p.id) AS comments,EXISTS(SELECT 1 FROM con.project_votes v WHERE v.project_id=p.id AND v.user_id=$1) AS voted FROM con.projects p WHERE p.published IS NOT NULL ORDER BY votes DESC,p.published_at DESC LIMIT 200`,
+      [userId],
+    )
+  ).rows.map((p) => ({
+    id: p.id,
+    ...p.published,
+    kind: "project",
+    author_name: p.owner_name,
+    owner_id: p.owner_id,
+    published_at: p.published_at,
+    votes: p.votes,
+    comments: p.comments,
+    voted: p.voted,
+  }));
+}
+export async function projectsHandler(
+  req,
+  res,
+  dbFactory = database,
+  accessLookup = accessFor,
+) {
+  try {
+    if (!["GET", "POST", "PUT", "DELETE"].includes(req.method)) {
+      res.setHeader("Allow", "GET, POST, PUT, DELETE");
+      return json(res, 405, { error: "Method not allowed" });
+    }
+    const url = new URL(req.url, ORIGIN),
+      action = url.searchParams.get("action") || "list";
+    if (req.method !== "GET" && req.headers.origin !== ORIGIN)
+      fail(403, "Invalid origin.");
+    const session = await readSession(req),
+      user = session?.user;
+    if (req.method !== "GET" && !user) fail(401, "Sign in with Discord first.");
+    const db = dbFactory();
+    if (req.method !== "GET") {
+      const staff = await lookupStaff(user.id, db);
+      if (
+        staff &&
+        (staff.approval_status === "rejected" ||
+          (staff.approval_status === "approved" && !staff.enabled))
+      )
+        fail(403, "Your account is disabled.");
+    }
+    const b =
+      typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    if (action === "list" && req.method === "GET")
+      return json(res, 200, { projects: await publicProjects(db, user?.id) });
+    if (action === "mine" && req.method === "GET") {
+      if (!user) fail(401, "Sign in first.");
+      const grant = await accessLookup(session);
+      return json(res, 200, {
+        projects: (
+          await db.query(
+            "SELECT * FROM con.projects WHERE owner_id=$1 ORDER BY updated_at DESC",
+            [user.id],
+          )
+        ).rows,
+        canReview: canReview(grant),
+        owner: Boolean(grant.owner),
+      });
+    }
+    if (action === "review") {
+      if (!user) fail(401, "Sign in first.");
+      const grant = await accessLookup(session);
+      if (!canReview(grant))
+        fail(
+          403,
+          "Project publishing and website publishing permissions are required.",
+        );
+      if (req.method === "GET")
+        return json(res, 200, {
+          projects: (
+            await db.query(
+              "SELECT * FROM con.projects WHERE status='pending' ORDER BY updated_at",
+            )
+          ).rows,
+        });
+      if (req.method !== "PUT") fail(405, "Use PUT.");
+      const id = idOf(b.id);
+      if (
+        !["approve", "reject", "unpublish"].includes(b.decision) ||
+        !Number.isSafeInteger(b.version)
+      )
+        fail(400, "Invalid review.");
+      if (typeof b.note !== "string" || b.note.length > 2000)
+        fail(400, "Review note is too long.");
+      const row = (
+        await db.query(
+          `UPDATE con.projects SET status=CASE WHEN $3='approve' THEN 'approved' ELSE 'rejected' END,published=CASE WHEN $3='approve' THEN draft WHEN $3='unpublish' THEN NULL ELSE published END,published_at=CASE WHEN $3='approve' THEN coalesce(published_at,now()) ELSE published_at END,review_note=$4,reviewed_by=$5,version=version+1,updated_at=now() WHERE id=$1 AND version=$2 AND (status='pending' OR $3='unpublish') RETURNING id`,
+          [id, b.version, b.decision, b.note, user.id],
+        )
+      ).rows[0];
+      if (!row) fail(409, "This submission changed. Refresh before reviewing.");
+      return json(res, 200, { ok: true });
+    }
+    if (action === "save" && ["POST", "PUT"].includes(req.method)) {
+      const draft = projectInput(b);
+      if (typeof b.submit !== "boolean") fail(400, "Choose draft or submit.");
+      if (req.method === "POST") {
+        const count = await db.query(
+          "SELECT count(*)::int AS n FROM con.projects WHERE owner_id=$1",
+          [user.id],
+        );
+        if (count.rows[0].n >= 30)
+          fail(429, "You can manage up to 30 projects.");
+        const id = randomUUID();
+        await db.query(
+          "INSERT INTO con.projects(id,owner_id,owner_name,draft,status)VALUES($1,$2,$3,$4,$5)",
+          [
+            id,
+            user.id,
+            user.name,
+            JSON.stringify(draft),
+            b.submit ? "pending" : "draft",
+          ],
+        );
+        return json(res, 200, { id });
+      }
+      const id = idOf(b.id);
+      if (!Number.isSafeInteger(b.version))
+        fail(400, "Missing project version.");
+      const row = (
+        await db.query(
+          "UPDATE con.projects SET draft=$3,status=$4,version=version+1,updated_at=now(),review_note='' WHERE id=$1 AND owner_id=$2 AND version=$5 RETURNING id",
+          [
+            id,
+            user.id,
+            JSON.stringify(draft),
+            b.submit ? "pending" : "draft",
+            b.version,
+          ],
+        )
+      ).rows[0];
+      if (!row)
+        fail(
+          409,
+          "Project changed or you do not own it. Refresh and try again.",
+        );
+      return json(res, 200, { id });
+    }
+    const id = idOf(url.searchParams.get("id") || b.id);
+    if (action === "detail" && req.method === "GET") {
+      const p = (await db.query("SELECT * FROM con.projects WHERE id=$1", [id]))
+        .rows[0];
+      if (!p) fail(404, "Project not found.");
+      const own = user?.id === p.owner_id;
+      if (!p.published && !own) fail(404, "Project not found.");
+      const stats = (
+        await db.query(
+          `SELECT
+        (SELECT count(*)::int FROM con.project_votes WHERE project_id=$1) AS votes,
+        (SELECT count(*)::int FROM con.project_comments WHERE project_id=$1) AS comments,
+        EXISTS(SELECT 1 FROM con.project_votes WHERE project_id=$1 AND user_id=$2) AS voted`,
+          [id, user?.id || ""],
+        )
+      ).rows[0];
+      const comments = p.published
+        ? (
+            await db.query(
+              "SELECT id,user_id,user_name,body,created_at FROM con.project_comments WHERE project_id=$1 ORDER BY created_at DESC LIMIT 200",
+              [id],
+            )
+          ).rows
+        : [];
+      return json(res, 200, {
+        project: {
+          id,
+          ...(p.published || p.draft),
+          author_name: p.owner_name,
+          published_at: p.published_at,
+          ...stats,
+        },
+        comments,
+        isPublished: Boolean(p.published),
+        canEdit: own,
+        canModerate: user ? canReview(await accessLookup(session)) : false,
+        version: own ? p.version : undefined,
+        status: own ? p.status : undefined,
+      });
+    }
+    if (action === "vote" && req.method === "PUT") {
+      if (typeof b.voted !== "boolean") fail(400, "Invalid vote.");
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const p = (
+          await client.query(
+            "SELECT id FROM con.projects WHERE id=$1 AND published IS NOT NULL FOR SHARE",
+            [id],
+          )
+        ).rows[0];
+        if (!p) fail(404, "Project is not published.");
+        if (b.voted)
+          await client.query(
+            "INSERT INTO con.project_votes(project_id,user_id)VALUES($1,$2) ON CONFLICT DO NOTHING",
+            [id, user.id],
+          );
+        else
+          await client.query(
+            "DELETE FROM con.project_votes WHERE project_id=$1 AND user_id=$2",
+            [id, user.id],
+          );
+        const votes = (
+          await client.query(
+            "SELECT count(*)::int AS n FROM con.project_votes WHERE project_id=$1",
+            [id],
+          )
+        ).rows[0].n;
+        await client.query("COMMIT");
+        return json(res, 200, { votes, voted: b.voted });
+      } catch (e) {
+        await client.query("ROLLBACK");
+        throw e;
+      } finally {
+        client.release();
+      }
+    }
+    if (action === "comment" && req.method === "POST") {
+      if (typeof b.body !== "string" || !b.body.trim() || b.body.length > 2000)
+        fail(400, "Comments must be 1–2000 characters.");
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+          `con-comment:${user.id}`,
+        ]);
+        const recent = await client.query(
+          "SELECT 1 FROM con.project_comments WHERE user_id=$1 AND created_at>now()-interval '15 seconds' LIMIT 1",
+          [user.id],
+        );
+        if (recent.rowCount)
+          fail(429, "Give it a moment before posting another comment.");
+        const p = await client.query(
+          "SELECT id FROM con.projects WHERE id=$1 AND published IS NOT NULL FOR SHARE",
+          [id],
+        );
+        if (!p.rowCount) fail(404, "Project is not published.");
+        await client.query(
+          "INSERT INTO con.project_comments(id,project_id,user_id,user_name,body)VALUES($1,$2,$3,$4,$5)",
+          [randomUUID(), id, user.id, user.name, b.body.trim()],
+        );
+        await client.query("COMMIT");
+        return json(res, 200, { ok: true });
+      } catch (e) {
+        await client.query("ROLLBACK");
+        throw e;
+      } finally {
+        client.release();
+      }
+    }
+    if (action === "comment" && req.method === "DELETE") {
+      const comment = idOf(b.comment_id),
+        grant = await accessLookup(session);
+      const result = await db.query(
+        "DELETE FROM con.project_comments WHERE id=$1 AND project_id=$2 AND (user_id=$3 OR $4) RETURNING id",
+        [comment, id, user.id, canReview(grant)],
+      );
+      if (!result.rowCount) fail(403, "You cannot remove this comment.");
+      return json(res, 200, { ok: true });
+    }
+    fail(405, "Unsupported project operation.");
+  } catch (e) {
+    if (e.code === "42P01")
+      return json(res, 503, {
+        error:
+          "Project storage needs an update. The owner can apply it from Admin → Database.",
+        needsSetup: true,
+      });
+    if (!e.status)
+      console.error("Community project operation failed", {
+        code: e.code || "application",
+      });
+    return json(res, e.status || 503, {
+      error: e.status ? e.message : "Project service temporarily unavailable.",
+    });
+  }
+}

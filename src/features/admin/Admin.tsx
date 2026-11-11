@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
+import { MemberProjects } from "../../ProjectPages";
 import Publishing from "./Publishing";
 import type { Access } from "./adminApi";
 import "./Admin.css";
@@ -133,6 +134,12 @@ export default function Admin() {
         </div>
       </header>
       <main className="con-admin-main">
+        {user && (
+          <div className="member-workspace-link">
+            <a href="/my-projects">My projects & submission reviews →</a>
+          </div>
+        )}
+        {user && !authorized && <MemberProjects />}
         {error && (
           <div role="alert" className="con-tool-error">
             {error}{" "}
@@ -152,6 +159,11 @@ export default function Admin() {
             allChannels={session.owner || session.all_channels || false}
             channelIds={session.channel_ids || []}
           />
+        ) : user ? (
+          <p className="member-workspace-link">
+            Your project workspace is available above. Staff tools require
+            separate approval from the owner.
+          </p>
         ) : (
           <section className="con-login-card">
             <span className="con-label">CULT OF nix0n // STAFF ACCESS</span>
@@ -160,7 +172,7 @@ export default function Admin() {
               {user
                 ? session?.access === "denied"
                   ? "Access is not enabled."
-                  : "Your access is pending approval."
+                  : "Your staff access is pending approval."
                 : "Welcome to the control room."}
             </h1>
             <p>

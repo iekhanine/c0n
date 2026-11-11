@@ -1,5 +1,7 @@
 // Owner-editable public copy. Keys are stable and allowlisted by the server.
 export const SITE_COPY = {
+  "discord.join": "Join Discord",
+  "account.projects": "My projects",
   "account.admin": "Open admin",
   "search.placeholder": "Search projects…",
   brand: "CULT OF NIX0N",
@@ -33,7 +35,7 @@ export const SITE_COPY = {
   "copy.3": "Look what they’re building.",
   "copy.4":
     "Apps, websites, and beautifully unnecessary experiments from our corner of the internet.",
-  "copy.5": "Featured first",
+  "copy.5": "Most upvoted",
   "copy.6": "Newest first",
   "copy.7": "Preview includes sample projects",
   "copy.8":

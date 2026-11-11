@@ -1389,3 +1389,349 @@ body.showcase-page {
   color: #19210e;
   border-color: #d1f77b;
 }
+/* HEADER 004: Readable community projects, voting and member workspaces. */
+.showcase-main {
+  max-width: 1600px;
+}
+.showcase-header {
+  padding-inline: max(28px, calc((100vw - 1544px) / 2));
+}
+.reference-layout {
+  grid-template-columns: minmax(0, 2.25fr) minmax(350px, 1fr);
+}
+.project-copy > p {
+  font-size: 16px;
+  line-height: 1.55;
+  min-height: 50px;
+}
+.project-meta,
+.project-meta strong {
+  font-size: 14px;
+}
+.project-meta .member-initial {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+.sample-comments,
+.sample-votes {
+  font-size: 14px;
+}
+.server-activity p {
+  font-size: 14px;
+}
+.server-activity small {
+  font-size: 12px;
+}
+.server-activity .project-tag {
+  font-size: 12px;
+}
+.activity-member {
+  font-size: 13px;
+}
+.activity-member > span:last-child {
+  font-size: 13px;
+}
+.rail-card p {
+  font-size: 14px;
+}
+.discord-invite {
+  font-size: 13px;
+  color: #d1f77b !important;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.project-vote {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid #596649;
+  background: #252e1e;
+  color: #d5f48c;
+  border-radius: 7px;
+  padding: 4px 7px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.project-vote[aria-pressed="true"] {
+  background: #d1f77b;
+  color: #19220e;
+}
+.vote-control {
+  position: relative;
+  display: inline-flex;
+}
+.vote-error {
+  position: absolute;
+  bottom: 120%;
+  right: 0;
+  z-index: 5;
+  width: 240px;
+  padding: 12px;
+  border: 1px solid #8b955c;
+  background: #20271a;
+  color: #f0efd9;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.vote-error a {
+  display: block;
+  color: #d1f77b;
+}
+.project-detail,
+.member-workspace {
+  max-width: 1150px;
+  margin: auto;
+  padding: 20px 0 45px;
+  text-align: left;
+}
+.project-detail h1,
+.member-workspace h1 {
+  font-size: 42px;
+  font-weight: 750;
+  line-height: 1.15;
+}
+.project-detail h2,
+.member-workspace h2 {
+  font-size: 23px;
+  font-weight: 700;
+}
+.project-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 25px 0;
+}
+.project-detail-heading h1 {
+  margin: 12px 0;
+}
+.project-detail-heading > div > p {
+  color: #b8c5a9;
+}
+.project-detail-image {
+  width: 100%;
+  max-height: 500px;
+  object-fit: contain;
+  background: #191f15;
+  border-radius: 12px;
+  margin-bottom: 25px;
+}
+.project-detail-body,
+.project-comment p,
+.review-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 18px;
+  line-height: 1.75;
+}
+.project-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding: 20px 0;
+  border-block: 1px solid #435335;
+  margin: 25px 0;
+}
+.project-detail-actions > span,
+.project-detail-actions > a {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+.project-detail label,
+.member-workspace label {
+  display: block;
+  font-size: 15px;
+  color: #d8e4ca;
+  margin: 15px 0;
+}
+.project-detail textarea,
+.member-workspace textarea,
+.member-workspace input,
+.member-workspace select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 7px 0;
+  padding: 12px;
+  background: #151d11;
+  color: #f2eedf;
+  border: 1px solid #5a6b45;
+  border-radius: 7px;
+  font: 16px/1.5 system-ui;
+}
+.project-detail button,
+.member-workspace button {
+  font: 600 14px system-ui;
+  border: 1px solid #728a4f;
+  background: #354525;
+  color: #eef5dd;
+  border-radius: 7px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.project-detail button:disabled,
+.member-workspace button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.project-comment {
+  padding: 22px 0;
+  border-bottom: 1px solid #48583a;
+}
+.project-comment header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.project-comment time {
+  font-size: 12px;
+  color: #b1bea0;
+}
+.project-comment p {
+  font-size: 16px;
+  margin-top: 10px;
+}
+.member-workspace {
+  color: #e5edd9;
+  font: 16px/1.6 system-ui;
+}
+.member-workspace h1,
+.member-workspace h2,
+.member-workspace h3 {
+  color: #f0ecd9;
+}
+.member-workspace a {
+  color: #d1f77b;
+}
+.member-workspace-link {
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  border: 1px solid #5c6f43;
+  border-radius: 8px;
+}
+.workspace-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 30px;
+  margin-top: 35px;
+}
+.workspace-layout > section,
+.workspace-layout > form {
+  padding: 22px;
+  border: 1px solid #47563a;
+  border-radius: 12px;
+  background: #1c2417;
+}
+.owned-project {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  margin-top: 12px;
+  gap: 7px;
+}
+.owned-project span {
+  font-size: 12px;
+  color: #c1d0b0;
+}
+.workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 20px;
+}
+.workspace-error {
+  padding: 15px;
+  border: 1px solid #9c7942;
+  background: #302819;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+.workspace-error a,
+.workspace-error button {
+  display: block;
+  margin-top: 12px;
+}
+.project-review-queue {
+  border-top: 1px solid #62754a;
+  padding-top: 30px;
+  margin-top: 40px;
+}
+.project-review-queue article {
+  margin: 25px 0;
+  padding: 25px;
+  border: 1px solid #566843;
+  border-radius: 10px;
+}
+.project-review-queue img {
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+.con-signin-page .member-workspace {
+  max-width: 1100px;
+}
+.con-signin-page .member-workspace + .con-login-card {
+  margin-top: 50px;
+}
+.project-detail a {
+  color: #d1f77b;
+}
+@media (max-width: 1150px) {
+  .reference-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .project-meta {
+    flex-wrap: wrap;
+  }
+  .project-copy > p {
+    font-size: 15px;
+  }
+  .project-meta strong {
+    font-size: 13px;
+  }
+}
+@media (max-width: 850px) {
+  .reference-layout {
+    grid-template-columns: 1fr;
+  }
+  .workspace-layout {
+    grid-template-columns: 1fr;
+  }
+  .project-detail h1,
+  .member-workspace h1 {
+    font-size: 32px;
+  }
+  .project-detail-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .project-comment header {
+    flex-wrap: wrap;
+  }
+  .showcase-main {
+    padding-inline: 18px;
+  }
+  .discord-invite {
+    font-size: 12px;
+  }
+  .project-copy > p {
+    min-height: 0;
+  }
+  .project-detail-actions {
+    flex-wrap: wrap;
+  }
+}
+.submission-cta {
+  display: inline-flex;
+  margin-bottom: 16px;
+  color: #d1f77b !important;
+  font-size: 14px;
+  font-weight: 650;
+}
+.project-detail .rail-button {
+  display: inline-flex;
+}

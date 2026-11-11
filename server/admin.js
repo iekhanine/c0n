@@ -338,10 +338,30 @@ export async function publish(db, input, staff) {
   if (input.unpublish === true) {
     if (input.webhook_id || input.website)
       throw new AppError(400, "Unpublish must be a separate operation.");
-    await db.query(
-      "UPDATE con.posts SET published_at=null,published_snapshot=null,published_version=null,published_updated_at=null WHERE id=$1",
-      [postId],
-    );
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        "UPDATE con.posts SET published_at=null,published_snapshot=null,published_version=null,published_updated_at=null WHERE id=$1",
+        [postId],
+      );
+      if (checked.kind === "project") {
+        const storage = await client.query(
+          "SELECT to_regclass('con.projects')::text AS marker",
+        );
+        if (storage.rows[0].marker)
+          await client.query(
+            "UPDATE con.projects SET published=null,status='draft',version=version+1,updated_at=now() WHERE id=$1",
+            [postId],
+          );
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
     return {
       ok: true,
       notice: "Removed from the website. Discord messages are retained.",
@@ -395,6 +415,21 @@ export async function publish(db, input, staff) {
         "UPDATE con.posts SET published_at=coalesce(published_at,now()),published_snapshot=$2::jsonb,published_version=$3,published_updated_at=now() WHERE id=$1",
         [postId, JSON.stringify(snapshot), post.version],
       );
+      if (post.kind === "project") {
+        const storage = await client.query(
+          "SELECT to_regclass('con.projects')::text AS marker",
+        );
+        if (storage.rows[0].marker)
+          await client.query(
+            `INSERT INTO con.projects(id,owner_id,owner_name,draft,published,status,published_at)VALUES($1,$2,$3,$4::jsonb,$4::jsonb,'approved',now()) ON CONFLICT(id) DO UPDATE SET draft=$4::jsonb,published=$4::jsonb,status='approved',version=con.projects.version+1,updated_at=now(),published_at=coalesce(con.projects.published_at,now())`,
+            [
+              postId,
+              post.author_id,
+              post.author_name,
+              JSON.stringify({ ...snapshot, category: "Tools" }),
+            ],
+          );
+      }
     }
     await client.query("COMMIT");
   } catch (error) {

@@ -1,3 +1,4 @@
+import { publicProjects } from "../server/projects.js";
 import { database } from "../server/db.js";
 import { json } from "../server/auth.js";
 export default async function handler(req, res) {
@@ -27,6 +28,14 @@ export default async function handler(req, res) {
         )
       ).rows;
     }
+    const projectStorage = await database().query(
+      "SELECT to_regclass('con.projects')::text AS marker",
+    );
+    if (projectStorage.rows[0].marker)
+      rows = [
+        ...rows.filter((p) => p.kind !== "project"),
+        ...(await publicProjects(database())),
+      ];
     return json(res, 200, { posts: rows });
   } catch (error) {
     if (error.code === "42P01" || !process.env.DATABASE_URL)
