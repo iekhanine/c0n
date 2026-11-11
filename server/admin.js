@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ORIGIN, json, requireStaff } from "./auth.js";
 import { database, databaseStatus, initializeDatabase } from "./db.js";
+import { canAccess, listStaff, saveStaff } from "./staff.js";
 import {
   AppError,
   id,
@@ -67,6 +68,11 @@ export async function adminHandler(req, res) {
       ["setup", "webhooks"].includes(action) && req.method !== "GET",
     );
     if (!staff) return;
+    if (!canAccess(staff.access, action, req.method))
+      throw new AppError(
+        403,
+        "Your access level does not permit this operation.",
+      );
     const db = database();
     if (action === "status") {
       expectMethod(req, "GET");
@@ -78,6 +84,16 @@ export async function adminHandler(req, res) {
     }
     if (action === "webhooks") return await webhooks(req, res, db, staff);
     if (action === "posts") return await posts(req, res, db, staff);
+    if (action === "staff") {
+      if (req.method === "GET")
+        return json(res, 200, { staff: await listStaff(db) });
+      expectMethod(req, "POST");
+      return json(res, 200, await saveStaff(staff.user.id, bodyOf(req), db));
+    }
+    if (action === "reports") {
+      expectMethod(req, "GET");
+      return json(res, 200, await reports(db));
+    }
     if (action === "publish") {
       expectMethod(req, "POST");
       return json(res, 200, await publish(db, bodyOf(req)));
@@ -115,8 +131,21 @@ export async function adminHandler(req, res) {
   }
 }
 
+// HEADER 006: Read-only report data excludes drafts, webhook URLs and tokens.
+export async function reports(db) {
+  const [summary, deliveries] = await Promise.all([
+    db.query(
+      `SELECT (SELECT count(*)::integer FROM con.posts WHERE published_at IS NOT NULL) AS website_posts,(SELECT count(*)::integer FROM con.webhooks WHERE enabled) AS active_channels,(SELECT count(*)::integer FROM con.deliveries WHERE state='sent') AS delivered,(SELECT count(*)::integer FROM con.deliveries WHERE state IN ('failed','uncertain','sending')) AS attention`,
+    ),
+    db.query(
+      `SELECT d.id,d.state,d.updated_at,d.last_error,p.title,p.kind,w.name AS channel_name FROM con.deliveries d JOIN con.posts p ON p.id=d.post_id JOIN con.webhooks w ON w.id=d.webhook_id ORDER BY d.updated_at DESC LIMIT 100`,
+    ),
+  ]);
+  return { summary: summary.rows[0], deliveries: deliveries.rows };
+}
+
 // HEADER 002: Channel settings never return stored webhook tokens to the client.
-async function webhooks(req, res, db, staff) {
+export async function webhooks(req, res, db, staff) {
   if (req.method === "GET") {
     const { rows } = await db.query(
       `SELECT ${safeWebhookColumns} FROM con.webhooks ORDER BY name`,
@@ -139,15 +168,25 @@ async function webhooks(req, res, db, staff) {
   }
   if (!["POST", "PATCH"].includes(req.method))
     throw new AppError(405, "Method not allowed.");
-  const input = webhookInput(body);
+  const suppliedName = typeof body.name === "string" ? body.name.trim() : "";
+  const input = webhookInput({
+    ...body,
+    name: suppliedName || "Discord channel",
+  });
   const existing =
     req.method === "PATCH" ? await findWebhook(db, body.id) : null;
+  if (!suppliedName && existing && !input.url) input.name = existing.name;
   if (!input.url && !existing)
     throw new AppError(400, "A webhook URL is required.");
   let info;
   let cipher = existing?.url_cipher;
   if (input.url) {
     info = await discordRequest(input.url);
+    if (!suppliedName)
+      input.name =
+        typeof info.name === "string" && info.name.trim()
+          ? info.name.trim().slice(0, 80)
+          : `Channel ${info.channel_id}`;
     if (
       info.type !== 1 ||
       !/^\d{17,20}$/.test(info.id) ||

@@ -1,43 +1,321 @@
-/* HEADER 001: Scoped control room layout. */
-.con-admin { max-width: 1080px; margin: 0 auto; padding: 0 32px; color: #e2dccb; text-align: left; font: 14px/1.6 Consolas, 'Courier New', monospace; }
-.con-admin-header { display:flex; justify-content:space-between; align-items:center; gap:24px; min-height:112px; border-bottom:1px solid #29351f; }
-.con-admin-brand { display:flex; align-items:center; gap:13px; font-weight:bold; letter-spacing:.08em; }
-.con-admin-brand img { width:58px; height:58px; object-fit:contain; }
-.con-admin-brand small { display:block; font-size:10px; color:#90a77b; letter-spacing:.14em; margin-top:3px; }
-.con-admin-back { display:flex; gap:8px; align-items:center; color:#a9a392; font-size:11px; }
-.con-admin main { max-width:860px; margin:65px auto 0; }
-.con-admin-eyebrow { display:flex; align-items:center; gap:10px; color:#99b775; font-size:11px; letter-spacing:.12em; }
-.con-admin-eyebrow > span { width:6px; height:6px; background:#8dbb4d; box-shadow:0 0 10px #769d4144; }
-.con-admin h1 { font-family:Impact, 'Arial Narrow', sans-serif; font-size:clamp(42px,8vw,72px); font-weight:400; letter-spacing:.025em; line-height:1.1; margin:17px 0; color:#e2dccb; }
-.con-admin h1 > span { color:#8dbb4d; }
-.con-admin-intro { color:#a9a392; line-height:1.8; font-size:14px; }
-.con-access-card { margin-top:35px; border:1px solid #38462c; background:#080c08; }
-.con-card-bar { display:flex; align-items:center; gap:9px; padding:12px 20px; border-bottom:1px solid #29351f; color:#99b775; font-size:11px; }
-.con-card-status { margin-left:auto; font-size:9px; letter-spacing:.1em; color:#a9a392; }
-.con-card-body { padding:30px; }
-.con-card-body h2 { margin:12px 0; font-size:20px; font-family:inherit; font-weight:700; color:#e2dccb; line-height:1.4; }
-.con-card-body p { max-width:620px; margin:0 0 20px; color:#b8b5a7; font-size:13px; line-height:1.8; }
-.con-access-icon { color:#8dbb4d; }
-.con-admin .con-primary, .con-admin button { display:inline-flex; align-items:center; justify-content:center; gap:12px; border:1px solid #769d41; border-radius:2px; padding:13px 18px; background:#141e0e; color:#d4e3bf; font:700 11px/1.4 Consolas,monospace; cursor:pointer; text-decoration:none; }
-.con-admin .con-primary:hover, .con-admin button:hover { background:#25351a; }
-.con-admin button:disabled { opacity:.6; cursor:wait; }
-.con-admin a:focus-visible, .con-admin button:focus-visible { outline:2px solid #a8cd7a; outline-offset:5px; }
-.con-card-body > small { display:block; margin-top:16px; font-size:10px; color:#929789; }
-.con-card-body .con-notice { border-left:2px solid #769d41; padding:10px 15px; background:#121a0e; margin:22px 0; }
-.con-identity { display:flex; gap:15px; align-items:center; flex-wrap:wrap; }
-.con-identity img, .con-avatar { width:48px; height:48px; border:1px solid #769d41; border-radius:3px; }
-.con-avatar { display:grid; place-items:center; background:#25351a; font-size:22px; }
-.con-identity h2 { margin:0 0 3px; }
-.con-identity p { margin:0; }
-.con-access-badge { margin-left:auto; font-size:10px; padding:4px 9px; color:#bcd79b; border:1px solid #38462c; }
-.con-account-id { margin-top:25px; display:flex; flex-wrap:wrap; align-items:center; gap:12px; font-size:10px; color:#929789; }
-.con-account-id code { color:#e2dccb; font-size:14px; user-select:all; background:transparent; padding:0; }
-.con-admin-roadmap { display:grid; grid-template-columns:repeat(3,1fr); margin-top:32px; gap:25px; }
-.con-admin-roadmap > div { border-top:1px solid #29351f; padding-top:22px; }
-.con-admin-roadmap svg { color:#90a77b; }
-.con-admin-roadmap h2 { color:#c8c5b6; font:700 11px/1.6 Consolas,monospace; margin:11px 0 8px; letter-spacing:.04em; }
-.con-admin-roadmap p { color:#929789; font-size:11px; line-height:1.8; }
-.con-admin-stage { color:#929789; margin:28px 0 0; font-size:9px; letter-spacing:.08em; }
-.con-admin footer { border-top:1px solid #29351f; margin-top:60px; padding:22px 0; color:#929789; font-size:10px; }
-/* HEADER 002: Mobile layout and reduced visual density. */
-@media(max-width:600px) { .con-admin { padding:0 18px; }.con-admin-header { min-height:88px; }.con-admin-brand { font-size:11px; }.con-admin-brand img { width:43px; height:43px; }.con-admin-back { font-size:0; }.con-admin-back svg { width:20px; height:20px; }.con-admin main { margin-top:38px; }.con-card-body { padding:22px 18px; }.con-card-bar { padding:11px 15px; }.con-admin-roadmap { grid-template-columns:1fr; gap:20px; }.con-admin-roadmap p br { display:none; }.con-admin-roadmap p { margin:0; }.con-access-badge { margin-left:0; }.con-card-body h2 { font-size:17px; } }
+/* HEADER 001: Full-width admin canvas and fixed identity bar. */
+body.con-admin-page {
+  background: #10171c;
+  color: #e8edeb;
+}
+body.con-admin-page::before {
+  display: none;
+}
+body.con-admin-page #root {
+  width: 100%;
+  max-width: none;
+  border: 0;
+  margin: 0;
+  text-align: left;
+  background: #10171c;
+}
+.con-admin {
+  --con-accent: #b5cf8c;
+  --con-line: #34434b;
+  --con-muted: #b2bec5;
+  color: #e8edeb;
+  font:
+    16px/1.65 "Segoe UI",
+    Arial,
+    sans-serif;
+  min-height: 100vh;
+  text-align: left;
+}
+.con-admin * {
+  box-sizing: border-box;
+}
+.con-admin-header {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 30px;
+  background: #0c130f;
+  border-bottom: 1px solid #344238;
+  box-shadow: 0 4px 24px #0002;
+}
+.con-admin-brand {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  color: #e9e5d5;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+.con-admin-brand img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+.con-admin-brand small {
+  display: block;
+  font:
+    10px/1.5 Consolas,
+    monospace;
+  color: #9daf95;
+  letter-spacing: 0.15em;
+  margin-top: 3px;
+}
+.con-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.con-view-site {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b6c2b9;
+  font-size: 14px;
+}
+.con-header-identity {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.con-header-identity img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+.con-header-identity small {
+  display: block;
+  color: #aec993;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+.con-header-loading {
+  font-size: 13px;
+  color: #b6c2b9;
+}
+.con-admin-main {
+  padding: 42px 40px 70px;
+  margin: 80px 0 0 248px;
+  max-width: 1740px;
+}
+.con-admin.con-signin-page .con-admin-main {
+  margin-left: 0;
+  padding-top: 70px;
+}
+.con-admin h1 {
+  margin: 8px 0 10px;
+  color: #eef0e8;
+  font:
+    650 38px/1.2 "Segoe UI",
+    Arial,
+    sans-serif;
+  letter-spacing: -0.03em;
+}
+.con-admin h2 {
+  color: #edf0ea;
+  font:
+    600 23px/1.35 "Segoe UI",
+    Arial,
+    sans-serif;
+  margin: 0 0 24px;
+  letter-spacing: -0.02em;
+}
+.con-admin h3 {
+  color: #e7ede7;
+  font:
+    600 17px/1.5 "Segoe UI",
+    Arial,
+    sans-serif;
+}
+.con-admin p {
+  margin: 0 0 20px;
+}
+.con-admin button,
+.con-admin .con-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 16px;
+  min-height: 43px;
+  color: #e2eae4;
+  border: 1px solid #4b5e62;
+  border-radius: 6px;
+  background: #26343b;
+  font:
+    600 14px/1.4 "Segoe UI",
+    Arial,
+    sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.con-admin button:hover {
+  background: #34464d;
+  border-color: #738b88;
+}
+.con-admin button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+.con-admin .con-primary {
+  background: #b3cd8b;
+  color: #15220e;
+  border-color: #b3cd8b;
+}
+.con-admin .con-primary:hover {
+  background: #c6dda5;
+  border-color: #c6dda5;
+}
+.con-admin a:focus-visible,
+.con-admin button:focus-visible,
+.con-admin summary:focus-visible {
+  outline: 2px solid #cfdfa9;
+  outline-offset: 4px;
+}
+.con-label {
+  display: block;
+  color: var(--con-accent);
+  font:
+    600 11px/1.6 Consolas,
+    monospace;
+  letter-spacing: 0.12em;
+}
+/* HEADER 002: Signed-out and pending-access states. */
+.con-login-card {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 46px;
+  border: 1px solid #3b4d43;
+  border-radius: 12px;
+  background: #19251f;
+  box-shadow: 0 16px 60px #0002;
+}
+.con-login-icon {
+  display: block;
+  margin: 27px 0 18px;
+  color: #b3cd8b;
+}
+.con-login-card h1 {
+  font-size: 36px;
+  margin-bottom: 22px;
+}
+.con-login-card > p {
+  color: #bdc9c0;
+  line-height: 1.8;
+}
+.con-login-card footer {
+  padding-top: 30px;
+  margin-top: 35px;
+  border-top: 1px solid #3b4d43;
+  color: #9faf9f;
+  font:
+    11px/1.8 Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.con-login-user-id {
+  display: grid;
+  gap: 10px;
+  margin: 30px 0;
+}
+.con-login-user-id > span {
+  color: #b8c6bc;
+  font-size: 13px;
+}
+.con-login-user-id code {
+  display: block;
+  color: #edf0ea;
+  background: #101a15;
+  padding: 14px;
+  border: 1px solid #3b4d43;
+  font:
+    17px/1.5 Consolas,
+    monospace;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.con-login-user-id small {
+  color: #b2c2b5;
+  font-size: 13px;
+}
+@media (max-width: 1100px) {
+  .con-admin-main {
+    padding: 32px 24px 55px;
+    margin-left: 222px;
+  }
+  .con-header-actions {
+    gap: 16px;
+  }
+}
+@media (max-width: 760px) {
+  .con-admin-header {
+    height: 72px;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .con-admin-brand {
+    font-size: 14px;
+    gap: 8px;
+  }
+  .con-admin-brand img {
+    width: 42px;
+    height: 42px;
+  }
+  .con-admin-brand small {
+    font-size: 8px;
+  }
+  .con-view-site {
+    display: none;
+  }
+  .con-header-actions {
+    gap: 10px;
+  }
+  .con-header-identity > span {
+    display: none;
+  }
+  .con-header-identity img {
+    width: 30px;
+    height: 30px;
+  }
+  .con-header-actions button > span {
+    display: none;
+  }
+  .con-header-actions button {
+    min-height: 38px;
+    padding: 9px;
+  }
+  .con-header-actions .con-primary {
+    font-size: 12px;
+    padding: 9px 11px;
+  }
+  .con-header-actions .con-primary svg {
+    display: none;
+  }
+  .con-admin-main {
+    margin-top: 72px;
+    margin-left: 76px;
+    padding: 26px 18px 45px;
+  }
+  .con-admin h1 {
+    font-size: 31px;
+  }
+  .con-login-card {
+    padding: 28px 22px;
+  }
+  .con-login-card h1 {
+    font-size: 30px;
+  }
+}

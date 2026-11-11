@@ -9,8 +9,14 @@ import {
   Settings2,
   ShieldCheck,
   Terminal,
+  BarChart3,
+  Users,
 } from "lucide-react";
 import "./Publishing.css";
+import Staff from "./Staff";
+import Reports from "./Reports";
+import { adminApi as api } from "./adminApi";
+import type { Access, StorageStatus } from "./adminApi";
 
 type Delivery = {
   id: string;
@@ -42,7 +48,7 @@ type Draft = Pick<
   Post,
   "kind" | "title" | "body" | "link_url" | "image_url" | "featured"
 >;
-type Tab = "update" | "project" | "webhooks" | "database";
+type Tab = "update" | "project" | "webhooks" | "staff" | "reports" | "database";
 const blank = (kind: "update" | "project"): Draft => ({
   kind,
   title: "",
@@ -52,42 +58,19 @@ const blank = (kind: "update" | "project"): Draft => ({
   featured: false,
 });
 
-// HEADER 001: Typed requests. URLs and tokens are never returned by this API.
-async function api<T>(
-  action: string,
-  method = "GET",
-  body?: unknown,
-): Promise<T> {
-  const response = await fetch(`/api/admin?action=${action}`, {
-    method,
-    cache: "no-store",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  let result;
-  try {
-    result = await response.json();
-  } catch {
-    throw new Error(
-      "The server returned an unreadable response. Try again shortly.",
-    );
-  }
-  if (!response.ok) throw new Error(result.error || "Request failed.");
-  return result as T;
-}
-
 export default function Publishing({
-  isAdmin,
+  access,
   authorName,
+  currentId,
 }: {
-  isAdmin: boolean;
+  access: Access;
   authorName: string;
+  currentId: string;
 }) {
-  const [tab, setTab] = useState<Tab>("update");
-  const [status, setStatus] = useState<{
-    connected: boolean;
-    initialized: boolean;
-  } | null>(null);
+  const isAdmin = access === "admin";
+  const canPublish = access !== "report";
+  const [tab, setTab] = useState<Tab>(canPublish ? "update" : "reports");
+  const [status, setStatus] = useState<StorageStatus | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [hooks, setHooks] = useState<Hook[]>([]);
   const [selected, setSelected] = useState<Post | null>(null);
@@ -108,9 +91,9 @@ export default function Publishing({
   const [dirty, setDirty] = useState(false);
 
   async function refresh() {
-    const s = await api<{ connected: boolean; initialized: boolean }>("status");
+    const s = await api<StorageStatus>("status");
     setStatus(s);
-    if (s.initialized) {
+    if (s.initialized && canPublish) {
       const [p, h] = await Promise.all([
         api<{ posts: Post[] }>("posts"),
         api<{ webhooks: Hook[] }>("webhooks"),
@@ -125,12 +108,10 @@ export default function Publishing({
     let active = true;
     async function start() {
       try {
-        const s = await api<{ connected: boolean; initialized: boolean }>(
-          "status",
-        );
+        const s = await api<StorageStatus>("status");
         if (!active) return;
         setStatus(s);
-        if (s.initialized) {
+        if (s.initialized && canPublish) {
           const [p, h] = await Promise.all([
             api<{ posts: Post[] }>("posts"),
             api<{ webhooks: Hook[] }>("webhooks"),
@@ -151,7 +132,7 @@ export default function Publishing({
     return () => {
       active = false;
     };
-  }, []);
+  }, [canPublish]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (dirty) event.preventDefault();
@@ -232,39 +213,109 @@ export default function Publishing({
   );
 
   return (
-    <section className="con-publishing" aria-label="Community publishing">
+    <section
+      className="con-publishing"
+      data-section={tab}
+      aria-label="Community publishing"
+    >
       <nav className="con-tool-tabs" aria-label="Admin tools">
-        <button
-          disabled={busy}
-          aria-current={tab === "update" ? "page" : undefined}
-          onClick={() => switchTab("update")}
-        >
-          <Radio size={15} /> UPDATES
-        </button>
-        <button
-          disabled={busy}
-          aria-current={tab === "project" ? "page" : undefined}
-          onClick={() => switchTab("project")}
-        >
-          <Terminal size={15} /> PROJECTS
-        </button>
-        {isAdmin && (
-          <button
-            disabled={busy}
-            aria-current={tab === "webhooks" ? "page" : undefined}
-            onClick={() => switchTab("webhooks")}
-          >
-            <Settings2 size={15} /> CHANNELS
-          </button>
+        <span className="con-sidebar-label">WORKSPACE</span>
+        {canPublish && (
+          <>
+            <button
+              title="Updates"
+              disabled={busy}
+              aria-current={tab === "update" ? "page" : undefined}
+              onClick={() => switchTab("update")}
+            >
+              <Radio size={20} />
+              <span>Updates</span>
+            </button>
+            <button
+              title="Featured projects"
+              disabled={busy}
+              aria-current={tab === "project" ? "page" : undefined}
+              onClick={() => switchTab("project")}
+            >
+              <Terminal size={20} />
+              <span>Featured projects</span>
+            </button>
+          </>
         )}
         <button
+          title="Reports"
           disabled={busy}
-          aria-current={tab === "database" ? "page" : undefined}
-          onClick={() => switchTab("database")}
+          aria-current={tab === "reports" ? "page" : undefined}
+          onClick={() => switchTab("reports")}
         >
-          <ShieldCheck size={15} /> DATABASE
+          <BarChart3 size={20} />
+          <span>Reports</span>
         </button>
+        {isAdmin && (
+          <>
+            <span className="con-sidebar-label">MANAGEMENT</span>
+            <button
+              title="Channels"
+              disabled={busy}
+              aria-current={tab === "webhooks" ? "page" : undefined}
+              onClick={() => switchTab("webhooks")}
+            >
+              <Settings2 size={20} />
+              <span>Channels</span>
+            </button>
+            <button
+              title="Staff access"
+              disabled={busy}
+              aria-current={tab === "staff" ? "page" : undefined}
+              onClick={() => switchTab("staff")}
+            >
+              <Users size={20} />
+              <span>Staff access</span>
+            </button>
+            <button
+              title="Database"
+              disabled={busy}
+              aria-current={tab === "database" ? "page" : undefined}
+              onClick={() => switchTab("database")}
+            >
+              <ShieldCheck size={20} />
+              <span>Database</span>
+            </button>
+          </>
+        )}
+        <div className="con-sidebar-footer">
+          <span className="con-online-dot" /> Community control
+          <small>BUILD. SHARE. SHIP.</small>
+        </div>
       </nav>
+      <header className="con-workspace-heading">
+        <span className="con-label">CULT OF nix0n / COMMUNITY CONTROL</span>
+        <h1>
+          {
+            {
+              update: "Updates",
+              project: "Featured projects",
+              webhooks: "Channels",
+              staff: "Staff access",
+              reports: "Reports",
+              database: "Database",
+            }[tab]
+          }
+        </h1>
+        <p>
+          {
+            {
+              update: "Share an update. Choose where it goes.",
+              project: "Put your community’s work in the spotlight.",
+              webhooks:
+                "Paste a webhook URL to connect another Discord channel.",
+              staff: "Give the right people the right access.",
+              reports: "A clear view of what has been published.",
+              database: "Connection status and storage updates.",
+            }[tab]
+          }
+        </p>
+      </header>
       {error && (
         <div role="alert" className="con-tool-error">
           {error} <a href="/admin">Reload / sign in again</a>
@@ -290,7 +341,9 @@ export default function Publishing({
           </h2>
           <p>
             {status?.initialized
-              ? "CoN storage is ready. Open Updates, Projects, or Channels to start publishing."
+              ? status.needs_upgrade
+                ? "A storage update is available for staff management. Apply it below to enable the new access levels."
+                : "CoN storage is ready. Your publishing tools are available from the sidebar."
               : "Check the connection, then initialize the private con schema. This creates storage for posts, channel connections, and Discord message history."}
           </p>
           <dl>
@@ -300,7 +353,13 @@ export default function Publishing({
             </div>
             <div>
               <dt>CoN tables</dt>
-              <dd>{status?.initialized ? "READY" : "NOT INITIALIZED"}</dd>
+              <dd>
+                {status?.needs_upgrade
+                  ? "UPDATE AVAILABLE"
+                  : status?.initialized
+                    ? "READY"
+                    : "NOT INITIALIZED"}
+              </dd>
             </div>
           </dl>
           <div className="con-button-row">
@@ -315,7 +374,7 @@ export default function Publishing({
             >
               CHECK CONNECTION
             </button>
-            {!status?.initialized && isAdmin && (
+            {(!status?.initialized || status?.needs_upgrade) && isAdmin && (
               <button
                 className="con-primary"
                 disabled={busy || !status?.connected}
@@ -324,12 +383,16 @@ export default function Publishing({
                     setStatus(await api("setup", "POST", {}));
                     await refresh();
                     setNotice(
-                      "CoN storage initialized. Your other application tables were not modified.",
+                      "CoN storage is up to date. Existing posts and channels were preserved.",
                     );
                   })
                 }
               >
-                {busy ? "WORKING…" : "INITIALIZE CoN STORAGE"}
+                {busy
+                  ? "Working…"
+                  : status?.needs_upgrade
+                    ? "Apply storage update"
+                    : "Initialize CoN storage"}
               </button>
             )}
           </div>
@@ -341,6 +404,23 @@ export default function Publishing({
             Webhook tokens stay encrypted on the server.
           </small>
         </div>
+      ) : tab === "staff" ? (
+        status.needs_upgrade ? (
+          <div className="con-database-panel">
+            <h2>A small storage update is needed.</h2>
+            <p>
+              Open Database and apply the update to enable staff management.
+              Your posts and channels are preserved.
+            </p>
+            <button onClick={() => switchTab("database")}>
+              Open database settings
+            </button>
+          </div>
+        ) : (
+          <Staff currentId={currentId} />
+        )
+      ) : tab === "reports" ? (
+        <Reports />
       ) : isContent ? (
         <div className="con-workspace">
           <aside className="con-post-list">
@@ -512,7 +592,8 @@ export default function Publishing({
                 </div>
               </fieldset>
             </form>
-            <section className="con-preview" aria-label="Discord embed preview">
+            <details className="con-preview">
+              <summary>Preview Discord card</summary>
               <span className="con-label">DISCORD PREVIEW · APPROXIMATE</span>
               <article>
                 <img className="con-preview-logo" src="/con-logo.png" alt="" />
@@ -546,7 +627,7 @@ export default function Publishing({
                   {selected?.author_name || authorName}
                 </small>
               </article>
-            </section>
+            </details>
             <section className="con-publish-panel">
               <span className="con-label">DESTINATION // PUBLISH</span>
               <fieldset disabled={busy}>
@@ -735,13 +816,13 @@ export default function Publishing({
             <div className="con-list-heading">
               <span>CHANNEL CONNECTIONS</span>
               <button
-                aria-label="New channel connection"
+                aria-label="Add channel"
                 disabled={busy}
                 onClick={() =>
                   setHookDraft({ id: "", name: "", url: "", enabled: true })
                 }
               >
-                <Plus size={16} />
+                <Plus size={18} /> Add channel
               </button>
             </div>
             {!hooks.length && (
@@ -789,20 +870,12 @@ export default function Publishing({
             <span className="con-label">
               {hookDraft.id ? "EDIT CONNECTION" : "CONNECT A CHANNEL"}
             </span>
-            <h2>Give it a destination.</h2>
+            <h2>
+              {hookDraft.id
+                ? "Edit channel connection"
+                : "Add a Discord channel"}
+            </h2>
             <fieldset disabled={busy}>
-              <label>
-                Channel label
-                <input
-                  required
-                  maxLength={80}
-                  value={hookDraft.name}
-                  placeholder="#transmissions"
-                  onChange={(e) =>
-                    setHookDraft((h) => ({ ...h, name: e.target.value }))
-                  }
-                />
-              </label>
               <label>
                 Discord webhook URL{" "}
                 {hookDraft.id && (
@@ -821,6 +894,18 @@ export default function Publishing({
                     hookDraft.id
                       ? "Stored securely; enter a replacement if needed"
                       : "https://discord.com/api/webhooks/…"
+                  }
+                />
+              </label>
+              <label>
+                Channel label{" "}
+                <span>(optional; defaults to the webhook name)</span>
+                <input
+                  maxLength={80}
+                  value={hookDraft.name}
+                  placeholder="#transmissions"
+                  onChange={(e) =>
+                    setHookDraft((h) => ({ ...h, name: e.target.value }))
                   }
                 />
               </label>
