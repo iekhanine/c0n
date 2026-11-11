@@ -1,0 +1,425 @@
+/* HEADER 001: Publishing workspace and navigation. */
+.con-publishing {
+  margin-top: 36px;
+}
+.con-tool-tabs {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #38462c;
+  padding-bottom: 10px;
+}
+.con-tool-tabs button {
+  border-color: transparent;
+  background: transparent;
+  padding: 10px 12px;
+  color: #a9a392;
+  font-size: 10px;
+}
+.con-tool-tabs button[aria-current] {
+  color: #d4e3bf;
+  border-color: #769d41;
+  background: #141e0e;
+}
+.con-tool-error,
+.con-tool-notice {
+  padding: 13px 16px;
+  margin: 18px 0;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.con-tool-error {
+  color: #f4b8b1;
+  border: 1px solid #783f37;
+  background: #21100e;
+}
+.con-tool-error a {
+  text-decoration: underline;
+  display: block;
+}
+.con-tool-notice {
+  color: #cee5b3;
+  border: 1px solid #38462c;
+  background: #141e0e;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.con-tool-empty {
+  color: #929789;
+  padding: 25px 15px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.con-label {
+  display: block;
+  color: #99b775;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+}
+.con-workspace,
+.con-channel-workspace {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  border: 1px solid #29351f;
+  border-top: 0;
+}
+.con-post-list,
+.con-channel-list {
+  border-right: 1px solid #29351f;
+  background: #070b07;
+}
+.con-list-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px;
+  border-bottom: 1px solid #29351f;
+  color: #929789;
+  font-size: 10px;
+}
+.con-list-heading button {
+  padding: 5px;
+  border: 0;
+  background: transparent;
+}
+.con-admin .con-post-item {
+  display: block;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid #29351f;
+  background: transparent;
+  width: 100%;
+  padding: 17px 14px;
+  color: #c8c5b6;
+}
+.con-post-item strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.con-post-item span {
+  display: block;
+  color: #929789;
+  font-size: 8px;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.con-admin .con-post-item.selected {
+  border-left: 2px solid #8dbb4d;
+  background: #141e0e;
+}
+.con-editor-area {
+  min-width: 0;
+  padding: 25px;
+}
+.con-editor-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+}
+.con-editor-heading h2,
+.con-channel-form h2,
+.con-database-panel h2 {
+  font:
+    700 21px/1.4 Consolas,
+    monospace;
+  color: #e2dccb;
+  margin: 9px 0 25px;
+  letter-spacing: -0.03em;
+}
+.con-unsaved {
+  font-size: 9px;
+  color: #d3bd73;
+}
+/* HEADER 002: Accessible fields and actions. */
+.con-publishing fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+.con-publishing label {
+  display: block;
+  color: #c8c5b6;
+  font-size: 11px;
+  margin: 0 0 18px;
+}
+.con-publishing label > span {
+  font-size: 9px;
+  color: #929789;
+}
+.con-publishing input:not([type="checkbox"]),
+.con-publishing textarea,
+.con-publishing select {
+  display: block;
+  width: 100%;
+  padding: 11px 12px;
+  margin-top: 7px;
+  background: #050805;
+  border: 1px solid #38462c;
+  color: #e2dccb;
+  border-radius: 2px;
+  font:
+    13px/1.6 Consolas,
+    monospace;
+  box-sizing: border-box;
+}
+.con-publishing textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+.con-publishing input::placeholder,
+.con-publishing textarea::placeholder {
+  color: #798270;
+}
+.con-publishing input:focus-visible,
+.con-publishing textarea:focus-visible,
+.con-publishing select:focus-visible {
+  outline: 2px solid #8dbb4d;
+  outline-offset: 2px;
+}
+.con-publishing .con-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  line-height: 1.7;
+}
+.con-check input {
+  accent-color: #8dbb4d;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.con-input-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.con-character-count {
+  color: #929789;
+  text-align: right;
+  font-size: 9px;
+  margin: -13px 0 20px;
+}
+.con-button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.con-publishing .con-tool-hint {
+  color: #a9a392;
+  font-size: 10px;
+  line-height: 1.8;
+  margin: 10px 0 18px;
+}
+.con-admin .con-danger {
+  color: #f4b8b1;
+  border-color: #783f37;
+  background: transparent;
+}
+.con-admin .con-text-button {
+  display: block;
+  border: 0;
+  padding: 12px 0 0;
+  background: transparent;
+  color: #a9a392;
+  font-size: 9px;
+}
+.con-admin .con-text-button:hover {
+  color: #e2dccb;
+  text-decoration: underline;
+}
+/* HEADER 003: Embed preview and delivery history. */
+.con-preview {
+  border-top: 1px solid #29351f;
+  padding-top: 24px;
+  margin-top: 25px;
+}
+.con-preview article {
+  margin-top: 14px;
+  background: #1f2225;
+  border-left: 4px solid #58783b;
+  border-radius: 4px;
+  padding: 18px;
+  font-family: Arial, sans-serif;
+  display: flow-root;
+}
+.con-preview-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  float: right;
+  margin-left: 15px;
+}
+.con-preview h3 {
+  font-size: 16px;
+  color: #f3f1e8;
+  margin: 0 0 9px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.con-preview p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #deddd6;
+  font:
+    14px/1.6 Arial,
+    sans-serif;
+  margin: 0 0 14px;
+}
+.con-preview a {
+  color: #a7c9f6;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.con-preview small {
+  display: block;
+  clear: both;
+  padding-top: 12px;
+  color: #b1b4b5;
+  font-size: 10px;
+}
+.con-preview-image {
+  display: block;
+  clear: both;
+  max-width: 100%;
+  max-height: 230px;
+  object-fit: contain;
+  border-radius: 3px;
+  margin-top: 12px;
+}
+.con-publish-panel {
+  margin-top: 24px;
+  padding-top: 23px;
+  border-top: 1px solid #29351f;
+}
+.con-publish-panel > .con-label {
+  margin-bottom: 18px;
+}
+.con-recovery {
+  margin-top: 20px;
+  border-top: 1px solid #29351f;
+  padding-top: 15px;
+  font-size: 11px;
+}
+.con-recovery summary {
+  cursor: pointer;
+  color: #b1c89a;
+}
+.con-recovery p {
+  color: #a9a392;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.con-delivery-history {
+  margin-top: 25px;
+}
+.con-delivery-history h3 {
+  font-size: 10px;
+  color: #929789;
+  margin-bottom: 10px;
+}
+.con-delivery-history > div {
+  padding: 12px 0;
+  border-top: 1px solid #29351f;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.con-delivery-history a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #b1c89a;
+}
+.con-delivery-history p {
+  width: 100%;
+  margin: 0;
+  color: #d3bd73;
+}
+.con-channel-form {
+  padding: 27px;
+}
+.con-database-panel {
+  border: 1px solid #29351f;
+  padding: 30px;
+  margin-top: 20px;
+}
+.con-database-panel > p {
+  color: #a9a392;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.con-database-panel dl {
+  padding: 15px 0;
+}
+.con-database-panel dl > div {
+  display: flex;
+  gap: 25px;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid #29351f;
+  font-size: 11px;
+}
+.con-database-panel dd {
+  color: #bcd79b;
+  margin: 0;
+}
+.con-database-panel small {
+  display: block;
+  margin-top: 20px;
+  color: #929789;
+  font-size: 10px;
+  line-height: 1.8;
+}
+@media (min-width: 1000px) {
+  .con-admin main:has(.con-publishing) {
+    max-width: 100%;
+  }
+}
+@media (max-width: 720px) {
+  .con-workspace,
+  .con-channel-workspace {
+    grid-template-columns: 1fr;
+  }
+  .con-post-list,
+  .con-channel-list {
+    border-right: 0;
+    border-bottom: 1px solid #29351f;
+    max-height: 230px;
+    overflow: auto;
+  }
+  .con-editor-area,
+  .con-channel-form {
+    padding: 20px 15px;
+  }
+  .con-input-pair {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .con-tool-tabs button {
+    padding: 9px 8px;
+    font-size: 9px;
+    gap: 6px;
+  }
+  .con-database-panel {
+    padding: 22px 17px;
+  }
+  .con-preview-logo {
+    width: 42px;
+    height: 42px;
+  }
+}
