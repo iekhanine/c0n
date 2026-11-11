@@ -1,10 +1,8 @@
-import { samples } from "./sampleProjects";
 import { VoteButton, type Project } from "./ProjectPages";
 import { Editable, Copy, EditButton, useSiteCopy } from "./SiteText";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  ArrowUp,
   ArrowUpRight,
   MessageCircle,
   Users,
@@ -21,13 +19,13 @@ type Post = {
   body: string;
   link_url: string;
   image_url: string;
+  git_url: string;
   featured: boolean;
   author_name: string;
   published_at: string;
   category?: string;
   votes?: number;
   comments?: number;
-  demo?: boolean;
   voted?: boolean;
 };
 const safe = (s: string) => {
@@ -52,13 +50,32 @@ export default function CommunityFeed({
     [query, setQuery] = useState(""),
     [sort, setSort] = useState("featured");
   const [community, setCommunity] = useState<Post[]>([]);
+  const [projectError, setProjectError] = useState("");
   useEffect(() => {
     const c = new AbortController();
-    void fetch("/api/projects", { signal: c.signal, cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { projects: [] }))
-      .then((d) => setCommunity(d.projects))
-      .catch(() => {});
-    return () => c.abort();
+    async function load() {
+      try {
+        const r = await fetch("/api/projects", {
+          signal: c.signal,
+          cache: "no-store",
+        });
+        const d = await r.json();
+        if (!r.ok) throw Error(d.error);
+        setCommunity(d.projects);
+        setProjectError("");
+      } catch {
+        if (!c.signal.aborted)
+          setProjectError(
+            "Projects are being set up. Please check back shortly.",
+          );
+      }
+    }
+    void load();
+    window.addEventListener("con-projects-changed", load);
+    return () => {
+      c.abort();
+      window.removeEventListener("con-projects-changed", load);
+    };
   }, []);
   useEffect(() => {
     const c = new AbortController();
@@ -73,10 +90,8 @@ export default function CommunityFeed({
       });
     return () => c.abort();
   }, []);
-  const real = community.length
-    ? community
-    : posts.filter((p) => p.kind === "project");
-  const projects = [...real, ...samples.slice(0, Math.max(0, 6 - real.length))]
+  const real = community;
+  const projects = [...real]
     .filter(
       (p) =>
         (category === "All projects" || p.category === category) &&
@@ -87,8 +102,7 @@ export default function CommunityFeed({
     .sort((a, b) =>
       sort === "newest"
         ? Date.parse(b.published_at) - Date.parse(a.published_at)
-        : Number(Boolean(a.demo)) - Number(Boolean(b.demo)) ||
-          (b.votes || 0) - (a.votes || 0) ||
+        : (b.votes || 0) - (a.votes || 0) ||
           Date.parse(b.published_at) - Date.parse(a.published_at),
     );
   return (
@@ -160,6 +174,11 @@ export default function CommunityFeed({
               <Editable id="copy.7" />
             </span>
           </label>
+          {projectError && (
+            <p role="status" className="muted">
+              {projectError}
+            </p>
+          )}
           {error && (
             <p role="alert" className="muted">
               <Editable id="copy.8" />
@@ -170,12 +189,12 @@ export default function CommunityFeed({
               <article className="project-card" key={p.id}>
                 <div className="project-preview">
                   <img
-                    src={safe(p.image_url) || "/placeholders/otles.svg"}
+                    src={safe(p.image_url) || "/con-logo.png"}
                     alt={`${p.title} project preview`}
                     loading="lazy"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
-                      e.currentTarget.src = "/placeholders/otles.svg";
+                      e.currentTarget.src = "/con-logo.png";
                     }}
                   />
                 </div>
@@ -185,7 +204,6 @@ export default function CommunityFeed({
                       {p.category || "Project"}
                     </span>
                     <h2>{p.title}</h2>
-                    {p.demo && <small className="demo-mark">DEMO</small>}
                   </div>
                   <p>{p.body}</p>
                   <div className="project-meta">
@@ -193,18 +211,7 @@ export default function CommunityFeed({
                       {p.author_name.slice(0, 2).toUpperCase()}
                     </span>
                     <strong>@{p.author_name}</strong>
-                    {p.demo ? (
-                      <>
-                        <span className="sample-votes">
-                          <ArrowUp size={17} />
-                          {p.votes}
-                        </span>
-                        <span className="sample-comments">
-                          <MessageCircle size={17} />
-                          {p.comments}
-                        </span>
-                      </>
-                    ) : (
+                    {
                       <>
                         <VoteButton
                           project={p as Project}
@@ -227,10 +234,10 @@ export default function CommunityFeed({
                           {p.comments || 0}
                         </a>
                       </>
-                    )}
+                    }
                     <a
                       className="project-arrow"
-                      href={`/projects/${p.demo ? "demo-" : ""}${p.id}`}
+                      href={`/projects/${p.id}`}
                       aria-label={`View ${p.title}`}
                     >
                       <ArrowRight size={18} />
@@ -246,10 +253,7 @@ export default function CommunityFeed({
             </p>
           )}
         </div>
-        <aside
-          className="showcase-rail"
-          aria-label="Community activity preview"
-        >
+        <aside className="showcase-rail" aria-label="Community highlights">
           <section className="rail-card server-panel">
             <div className="server-heading">
               <Gamepad2 size={43} />
@@ -258,124 +262,86 @@ export default function CommunityFeed({
                   <Editable id="copy.10" />
                 </h2>
                 <p>
-                  <span className="presence-dot" />
-                  42 members online <small>DEMO</small>
+                  <Editable id="discord.connection" />
                 </p>
               </div>
             </div>
-            <div className="server-bottom">
-              <div className="presence-avatars">
-                ● ● ● ● <span>+37</span>
-              </div>
-              <div className="editable-link">
-                <a className="rail-button" href="https://discord.gg/dSHMeZ4ETJ">
-                  <Copy id="discord.join" />
-                  <ArrowUpRight size={17} />
-                </a>
-                <EditButton id="discord.join" />
-              </div>
-            </div>
+            <a
+              className="rail-button"
+              href="https://discord.gg/dSHMeZ4ETJ"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Copy id="discord.join" />
+              <ArrowUpRight size={17} />
+            </a>
           </section>
           <section className="rail-card">
             <h2>
               <Trophy size={23} />
               <Editable id="copy.12" />
-              {!real.length && <small>DEMO</small>}
             </h2>
-            {(real.length
-              ? [...real]
-                  .sort((a, b) => (b.votes || 0) - (a.votes || 0))
-                  .slice(0, 3)
-              : [samples[3], samples[0], samples[5]]
-            ).map((p, i) => (
-              <a
-                href={`/projects/${p.demo ? "demo-" : ""}${p.id}`}
-                className="spotlight-row"
-                key={p.id}
-              >
-                <span>{i + 1}.</span>
-                <strong>{p.title}</strong>
-                <span className="sample-votes">
-                  <ArrowUp size={17} />
-                  {p.votes}
-                </span>
-              </a>
-            ))}
+            {[...real]
+              .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+              .slice(0, 3)
+              .map((p, i) => (
+                <a
+                  href={`/projects/${p.id}`}
+                  className="spotlight-row"
+                  key={p.id}
+                >
+                  <span>{i + 1}.</span>
+                  <strong>{p.title}</strong>
+                  <span className="sample-votes">↑ {p.votes || 0}</span>
+                </a>
+              ))}
+            {!real.length && (
+              <p>
+                <Editable id="projects.empty" />
+              </p>
+            )}
           </section>
           <section className="rail-card" id="members">
             <h2>
               <Zap size={25} />
               <Editable id="copy.14" />
-              <small>DEMO</small>
             </h2>
-            {[
-              ["AL", "alexturner", "Polishing v0.3 of Loopboard"],
-              ["MK", "mariok", "Adding new recipes to Pixel Pantry"],
-              ["SY", "sylvie", "Prototyping a map editor for Tiny Worlds"],
-            ].map(([a, n, b]) => (
-              <div className="activity-member" key={n}>
-                <span className="member-initial">{a}</span>
-                <strong>@{n}</strong>
-                <span>{b}</span>
-              </div>
+            {real.slice(0, 3).map((p) => (
+              <a
+                href={`/projects/${p.id}`}
+                className="activity-member"
+                key={p.id}
+              >
+                <span className="member-initial">
+                  {p.author_name.slice(0, 2).toUpperCase()}
+                </span>
+                <strong>{p.author_name}</strong>
+                <span>{p.title}</span>
+              </a>
             ))}
+            {!real.length && (
+              <p>
+                <Editable id="projects.empty" />
+              </p>
+            )}
           </section>
           <section className="rail-card">
             <h2>
               <Users size={23} />
               <Editable id="copy.15" />
-              <small>DEMO</small>
             </h2>
             <p>
-              <Editable id="copy.16" />
+              <Editable id="members.connection" />
             </p>
-            <div className="fresh-members">
-              {[
-                ["JD", "jdx"],
-                ["ER", "erinn"],
-                ["KC", "kcasey"],
-              ].map(([a, n]) => (
-                <div key={n}>
-                  <span className="member-initial">{a}</span>
-                  <span>@{n}</span>
-                </div>
-              ))}
-            </div>
           </section>
           <section className="rail-card">
             <h2>
               <MessageCircle size={23} />
               <Editable id="copy.17" />
-              <small>DEMO</small>
             </h2>
-            {[
-              [
-                "projects",
-                "otlesdev",
-                "shared a new update for OTLES v0.4.",
-                "16m",
-              ],
-              [
-                "show-and-tell",
-                "sylvie",
-                "posted a terrain preview from Tiny Worlds.",
-                "28m",
-              ],
-              [
-                "tools",
-                "retroterm",
-                "shared their task setup and dotfiles.",
-                "41m",
-              ],
-            ].map(([c, n, b, time]) => (
-              <div className="server-activity" key={c}>
-                <span className="project-tag"># {c}</span>
-                <p>
-                  <strong>@{n}</strong> {b}
-                  <small>{time} ago</small>
-                </p>
-              </div>
-            ))}
+            <p>
+              <Editable id="activity.connection" />
+            </p>
           </section>
         </aside>
         <section
@@ -410,9 +376,6 @@ export default function CommunityFeed({
               </article>
             ))}
         </section>
-        <p className="demo-explanation" id="demo-explanation">
-          <Editable id="copy.20" />
-        </p>
       </div>
     </>
   );

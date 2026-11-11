@@ -1,3 +1,4 @@
+import { seedOwnerProjects } from "./starter-projects.js";
 import { randomUUID } from "node:crypto";
 import { database } from "./db.js";
 import { json, ORIGIN, readSession, accessFor } from "./auth.js";
@@ -14,12 +15,14 @@ export const canReview = (grant) =>
       hasPermission(grant, "website.publish")),
   );
 export function projectInput(b) {
+  b = { ...b, git_url: b.git_url ?? "" };
   const result = {};
   for (const [k, max, required] of [
     ["title", 160, true],
     ["body", 10000, true],
     ["link_url", 2000, false],
     ["image_url", 2000, false],
+    ["git_url", 2000, false],
     ["category", 30, true],
   ]) {
     if (
@@ -32,7 +35,7 @@ export function projectInput(b) {
   }
   if (!["Apps", "Websites", "Tools", "Experiments"].includes(result.category))
     fail(400, "Choose a valid project category.");
-  for (const k of ["link_url", "image_url"])
+  for (const k of ["link_url", "image_url", "git_url"])
     if (result[k]) {
       let u;
       try {
@@ -101,6 +104,12 @@ export async function projectsHandler(
     }
     const b =
       typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    if (action === "seed" && req.method === "POST") {
+      const grant = await accessLookup(session);
+      if (!grant.owner)
+        fail(403, "Only the site owner can create starter projects.");
+      return json(res, 200, await seedOwnerProjects(db, user));
+    }
     if (action === "list" && req.method === "GET")
       return json(res, 200, { projects: await publicProjects(db, user?.id) });
     if (action === "mine" && req.method === "GET") {
