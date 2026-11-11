@@ -162,6 +162,7 @@ function App() {
           <a href="#submit">SUBMIT</a>
           <a href="#members">MEMBERS</a>
           <a href="#about">ABOUT</a>
+          <a href="/admin">ADMIN</a>
         </nav>
 
         <a
