@@ -55,3 +55,21 @@ All admin endpoints use server-side `requireStaff`; channel mutations and databa
 Browser sign-in verification requires a real Discord user to complete OAuth. `vite` serves frontend development only; use Vercel Functions for the `/api` routes.
 
 Production database connectivity and real Discord publication must be checked by the signed-in owner. Preview deployments do not receive production database credentials.
+
+## Staff access and layout (schema version 2)
+
+The admin uses a fixed identity header, a left sidebar, larger type and separate surfaces for editing, preview, publishing, channels, staff and reports. Channel setup accepts just a webhook URL; a label is optional and defaults to the Discord webhook name. The embed preview is collapsed until requested.
+
+After deploying this version to an existing install, open **Database → Apply storage update** as an owner/admin. This adds con.staff_users and con.staff_audit inside the existing private con schema. Existing posts, channel settings and deliveries remain intact. The update is transactional and idempotent. It is not applied during deployment.
+
+Under **Staff access**, add a Discord user ID and choose:
+
+| Access | Permissions |
+| --- | --- |
+| Admin | Manage staff and channels; edit and publish content; view reports; apply storage updates. |
+| Moderator | Edit and publish content through existing channels; view reports. |
+| Report | Read published-content totals and delivery history only. No draft access or mutations. |
+
+These are application permissions; they do not change Discord server roles. Accounts sign in using Discord OAuth. Assigned permissions are loaded from the database on every request, so disabling a member revokes an existing session's privileges immediately. A disabled database entry overrides Discord server-role fallback. Failed database permission lookups deny access.
+
+DISCORD_ADMIN_IDS remains the protected owner allowlist. Owner accounts cannot be edited through Staff access, and administrators cannot modify their own access. Staff changes are recorded in the private audit table. No new real staff account is granted access by deploying this release.

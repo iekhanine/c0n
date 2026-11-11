@@ -70,6 +70,26 @@ REVOKE ALL ON SCHEMA con FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON ALL TABLES IN SCHEMA con FROM PUBLIC, anon, authenticated;
 INSERT INTO con.schema_migrations(version, app) VALUES (1, 'cult-of-nix0n');
 `;
+// HEADER 003: Staff access is an additive migration; existing content is preserved.
+export const staffMigration = `
+CREATE TABLE con.staff_users (
+ discord_id text PRIMARY KEY CHECK (discord_id ~ '^[0-9]{17,20}$'),
+ display_name text NOT NULL DEFAULT '' CHECK (length(display_name)<=80),
+ access text NOT NULL CHECK (access IN ('admin','moderator','report')),
+ enabled boolean NOT NULL DEFAULT true,
+ created_by text NOT NULL, updated_by text NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE con.staff_audit (
+ id uuid PRIMARY KEY, actor_id text NOT NULL, target_id text NOT NULL,
+ old_access text, new_access text NOT NULL, old_enabled boolean, new_enabled boolean NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE con.staff_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE con.staff_audit ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON con.staff_users,con.staff_audit FROM PUBLIC,anon,authenticated;
+INSERT INTO con.schema_migrations(version,app) VALUES (2,'cult-of-nix0n');
+`;
 export async function databaseStatus(db = database()) {
   const result = await db.query(
     "SELECT to_regclass('con.schema_migrations')::text AS marker",
@@ -78,9 +98,14 @@ export async function databaseStatus(db = database()) {
   const marker = await db.query(
     "SELECT version, app FROM con.schema_migrations WHERE version = 1",
   );
+  const latest = await db.query(
+    "SELECT max(version)::integer AS version FROM con.schema_migrations",
+  );
   return {
     connected: true,
     initialized: marker.rows[0]?.app === "cult-of-nix0n",
+    schema_version: latest.rows[0].version,
+    needs_upgrade: latest.rows[0].version < 2,
   };
 }
 export async function initializeDatabase(db = database()) {
@@ -117,8 +142,17 @@ export async function initializeDatabase(db = database()) {
         );
       await client.query(migration);
     }
+    const current = await client.query(
+      "SELECT 1 FROM con.schema_migrations WHERE version=2",
+    );
+    if (!current.rowCount) await client.query(staffMigration);
     await client.query("COMMIT");
-    return { connected: true, initialized: true };
+    return {
+      connected: true,
+      initialized: true,
+      schema_version: 2,
+      needs_upgrade: false,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

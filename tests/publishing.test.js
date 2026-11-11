@@ -11,7 +11,7 @@ import {
   deliveryAction,
   discordPayload,
 } from "../server/content.js";
-import { publish, reconcile, adminHandler } from "../server/admin.js";
+import { publish, reconcile, adminHandler, webhooks } from "../server/admin.js";
 
 process.env.SESSION_SECRET =
   "a-test-only-encryption-secret-at-least-thirty-two-characters";
@@ -153,6 +153,8 @@ test("database migration and delivery lifecycle", async (t) => {
         assert.deepEqual(await databaseStatus(db), {
           connected: true,
           initialized: true,
+          schema_version: 2,
+          needs_upgrade: false,
         });
         assert.equal(
           (await db.query("SELECT id FROM public.existing_app")).rows[0].id,
@@ -167,6 +169,46 @@ test("database migration and delivery lifecycle", async (t) => {
     );
     const original = globalThis.fetch;
     try {
+      await t.test(
+        "connects a channel from its URL alone without posting or exposing its token",
+        async () => {
+          let calls = 0;
+          globalThis.fetch = async (_url, options) => {
+            calls++;
+            assert.equal(options.method, undefined);
+            return Response.json({
+              id: "123456789012345678",
+              channel_id: channel,
+              guild_id: "345678901234567890",
+              type: 1,
+              name: "Transmissions",
+            });
+          };
+          const response = () => ({
+            headers: {},
+            setHeader(k, v) {
+              this.headers[k] = v;
+            },
+            end(body) {
+              this.body = body;
+            },
+          });
+          const saved = response();
+          await webhooks(
+            { method: "POST", body: { url: hookUrl, enabled: true } },
+            saved,
+            db,
+            { user: { id: "owner" } },
+          );
+          assert.equal(calls, 1);
+          const read = response();
+          await webhooks({ method: "GET" }, read, db, {});
+          const hook = JSON.parse(read.body).webhooks[0];
+          assert.equal(hook.name, "Transmissions");
+          assert.equal(read.body.includes(hookUrl), false);
+          assert.equal(read.body.includes("url_cipher"), false);
+        },
+      );
       await t.test(
         "publishes once, persists the message ID, and edits on the next publish",
         async () => {
