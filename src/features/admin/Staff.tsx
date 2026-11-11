@@ -1,37 +1,60 @@
 import { useEffect, useState } from "react";
-import { LockKeyhole, Plus, Save, Users } from "lucide-react";
+import { Check, LockKeyhole, RefreshCw, Save, Users, X } from "lucide-react";
 import { adminApi } from "./adminApi";
 import type { Access } from "./adminApi";
-
+import {
+  PERMISSION_GROUPS,
+  presetPermissions,
+  withViewPermissions,
+  channelLabel,
+} from "../../../shared/permissions.js";
 type Member = {
   discord_id: string;
   display_name: string;
+  username?: string;
   access: Access;
   enabled: boolean;
   owner: boolean;
+  approval_status: "pending" | "approved" | "rejected";
+  permissions: string[];
+  all_channels: boolean;
+  channel_ids: string[];
+  requested_at?: string;
+  last_seen_at?: string;
+  updated_at?: string;
 };
-const empty = {
-  discord_id: "",
-  display_name: "",
-  access: "moderator" as Access,
-  enabled: true,
-};
-const labels = { admin: "Admin", moderator: "Moderator", report: "Report" };
-
-// HEADER 001: Staff grants are explicit Discord IDs and checked server-side.
-export default function Staff({ currentId }: { currentId: string }) {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [form, setForm] = useState({ ...empty });
-  const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(true);
+const when = (value?: string) =>
+  value ? new Date(value).toLocaleString() : "—";
+export default function Staff({
+  currentId,
+  permissions,
+  allChannels,
+  channelIds,
+}: {
+  currentId: string;
+  permissions: string[];
+  allChannels: boolean;
+  channelIds: string[];
+}) {
+  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
+  const [members, setMembers] = useState<Member[]>([]),
+    [form, setForm] = useState<Member | null>(null),
+    [filter, setFilter] = useState<"pending" | "approved" | "other">("pending"),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [loading, setLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    adminApi<{ staff: Member[] }>("staff")
-      .then((data) => {
-        if (active) setMembers(data.staff);
+    Promise.all([
+      adminApi<{ staff: Member[] }>("staff"),
+      adminApi<{ webhooks: { id: string; name: string }[] }>("webhooks"),
+    ])
+      .then(([d, c]) => {
+        if (active) {
+          setMembers(d.staff);
+          setChannels(c.webhooks);
+        }
       })
       .catch((err) => {
         if (active) setError(err.message);
@@ -43,190 +66,349 @@ export default function Staff({ currentId }: { currentId: string }) {
       active = false;
     };
   }, []);
+  async function refresh() {
+    setError("");
+    try {
+      setMembers((await adminApi<{ staff: Member[] }>("staff")).staff);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load requests.");
+    }
+  }
+  function check(key: string, value: boolean) {
+    if (!form) return;
+    let next = form.permissions.filter((p) => p !== key);
+    if (value) next.push(key);
+    else if (key.endsWith(".view"))
+      next = next.filter((p) => !p.startsWith(key.split(".")[0] + "."));
+    setForm({ ...form, permissions: withViewPermissions(next) });
+  }
+  async function save(reject = false) {
+    if (!form) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await adminApi("staff", "POST", {
+        discord_id: form.discord_id,
+        display_name: form.display_name,
+        access: form.access,
+        enabled: reject ? false : form.enabled,
+        approval_status: reject ? "rejected" : "approved",
+        permissions: reject ? [] : form.permissions,
+        all_channels: reject ? false : form.all_channels,
+        channel_ids: reject ? [] : form.channel_ids,
+        expected_updated_at: form.updated_at,
+      });
+      setMembers((await adminApi<{ staff: Member[] }>("staff")).staff);
+      setNotice(
+        reject
+          ? "Request rejected. This account has no access."
+          : "Access saved. Their next status check will open the approved tools.",
+      );
+      setForm(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save access.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  const pending = members.filter((m) => m.approval_status === "pending");
+  const visible = members.filter((m) =>
+    filter === "pending"
+      ? m.approval_status === "pending"
+      : filter === "approved"
+        ? m.approval_status === "approved" && m.enabled
+        : m.approval_status === "rejected" ||
+          (!m.enabled && m.approval_status !== "pending"),
+  );
   return (
     <div className="con-staff-view">
-      <div className="con-permission-guide">
-        <article>
-          <span className="con-role-badge admin">Admin</span>
-          <p>Manage staff and channels. Create, edit, and publish content.</p>
-        </article>
-        <article>
-          <span className="con-role-badge moderator">Moderator</span>
-          <p>Create, edit, and publish content using existing channels.</p>
-        </article>
-        <article>
-          <span className="con-role-badge report">Report</span>
+      <div className="con-approval-intro">
+        <Users size={24} />
+        <div>
+          <h2>They sign in. You decide.</h2>
           <p>
-            Read publishing totals and delivery history. No editing or
-            publishing.
+            Ask them to log in with Discord on this site. Their request appears
+            here automatically. No IDs to enter.
           </p>
-        </article>
+        </div>
+        <button disabled={busy} onClick={() => void refresh()}>
+          <RefreshCw size={16} />
+          Refresh
+        </button>
       </div>
       {error && (
-        <div className="con-tool-error" role="alert">
+        <div role="alert" className="con-tool-error">
           {error}
         </div>
       )}
       {notice && (
-        <p className="con-tool-notice" role="status">
+        <p role="status" className="con-tool-notice">
+          <Check size={16} />
           {notice}
         </p>
       )}
       <div className="con-staff-grid">
         <section className="con-surface con-staff-list">
-          <div className="con-list-heading">
-            <h2>
-              <Users size={20} /> Staff members
-            </h2>
+          <div className="con-request-filters">
             <button
-              disabled={busy}
-              onClick={() => {
-                setForm({ ...empty });
-                setEditing(false);
-                setNotice("");
-              }}
+              aria-pressed={filter === "pending"}
+              onClick={() => setFilter("pending")}
             >
-              <Plus size={17} /> Add staff
+              Pending <b>{pending.length}</b>
+            </button>
+            <button
+              aria-pressed={filter === "approved"}
+              onClick={() => setFilter("approved")}
+            >
+              Approved
+            </button>
+            <button
+              aria-pressed={filter === "other"}
+              onClick={() => setFilter("other")}
+            >
+              Disabled / rejected
             </button>
           </div>
           {loading ? (
             <p role="status" className="con-tool-empty">
-              Loading staff…
+              Loading accounts…
+            </p>
+          ) : !visible.length ? (
+            <p className="con-tool-empty">
+              {filter === "pending"
+                ? "No pending requests. New Discord sign-ins will appear here."
+                : "No accounts in this group."}
             </p>
           ) : (
-            members.map((member) => (
-              <article className="con-staff-row" key={member.discord_id}>
+            visible.map((m) => (
+              <article
+                className={`con-staff-row ${form?.discord_id === m.discord_id ? "selected" : ""}`}
+                key={m.discord_id}
+              >
                 <div>
-                  <strong>{member.display_name || "Discord member"}</strong>
-                  <code>{member.discord_id}</code>
-                  <span className={`con-role-badge ${member.access}`}>
-                    {member.owner ? "Owner" : labels[member.access]}
+                  <strong>
+                    {m.display_name || m.username || "Discord member"}
+                  </strong>
+                  {m.username && (
+                    <span className="con-request-username">@{m.username}</span>
+                  )}
+                  <code>{m.discord_id}</code>
+                  <span className={`con-role-badge ${m.access}`}>
+                    {m.owner
+                      ? "Owner"
+                      : m.approval_status === "pending"
+                        ? "Pending approval"
+                        : m.access}
                   </span>
-                  {!member.enabled && (
-                    <span className="con-disabled-badge">Disabled</span>
+                  {m.approval_status === "pending" && (
+                    <small>Requested {when(m.requested_at)}</small>
                   )}
                 </div>
-                {member.owner || member.discord_id === currentId ? (
+                {m.owner || m.discord_id === currentId ? (
                   <span className="con-protected">
-                    <LockKeyhole size={14} />{" "}
-                    {member.owner ? "Protected" : "Your account"}
+                    <LockKeyhole size={14} />
+                    Protected
                   </span>
                 ) : (
                   <button
                     disabled={busy}
                     onClick={() => {
                       setForm({
-                        discord_id: member.discord_id,
-                        display_name: member.display_name,
-                        access: member.access,
-                        enabled: member.enabled,
+                        ...m,
+                        enabled:
+                          m.approval_status === "pending" ? true : m.enabled,
+                        permissions: [...(m.permissions || [])],
                       });
-                      setEditing(true);
                       setNotice("");
                     }}
                   >
-                    Edit access
+                    {m.approval_status === "pending"
+                      ? "Review request"
+                      : "Edit permissions"}
                   </button>
                 )}
               </article>
             ))
           )}
         </section>
-        <form
-          className="con-surface con-staff-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void (async () => {
-              setBusy(true);
-              setError("");
-              setNotice("");
-              try {
-                await adminApi("staff", "POST", form);
-                const result = await adminApi<{ staff: Member[] }>("staff");
-                setMembers(result.staff);
-                setForm({ ...empty });
-                setEditing(false);
-                setNotice(
-                  "Staff access saved. It takes effect on their next request.",
-                );
-              } catch (err) {
-                setError(
-                  err instanceof Error ? err.message : "Could not save access.",
-                );
-              } finally {
-                setBusy(false);
-              }
-            })();
-          }}
-        >
-          <span className="con-label">
-            {editing ? "EDIT ACCESS" : "NEW STAFF MEMBER"}
-          </span>
-          <h2>
-            {editing
-              ? "Update their permissions."
-              : "Invite someone to the controls."}
-          </h2>
-          <fieldset disabled={busy}>
-            <label>
-              Discord user ID
-              <input
-                required
-                inputMode="numeric"
-                pattern="[0-9]{17,20}"
-                disabled={editing}
-                value={form.discord_id}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, discord_id: e.target.value.trim() }))
-                }
-                placeholder="Paste their Discord user ID"
-              />
-            </label>
-            <label>
-              Display name <span>(optional)</span>
-              <input
-                maxLength={80}
-                value={form.display_name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, display_name: e.target.value }))
-                }
-                placeholder="A name you recognize"
-              />
-            </label>
-            <label>
-              Access level
-              <select
-                value={form.access}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, access: e.target.value as Access }))
-                }
-              >
-                <option value="admin">Admin</option>
-                <option value="moderator">Moderator</option>
-                <option value="report">Report · read only</option>
-              </select>
-            </label>
-            <label className="con-check">
-              <input
-                type="checkbox"
-                checked={form.enabled}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, enabled: e.target.checked }))
-                }
-              />{" "}
-              Allow this account to sign in as staff
-            </label>
-            <p className="con-tool-hint">
-              They sign in with their own Discord account. Disabling access
-              overrides server-role access too. Owner accounts cannot be changed
-              here.
-            </p>
-            <button className="con-primary" type="submit">
-              <Save size={17} />{" "}
-              {busy ? "Saving…" : editing ? "Save access" : "Add staff member"}
-            </button>
-          </fieldset>
-        </form>
+        <section className="con-surface con-staff-form">
+          {!form ? (
+            <div className="con-tool-empty">
+              <Users size={30} />
+              <h2>Select a request or staff member.</h2>
+              <p>
+                Review their permissions here before approving access. New
+                accounts start with nothing enabled.
+              </p>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void save();
+              }}
+            >
+              <span className="con-label">
+                {form.approval_status === "pending"
+                  ? "REVIEW REQUEST"
+                  : "EDIT PERMISSIONS"}
+              </span>
+              <h2>{form.display_name || form.username || "Discord member"}</h2>
+              <p className="con-tool-hint">
+                These permissions apply to this website. They do not change
+                Discord server roles.
+              </p>
+              <fieldset disabled={busy}>
+                <label>
+                  Role label
+                  <select
+                    value={form.access}
+                    onChange={(e) =>
+                      setForm({ ...form, access: e.target.value as Access })
+                    }
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="report">Report</option>
+                  </select>
+                </label>
+                <div className="con-permission-presets">
+                  <span>Start with a preset:</span>
+                  {(["admin", "moderator", "report"] as Access[]).map(
+                    (role) => (
+                      <button
+                        type="button"
+                        key={role}
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            access: role,
+                            permissions: presetPermissions(role).filter((p) =>
+                              permissions.includes(p),
+                            ),
+                          })
+                        }
+                      >
+                        {role === "admin"
+                          ? "Admin"
+                          : role === "moderator"
+                            ? "Moderator"
+                            : "Report"}
+                      </button>
+                    ),
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, permissions: [] })}
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="con-permission-checklist">
+                  {PERMISSION_GROUPS.map((group) => (
+                    <fieldset key={group.label}>
+                      <legend>{group.label}</legend>
+                      {group.items.map(([key, label]) => (
+                        <label className="con-check" key={key}>
+                          <input
+                            type="checkbox"
+                            disabled={!permissions.includes(key)}
+                            checked={form.permissions.includes(key)}
+                            onChange={(e) => check(key, e.target.checked)}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </fieldset>
+                  ))}
+                </div>
+                <div className="con-permission-checklist">
+                  <fieldset>
+                    <legend>Allowed Discord posting channels</legend>
+                    <label className="con-check">
+                      <input
+                        type="checkbox"
+                        disabled={!allChannels}
+                        checked={form.all_channels}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            all_channels: e.target.checked,
+                            channel_ids: [],
+                          })
+                        }
+                      />
+                      All current and future channels
+                    </label>
+                    {!form.all_channels &&
+                      channels.map((channel) => (
+                        <label className="con-check" key={channel.id}>
+                          <input
+                            type="checkbox"
+                            disabled={
+                              !allChannels && !channelIds.includes(channel.id)
+                            }
+                            checked={form.channel_ids.includes(channel.id)}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                channel_ids: e.target.checked
+                                  ? [...form.channel_ids, channel.id]
+                                  : form.channel_ids.filter(
+                                      (id) => id !== channel.id,
+                                    ),
+                              })
+                            }
+                          />
+                          {channelLabel(channel.name)}
+                        </label>
+                      ))}
+                    <p className="con-tool-hint">
+                      Content publishing permission and an allowed channel are
+                      both required. Website publishing is controlled separately
+                      above.
+                    </p>
+                  </fieldset>
+                </div>
+                <label className="con-check">
+                  <input
+                    type="checkbox"
+                    checked={form.enabled}
+                    onChange={(e) =>
+                      setForm({ ...form, enabled: e.target.checked })
+                    }
+                  />
+                  Enable this account’s approved access
+                </label>
+                <p className="con-tool-hint">
+                  {form.permissions.length} permissions selected. The role label
+                  does not add permissions; only checked items are granted.
+                </p>
+                <div className="con-button-row">
+                  <button type="submit" className="con-primary">
+                    <Save size={17} />
+                    {busy
+                      ? "Saving…"
+                      : form.approval_status === "pending"
+                        ? "Approve & save access"
+                        : "Save permissions"}
+                  </button>
+                  {form.approval_status === "pending" && (
+                    <button
+                      type="button"
+                      className="con-danger"
+                      onClick={() => void save(true)}
+                    >
+                      <X size={17} />
+                      Reject request
+                    </button>
+                  )}
+                </div>
+              </fieldset>
+            </form>
+          )}
+        </section>
       </div>
     </div>
   );

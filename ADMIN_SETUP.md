@@ -1,75 +1,64 @@
-# CoN administration
+# Cult of nix0n administration
 
-## Discord login
+## Production configuration
 
-The public showcase stays at `/`. Staff sign in at `/admin` through Discord.
-The exact registered redirect is:
+The public feed is at `/`; the staff workspace is at `/admin`.
+Discord's exact OAuth redirect is `https://c0n.ivansays.com/api/auth/discord/callback`.
 
-`https://c0n.ivansays.com/api/auth/discord/callback`
+Server-only Production values in Vercel:
 
-Set Production environment variables in Vercel:
+- `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`: Discord OAuth application.
+- `SESSION_SECRET`: random secret of at least 32 characters; rotating it signs everyone out.
+- `DISCORD_ADMIN_IDS`: protected owner Discord IDs, comma-separated. Owners retain recovery access and all permissions.
+- `DATABASE_URL`: Supabase transaction-pooler URI, with its password percent-encoded.
+- `DATABASE_CA_CERT`: the downloaded Supabase root CA PEM. Certificate verification stays enabled.
+- `WEBHOOK_ENCRYPTION_KEY`: independent random secret. Keep stable; changing it without re-encrypting stored records makes existing webhook tokens unreadable.
 
-- `DISCORD_CLIENT_ID`: Discord application ID.
-- `DISCORD_CLIENT_SECRET`: server-only Discord OAuth secret.
-- `SESSION_SECRET`: random secret, at least 32 characters. Changing it signs out every session.
-- `DISCORD_ADMIN_IDS`: comma-separated Discord user IDs with owner/admin access.
+No bot is required. Login requests only the Discord profile (`identify`). The OAuth token is used server-side to obtain the profile and is not retained in the session. Cookies are encrypted, Secure, HttpOnly, SameSite=Lax and expire after at most thirty minutes.
 
-Optional role access:
+## Storage update
 
-- `DISCORD_GUILD_ID`: Cult of nix0n server ID.
-- `DISCORD_ADMIN_ROLE_IDS`: comma-separated admin role IDs.
-- `DISCORD_MOD_ROLE_IDS`: comma-separated moderator role IDs.
+After this release, open **Database → Apply storage update** as the owner. Migration 3 adds pending-request fields, explicit permissions, allowed posting channels, expanded audit data and published website snapshots. Existing approved database staff keep their previous capabilities and current/future channel access. New sign-ins get no rights until reviewed. Discord server-role fallback is no longer used.
 
-Redeploy after changing environment variables. No bot token is needed. Login requests only `identify` and `guilds.members.read`. The authenticated user sees their own Discord ID so the owner can configure the initial allowlist. There is no automatic first-user administrator.
+Updates are transactional and idempotent, confined to the private `con` schema. Existing posts, webhooks and deliveries are preserved. Public/other application schemas are not modified. The public feed has a read-only compatibility path during the upgrade; admin tools wait for the update. Schema migrations never run during deployment.
 
-OAuth state lasts ten minutes. Encrypted, HttpOnly, Secure, SameSite=Lax session cookies last at most thirty minutes. Tokens are not returned to browser JavaScript. Role membership is verified against Discord when staff permissions are checked. A Discord lookup failure never grants access.
+CoN tables have RLS enabled and no browser-facing policies. `anon` and `authenticated` have no schema/table privileges. Do not expose `con` through the Supabase Data API. Queries use parameters and schema-qualified names.
 
-## Publishing and storage
+## Approval workflow
 
-Set Production secrets `DATABASE_URL` (Supabase transaction pooler, port 6543) and `WEBHOOK_ENCRYPTION_KEY` (independent random secret of at least 32 characters). Optional `DATABASE_CA_CERT` accepts the database CA PEM if its certificate is not in Node's trust store. TLS certificate verification is always enabled. Keep the webhook encryption key stable: changing it without re-encrypting existing records makes stored connections unreadable.
+1. A person signs in with Discord and opens the site/admin page.
+2. Their first authenticated session check creates a pending request with no permissions or allowed channels. Later sign-ins update profile/last-seen fields only; they never re-enable disabled/rejected access.
+3. The waiting page checks approval every fifteen seconds and has a manual Check status button.
+4. A staff manager opens **Staff approval → Pending**, selects the request, checks capabilities and allowed channels, and approves it.
+5. The person's next request/status check opens the enabled tools. Every server action re-checks their current permissions.
 
-At `/admin`, open Database. Check the connection, then select **Initialize CoN storage** as an administrator. This creates only the private `con` schema and its posts, webhooks, deliveries and migration tables. It refuses an existing schema with unrelated relations or functions. Setup is transactional and idempotent. RLS is enabled without public policies; anon/authenticated schema access is revoked. Do not expose the con schema through the Supabase Data API.
+The role name (Admin, Moderator, Report) is a label. Preset buttons fill the checklist; only checked capabilities are granted. Capabilities are independent for Updates and Projects: view, create, edit, publish, and delete unpublished drafts. Additional checks cover website publication, channel management, reports, account approval and storage updates.
 
-The shared database account needs permission to create and access this schema. All application queries use schema-qualified names and parameterized values. No changes are made to public or other application schemas. Integration tests use an isolated in-memory PostgreSQL engine rather than the shared production database.
+Discord posting needs both the content's publish capability and an allowed channel. Website publication additionally needs `website.publish`. Choosing “All current and future channels” explicitly grants that scope. New requests default to none. Checking a content action also checks its view permission; unchecking view clears the other actions in that group.
 
-### Workflow
+Owners cannot be changed through the UI. No one can modify their own access. A staff manager cannot grant or manage permissions/channels beyond their own authority. Approval, permission, channel-scope and enabled-state changes are recorded in `con.staff_audit`.
 
-1. Add channel webhooks under Channels. Saving verifies the webhook with Discord without sending a message. Stored tokens are encrypted and never returned by the API. Labels and enabled state can be edited; a replacement token can be pasted. An existing connection with message history cannot be repointed at another channel or webhook.
-2. Create an Update or Project. Image and destination links are optional HTTPS URLs. Projects can be marked featured. Save Draft does not publish a new post.
-3. Preview the embed, choose Website and/or a Discord channel, then publish. Public content appears on `/`; the public feed never returns drafts, delivery records, or webhook metadata.
-4. Edit a published post and save. Website content updates immediately; select the same Discord channel and Publish to PATCH the original message. Each channel keeps its own message ID and content version.
-5. Remove from Website unpublishes only the public website entry; Discord messages remain. Only drafts without delivery history may be deleted.
+## Editing and publishing
 
-Discord delivery reserves a durable record before network I/O. Unconfirmed sends block blind retries. Check Discord and use **Link an existing Discord message** to recover an uncertain send or import a prior message from the same webhook. Wait two minutes before recovering an in-progress request. A linked message is not modified until the next Publish. If no message was created after an ambiguous send, an administrator must investigate the delivery record rather than repost automatically.
+The left post list shows each website/Discord destination, original posting time and last sync time. Discord message creation time is decoded from its message ID using Discord's documented snowflake format; later sync time comes from the delivery record. Times use the viewer's local timezone.
 
-Published cards use the public logo URL, disable mentions, and replace attachments with the configured image URL. Linking and updating an older message replaces its embed with the current editor content, including removing old uploaded attachments. It does not import that message's content automatically.
+Selecting a post with one existing Discord destination selects that channel. Multiple destinations require an explicit choice. The sticky top toolbar shows its current targets and Save & Update / Save & Publish actions.
 
-All admin endpoints use server-side `requireStaff`; channel mutations and database setup require administrator access. POST/PATCH/DELETE check the canonical Origin. Publishing verifies the post version shown in the preview. There are no scheduled posts or automatic daily sends in this release.
+Saving edits changes only the draft. Published website snapshots and Discord messages remain unchanged until explicitly published. Publish can target the website, one allowed Discord channel, or both. The same post can have copies in multiple channels, each with its own message ID and last-synced version. Updating one destination does not update the others automatically.
 
-## Validation
+The public homepage leads with posts in a compact sidebar/header layout. Project copy describes work by community builders. All channel labels are normalized to a single leading `#`.
 
-`npm run build`
+## Channels and recovery
 
-`node --test tests/*.test.js`
+Under **Channels**, paste a Discord webhook URL; its optional label defaults to the webhook name. Saving verifies the connection without sending a message. Tokens are encrypted and never returned to browser JavaScript. Used connections cannot be repointed to a different webhook/channel; disable one and create another instead.
 
-Browser sign-in verification requires a real Discord user to complete OAuth. `vite` serves frontend development only; use Vercel Functions for the `/api` routes.
+Delivery reservations are stored before network I/O. Timeouts/ambiguous sends block blind retries. Check Discord, then use **Link or recover an existing Discord message** to attach its ID. A linked message is not changed until a later explicit publication. Linking verifies webhook/channel ownership and respects allowed-channel permissions. A send still marked in progress must wait two minutes before recovery.
 
-Production database connectivity and real Discord publication must be checked by the signed-in owner. Preview deployments do not receive production database credentials.
+Updating a linked older message replaces its embed and uploaded attachments with the current editor configuration. Mentions are disabled. Images use optional HTTPS URLs. There are no scheduled posts, automatic daily sends, file uploads or Discord server-role changes in this release.
 
-## Staff access and layout (schema version 2)
+## Verification
 
-The admin uses a fixed identity header, a left sidebar, larger type and separate surfaces for editing, preview, publishing, channels, staff and reports. Channel setup accepts just a webhook URL; a label is optional and defaults to the Discord webhook name. The embed preview is collapsed until requested.
+- `npm run build`
+- `node --test tests/*.test.js`
 
-After deploying this version to an existing install, open **Database → Apply storage update** as an owner/admin. This adds con.staff_users and con.staff_audit inside the existing private con schema. Existing posts, channel settings and deliveries remain intact. The update is transactional and idempotent. It is not applied during deployment.
-
-Under **Staff access**, add a Discord user ID and choose:
-
-| Access | Permissions |
-| --- | --- |
-| Admin | Manage staff and channels; edit and publish content; view reports; apply storage updates. |
-| Moderator | Edit and publish content through existing channels; view reports. |
-| Report | Read published-content totals and delivery history only. No draft access or mutations. |
-
-These are application permissions; they do not change Discord server roles. Accounts sign in using Discord OAuth. Assigned permissions are loaded from the database on every request, so disabling a member revokes an existing session's privileges immediately. A disabled database entry overrides Discord server-role fallback. Failed database permission lookups deny access.
-
-DISCORD_ADMIN_IDS remains the protected owner allowlist. Owner accounts cannot be edited through Staff access, and administrators cannot modify their own access. Staff changes are recorded in the private audit table. No new real staff account is granted access by deploying this release.
+Tests use isolated in-memory PostgreSQL and stubbed Discord responses. They never query/migrate the shared production database or send real Discord posts. Preview deployments do not receive production database credentials. Authenticated browser QA needs an actual Discord session; the cloud browser's session is separate from the owner's browser.

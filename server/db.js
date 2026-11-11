@@ -1,4 +1,5 @@
 import pg from "pg";
+import { presetPermissions } from "../shared/permissions.js";
 
 // HEADER 001: Server-only pooled database connection. No credentials in logs.
 let pool;
@@ -90,6 +91,25 @@ ALTER TABLE con.staff_audit ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON con.staff_users,con.staff_audit FROM PUBLIC,anon,authenticated;
 INSERT INTO con.schema_migrations(version,app) VALUES (2,'cult-of-nix0n');
 `;
+export const approvalMigration = `
+ALTER TABLE con.staff_users ADD COLUMN username text, ADD COLUMN avatar text,
+ ADD COLUMN approval_status text NOT NULL DEFAULT 'approved' CHECK (approval_status IN ('pending','approved','rejected')),
+ ADD COLUMN permissions jsonb, ADD COLUMN channel_ids jsonb NOT NULL DEFAULT '[]'::jsonb, ADD COLUMN all_channels boolean NOT NULL DEFAULT false, ADD COLUMN requested_at timestamptz, ADD COLUMN last_seen_at timestamptz;
+UPDATE con.staff_users SET permissions=CASE access
+ WHEN 'admin' THEN '${JSON.stringify(presetPermissions("admin"))}'::jsonb
+ WHEN 'moderator' THEN '${JSON.stringify(presetPermissions("moderator"))}'::jsonb
+ ELSE '["reports.view"]'::jsonb END;
+UPDATE con.staff_users SET all_channels=true;
+ALTER TABLE con.posts ADD COLUMN published_snapshot jsonb, ADD COLUMN published_version integer, ADD COLUMN published_updated_at timestamptz;
+UPDATE con.posts SET published_snapshot=jsonb_build_object('kind',kind,'title',title,'body',body,'link_url',link_url,'image_url',image_url,'featured',featured,'author_name',author_name),published_version=version,published_updated_at=updated_at WHERE published_at IS NOT NULL;
+ALTER TABLE con.staff_users ALTER COLUMN permissions SET NOT NULL, ALTER COLUMN permissions SET DEFAULT '[]'::jsonb,
+ ALTER COLUMN approval_status SET DEFAULT 'pending';
+ALTER TABLE con.staff_users ADD CONSTRAINT con_permissions_array CHECK (jsonb_typeof(permissions)='array');
+ALTER TABLE con.staff_audit ADD COLUMN old_permissions jsonb, ADD COLUMN new_permissions jsonb,
+ ADD COLUMN old_status text, ADD COLUMN new_status text, ADD COLUMN old_channels jsonb, ADD COLUMN new_channels jsonb, ADD COLUMN old_all_channels boolean, ADD COLUMN new_all_channels boolean;
+UPDATE con.webhooks SET name='#' || left(coalesce(nullif(regexp_replace(trim(name),'^#+[[:space:]]*',''),''),'channel'),79);
+INSERT INTO con.schema_migrations(version,app) VALUES (3,'cult-of-nix0n');
+`;
 export async function databaseStatus(db = database()) {
   const result = await db.query(
     "SELECT to_regclass('con.schema_migrations')::text AS marker",
@@ -105,7 +125,7 @@ export async function databaseStatus(db = database()) {
     connected: true,
     initialized: marker.rows[0]?.app === "cult-of-nix0n",
     schema_version: latest.rows[0].version,
-    needs_upgrade: latest.rows[0].version < 2,
+    needs_upgrade: latest.rows[0].version < 3,
   };
 }
 export async function initializeDatabase(db = database()) {
@@ -146,11 +166,15 @@ export async function initializeDatabase(db = database()) {
       "SELECT 1 FROM con.schema_migrations WHERE version=2",
     );
     if (!current.rowCount) await client.query(staffMigration);
+    const approval = await client.query(
+      "SELECT 1 FROM con.schema_migrations WHERE version=3",
+    );
+    if (!approval.rowCount) await client.query(approvalMigration);
     await client.query("COMMIT");
     return {
       connected: true,
       initialized: true,
-      schema_version: 2,
+      schema_version: 3,
       needs_upgrade: false,
     };
   } catch (error) {

@@ -1,191 +1,210 @@
-/* HEADER 001: Public transmissions and live project cards. */
-.con-community-feed {
-  text-align: left;
+/* HEADER 001: Posts lead the public page inside the same fixed-header/sidebar shell. */
+.con-admin .con-tool-tabs a {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 14px;
+  min-height: 49px;
+  color: #c0cdc4;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.con-admin .con-tool-tabs a:hover {
+  background: #2b3d2e;
+  border-color: #4d6548;
+  color: #e8efd7;
+}
+.con-admin .con-tool-tabs a svg {
+  color: #a4bb94;
+  flex-shrink: 0;
+}
+.con-public-shell .con-admin-main {
+  max-width: 1480px;
+}
+.con-public-account {
+  font-size: 14px;
+  color: #c7d5c8;
 }
 .con-public-section {
-  padding: 35px 25px;
-  border-top: 1px solid var(--border);
+  scroll-margin-top: 105px;
+  margin-bottom: 50px;
 }
-.con-public-section > .section-header > span {
-  color: #a9a392;
-  font-size: 9px;
-  letter-spacing: 0.1em;
+.con-feed-heading {
+  margin-bottom: 25px;
 }
-.con-public-empty {
-  padding: 28px 0;
+.con-feed-heading h1,
+.con-feed-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 8px 0 12px;
+}
+.con-feed-heading h1 {
+  font-size: 30px;
+}
+.con-feed-heading h2 {
+  font-size: 25px;
+}
+.con-feed-heading h1 svg {
+  color: #b3cd8b;
+}
+.con-feed-heading p {
+  font-size: 16px;
+  color: #b4c4cd;
   margin: 0;
-  color: #a9a392;
-  font: 12px/1.8 var(--mono);
 }
-.con-public-empty button {
-  color: #bcd79b;
-  background: transparent;
-  border: 1px solid #38462c;
-  padding: 7px 12px;
-  cursor: pointer;
+.con-timeline {
+  border: 1px solid #40545b;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #192630;
 }
-.con-update-feed {
-  max-width: 850px;
-}
-.con-public-update {
+.con-feed-post {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
-  gap: 16px;
-  padding: 25px 0;
-  border-bottom: 1px solid #29351f;
+  gap: 17px;
+  padding: 27px 30px;
+  border-bottom: 1px solid #3a4b54;
 }
-.con-update-avatar img {
+.con-feed-post:last-child {
+  border-bottom: 0;
+}
+.con-feed-post.project {
+  background: #1b2a32;
+}
+.con-feed-avatar {
   width: 42px;
   height: 42px;
   object-fit: contain;
+  border-radius: 6px;
 }
-.con-public-update header {
+.con-feed-post-main header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 13px;
   flex-wrap: wrap;
-  font-size: 10px;
 }
-.con-public-update header strong {
+.con-feed-post-main header strong {
+  font-size: 15px;
+  color: #e7ece9;
+}
+.con-feed-post-main header span {
+  color: #b7cb9f;
+  font:
+    10px/1.7 Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.con-feed-post-main header time {
+  color: #afc0c9;
   font-size: 12px;
-  color: #e2dccb;
-}
-.con-public-update header span {
-  color: #99b775;
-  font-size: 8px;
-}
-.con-public-update time {
   margin-left: auto;
-  color: #a9a392;
-  font-size: 9px;
 }
-.con-public-update h3 {
-  font: 700 18px/1.5 var(--mono);
-  color: #e2dccb;
-  margin: 12px 0 8px;
-  overflow-wrap: anywhere;
+.con-feed-post-main h3 {
+  font-size: 21px;
+  line-height: 1.5;
+  margin: 15px 0 10px;
 }
-.con-public-update p {
+.con-feed-post-main > p {
+  font-size: 16px;
+  line-height: 1.9;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: 14px/1.9 var(--mono);
-  color: #c2bfaf;
   margin: 12px 0;
+  color: #d1dde1;
 }
-.con-public-image {
+.con-feed-media {
   display: block;
-  max-width: 100%;
-  max-height: 440px;
+  max-width: min(100%, 600px);
+  max-height: 340px;
   object-fit: contain;
-  border: 1px solid #29351f;
-  border-radius: 3px;
-  margin: 18px 0;
+  border-radius: 7px;
+  border: 1px solid #40545b;
+  margin: 20px 0;
 }
-.con-public-link {
+.con-feed-link {
   display: inline-flex;
-  gap: 9px;
   align-items: center;
-  color: #bcd79b;
-  font-size: 10px;
-  padding: 12px 0;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c7dea7;
+  padding-top: 10px;
 }
-.con-real-project-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+.con-feed-post.project .con-feed-link {
+  color: #add4e2;
 }
-.con-real-project {
-  border: 1px solid #38462c;
-  background: #080c08;
-  overflow: hidden;
+.con-public-projects .con-label {
+  color: #a9cfdf;
 }
-.con-real-project > img,
-.con-project-placeholder {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border-bottom: 1px solid #29351f;
+.con-public-empty {
+  border: 1px dashed #40545b;
+  border-radius: 9px;
+  padding: 30px;
+  color: #b5c7d0;
+  font-size: 16px;
 }
-.con-project-placeholder {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  align-items: center;
-  justify-content: center;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      #769d4109 0px,
-      #769d4109 1px,
-      transparent 1px,
-      transparent 18px
-    ),
-    #080c08;
-  color: #99b775;
+.con-public-about {
+  scroll-margin-top: 105px;
+  padding: 30px;
+  border: 1px solid #445947;
+  border-radius: 10px;
+  background: #1c2a20;
 }
-.con-project-placeholder span {
-  font-size: 8px;
-  letter-spacing: 0.12em;
+.con-public-about h2 {
+  margin: 9px 0 20px;
+  font-size: 25px;
 }
-.con-real-project > div:last-child {
-  padding: 20px;
+.con-public-about p {
+  max-width: 760px;
+  color: #c1d1c1;
+  line-height: 1.9;
 }
-.con-project-author {
-  font-size: 8px;
-  color: #99b775;
+.con-public-footer {
+  margin-top: 35px;
+  color: #a4b8a4;
+  font:
+    11px/1.8 Consolas,
+    monospace;
 }
-.con-real-project h3 {
-  margin: 9px 0;
-  font: 700 22px/1.4 var(--mono);
-  color: #e2dccb;
-  overflow-wrap: anywhere;
-}
-.con-real-project p {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: 12px/1.8 var(--mono);
-  color: #a9a392;
-}
-.con-project-directory-title {
-  color: #a9a392;
-  font: 700 12px/1.6 var(--mono);
-  margin: 32px 0 18px;
-}
-.con-public-section .submit-banner {
-  margin-top: 32px;
-}
-.con-public-section .submit-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-@media (max-width: 780px) {
-  .con-real-project-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 760px) {
+  .con-admin .con-tool-tabs a {
+    justify-content: center;
+    padding: 13px 0;
   }
-  .con-public-section {
-    padding: 28px 12px;
+  .con-tool-tabs a > span {
+    display: none;
   }
-  .con-public-update {
-    gap: 10px;
+  .con-feed-heading h1 {
+    font-size: 27px;
+  }
+  .con-feed-post {
+    padding: 22px 18px;
     grid-template-columns: 32px minmax(0, 1fr);
+    gap: 11px;
   }
-  .con-update-avatar img {
+  .con-feed-avatar {
     width: 32px;
     height: 32px;
   }
-  .con-public-update time {
+  .con-feed-post-main header time {
     margin-left: 0;
   }
-  .con-public-section > .section-header > span {
+  .con-feed-post-main > p {
+    font-size: 15px;
+  }
+  .con-public-account {
     display: none;
   }
-  .con-public-update p {
-    font-size: 12px;
+  .con-public-about {
+    padding: 25px 20px;
   }
-  .con-real-project > img,
-  .con-project-placeholder {
-    height: 220px;
+  .con-feed-post-main header {
+    gap: 7px 11px;
+  }
+  .con-feed-post-main header span {
+    font-size: 9px;
   }
 }

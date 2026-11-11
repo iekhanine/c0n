@@ -1,127 +1,97 @@
-import { ArrowRight, ExternalLink, MessageCircle } from "lucide-react";
-import "./App.css";
+import { useEffect, useState } from "react";
+import { ArrowRight, Hash, Radio, ShieldCheck, Terminal } from "lucide-react";
 import CommunityFeed from "./CommunityFeed";
+import "./features/admin/Admin.css";
+import "./features/admin/Publishing.css";
+import "./CommunityFeed.css";
 
-function App() {
+// HEADER 001: Public community feed shares the control-room shell, not a hero page.
+export default function App() {
+  const [account, setAccount] = useState<{
+    user: { name: string } | null;
+    authorized: boolean;
+  } | null>(null);
+  useEffect(() => {
+    document.body.classList.add("con-admin-page", "con-public-page");
+    const controller = new AbortController();
+    void fetch("/api/auth/session", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setAccount(data))
+      .catch(() => {});
+    return () => {
+      controller.abort();
+      document.body.classList.remove("con-admin-page", "con-public-page");
+    };
+  }, []);
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <a href="#top" className="brand">
-          <img src="/con-logo.png" alt="CoN logo" />
-
-          <div className="brand-copy">
-            <strong>CoN</strong>
-            <span>CULT OF NIX0N</span>
-          </div>
+    <div className="con-admin con-public-shell">
+      <header className="con-admin-header">
+        <a className="con-admin-brand" href="/">
+          <img src="/con-logo.png" alt="Cult of nix0n" />
+          <span>
+            CULT OF nix0n<small>BUILD. SHARE. SHIP.</small>
+          </span>
         </a>
-
-        <nav className="main-nav">
-          <a className="active" href="#top">
-            HOME
-          </a>
-          <a href="#projects">PROJECTS</a>
-          <a href="#submit">SUBMIT</a>
-          <a href="#transmissions">UPDATES</a>
-          <a href="#about">ABOUT</a>
-          <a href="/admin">ADMIN</a>
-        </nav>
-
-        <a className="discord-button header-discord" href="#discord">
-          <MessageCircle size={18} />
-          JOIN DISCORD
-        </a>
-      </header>
-
-      <main id="top">
-        <section className="hero">
-          <div className="hero-copy">
-            <div className="terminal-prompt">
-              root@c0n:~# <span className="terminal-cursor">_</span>
-            </div>
-
-            <h1>
-              DEVELOPERS.
-              <br />
-              PROJECTS.
-              <br />
-              <span>SHOWCASE.</span>
-            </h1>
-
-            <div className="hero-rule" />
-
-            <p>
-              CoN is a developer project showcase.
-              <br />
-              Share what you&apos;re building.
-              <br />
-              Discover what others are creating.
-              <br />
-              Collaborate in our Discord community.
-            </p>
-
-            <div className="hero-actions">
-              <a className="discord-button" href="#discord">
-                <MessageCircle size={18} />
-                JOIN DISCORD
-              </a>
-
-              <a className="secondary-button" href="#projects">
-                BROWSE PROJECTS
-                <ArrowRight size={18} />
-              </a>
-            </div>
-          </div>
-
-          <div className="hero-logo">
-            <div className="logo-glow" />
-            <img src="/con-logo_large.png" alt="Cult of nix0n" />
-          </div>
-        </section>
-
-        <CommunityFeed />
-      </main>
-
-      <footer className="site-footer">
-        <div className="footer-brand">
-          <strong>CoN</strong>
-          <span>CULT OF NIX0N</span>
-
-          <small>© 2026 CoN. All rights reserved.</small>
-        </div>
-
-        <div className="footer-column">
-          <strong>EXPLORE</strong>
-          <a href="#projects">Projects</a>
-          <a href="#members">Members</a>
-          <a href="#about">About</a>
-        </div>
-
-        <div className="footer-column">
-          <strong>RESOURCES</strong>
-          <a href="#submit">Submission Guidelines</a>
-          <a href="#assets">Brand Assets</a>
-          <span>API (Soon)</span>
-        </div>
-
-        <div id="discord" className="footer-column">
-          <strong>CONNECT</strong>
-          <a href="#discord">
-            <MessageCircle size={15} />
-            Discord
-          </a>
-
+        <div className="con-header-actions">
+          {account?.user && (
+            <span className="con-public-account">{account.user.name}</span>
+          )}
           <a
-            href="https://github.com/iekhanine/c0n"
-            target="_blank"
-            rel="noreferrer"
+            className="con-primary"
+            href={account?.user ? "/admin" : "/api/auth/discord/login"}
           >
-            <ExternalLink size={15} />
-            GitHub
+            {account?.authorized
+              ? "Open admin"
+              : account?.user
+                ? "Approval status"
+                : "Log in with Discord"}
+            <ArrowRight size={17} />
           </a>
         </div>
-      </footer>
+      </header>
+      <nav className="con-tool-tabs" aria-label="Community navigation">
+        <span className="con-sidebar-label">COMMUNITY</span>
+        <a href="#transmissions">
+          <Radio size={20} />
+          <span>Latest posts</span>
+        </a>
+        <a href="#projects">
+          <Terminal size={20} />
+          <span>Featured projects</span>
+        </a>
+        <a href="#about">
+          <Hash size={20} />
+          <span>About the community</span>
+        </a>
+        <span className="con-sidebar-label">STAFF</span>
+        <a href="/admin">
+          <ShieldCheck size={20} />
+          <span>Community control</span>
+        </a>
+        <div className="con-sidebar-footer">
+          <span className="con-online-dot" />
+          Cult of nix0n<small>CURIOUS PEOPLE. STRANGE IDEAS.</small>
+        </div>
+      </nav>
+      <main className="con-admin-main">
+        <CommunityFeed />
+        <section id="about" className="con-public-about">
+          <span className="con-label">YOU HAVE FOUND YOUR PEOPLE.</span>
+          <h2>Our condolences.</h2>
+          <p>
+            A gathering of friends, gamers, professional lurkers, and people who
+            were absolutely supposed to be doing something else.
+          </p>
+          <p>Build things. Share what you know. Preserve the weird internet.</p>
+          <strong>No robes required.</strong>
+        </section>
+        <footer className="con-public-footer">
+          CoN // BUILD. SHARE. PRESERVE. QUESTION. SHIP.
+        </footer>
+      </main>
     </div>
   );
 }
-
-export default App;

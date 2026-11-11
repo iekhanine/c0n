@@ -3,6 +3,11 @@ import { ORIGIN, json, requireStaff } from "./auth.js";
 import { database, databaseStatus, initializeDatabase } from "./db.js";
 import { canAccess, listStaff, saveStaff } from "./staff.js";
 import {
+  hasPermission,
+  contentPrefix,
+  channelLabel,
+} from "../shared/permissions.js";
+import {
   AppError,
   id,
   webhookInput,
@@ -62,13 +67,9 @@ export async function adminHandler(req, res) {
       throw new AppError(405, "Method not allowed.");
     if (req.method !== "GET" && req.headers.origin !== ORIGIN)
       throw new AppError(403, "Invalid request origin.");
-    const staff = await requireStaff(
-      req,
-      res,
-      ["setup", "webhooks"].includes(action) && req.method !== "GET",
-    );
+    const staff = await requireStaff(req, res);
     if (!staff) return;
-    if (!canAccess(staff.access, action, req.method))
+    if (!canAccess(staff, action, req.method))
       throw new AppError(
         403,
         "Your access level does not permit this operation.",
@@ -96,11 +97,11 @@ export async function adminHandler(req, res) {
     }
     if (action === "publish") {
       expectMethod(req, "POST");
-      return json(res, 200, await publish(db, bodyOf(req)));
+      return json(res, 200, await publish(db, bodyOf(req), staff));
     }
     if (action === "reconcile") {
       expectMethod(req, "POST");
-      return json(res, 200, await reconcile(db, bodyOf(req)));
+      return json(res, 200, await reconcile(db, bodyOf(req), staff));
     }
     throw new AppError(404, "Unknown operation.");
   } catch (error) {
@@ -150,7 +151,15 @@ export async function webhooks(req, res, db, staff) {
     const { rows } = await db.query(
       `SELECT ${safeWebhookColumns} FROM con.webhooks ORDER BY name`,
     );
-    return json(res, 200, { webhooks: rows });
+    return json(res, 200, {
+      webhooks:
+        staff.owner ||
+        staff.all_channels ||
+        hasPermission(staff, "channels.manage") ||
+        hasPermission(staff, "staff.manage")
+          ? rows
+          : rows.filter((row) => staff.channel_ids?.includes(row.id)),
+    });
   }
   const body = bodyOf(req);
   if (req.method === "DELETE") {
@@ -218,6 +227,7 @@ export async function webhooks(req, res, db, staff) {
     }
     cipher = encryptWebhook(input.url);
   }
+  input.name = channelLabel(input.name).slice(0, 80);
   const values = [
     input.name,
     cipher,
@@ -241,16 +251,22 @@ export async function webhooks(req, res, db, staff) {
 }
 
 // HEADER 003: Versioned drafts and website content; updates are never sent implicitly.
-async function posts(req, res, db, staff) {
+export async function posts(req, res, db, staff) {
   if (req.method === "GET") {
     const { rows } = await db.query(
-      `SELECT p.*, coalesce((SELECT json_agg(json_build_object('id',d.id,'webhook_id',d.webhook_id,'name',w.name,'message_id',d.message_id,'channel_id',w.channel_id,'guild_id',w.guild_id,'state',d.state,'last_error',d.last_error,'post_version',d.post_version)) FROM con.deliveries d JOIN con.webhooks w ON w.id=d.webhook_id WHERE d.post_id=p.id),'[]'::json) AS deliveries FROM con.posts p ORDER BY p.created_at DESC LIMIT 200`,
+      `SELECT p.*, coalesce((SELECT json_agg(json_build_object('id',d.id,'webhook_id',d.webhook_id,'name',w.name,'message_id',d.message_id,'channel_id',w.channel_id,'guild_id',w.guild_id,'state',d.state,'last_error',d.last_error,'post_version',d.post_version,'updated_at',d.updated_at)) FROM con.deliveries d JOIN con.webhooks w ON w.id=d.webhook_id WHERE d.post_id=p.id),'[]'::json) AS deliveries FROM con.posts p WHERE p.kind=ANY($1::text[]) ORDER BY p.updated_at DESC LIMIT 200`,
+      [
+        ["update", "project"].filter((kind) =>
+          hasPermission(staff, `${contentPrefix(kind)}.view`),
+        ),
+      ],
     );
     return json(res, 200, { posts: rows });
   }
   const body = bodyOf(req);
   if (req.method === "DELETE") {
     const post = await findPost(db, body.id);
+    assertContent(staff, post.kind, "delete");
     const sent = await db.query(
       "SELECT 1 FROM con.deliveries WHERE post_id=$1 LIMIT 1",
       [post.id],
@@ -275,6 +291,10 @@ async function posts(req, res, db, staff) {
     input.featured,
   ];
   if (req.method === "PATCH") {
+    const current = await findPost(db, body.id);
+    if (current.kind !== input.kind)
+      throw new AppError(400, "A saved post cannot change content type.");
+    assertContent(staff, current.kind, "edit");
     if (!Number.isInteger(body.version) || body.version < 1)
       throw new AppError(400, "Post version is required.");
     const result = await db.query(
@@ -288,6 +308,7 @@ async function posts(req, res, db, staff) {
       );
     return json(res, 200, { post: result.rows[0] });
   }
+  assertContent(staff, input.kind, "create");
   const result = await db.query(
     "INSERT INTO con.posts(kind,title,body,link_url,image_url,featured,id,author_id,author_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *",
     [...values, randomUUID(), staff.user.id, staff.user.name],
@@ -296,16 +317,31 @@ async function posts(req, res, db, staff) {
 }
 
 // HEADER 004: Reserve delivery before network I/O; retry edits, never blind reposts.
-export async function publish(db, input) {
+export function assertContent(staff, kind, operation) {
+  if (!hasPermission(staff, `${contentPrefix(kind)}.${operation}`))
+    throw new AppError(
+      403,
+      `You do not have permission to ${operation} this content.`,
+    );
+}
+export async function publish(db, input, staff) {
   const postId = id(input.post_id);
+  const checked = await findPost(db, postId);
+  assertContent(staff, checked.kind, "publish");
+  assertDestination(
+    staff,
+    input.webhook_id,
+    input.website === true || input.unpublish === true,
+  );
   if (!input.webhook_id && input.website !== true && input.unpublish !== true)
     throw new AppError(400, "Choose the website or a Discord channel.");
   if (input.unpublish === true) {
     if (input.webhook_id || input.website)
       throw new AppError(400, "Unpublish must be a separate operation.");
-    await db.query("UPDATE con.posts SET published_at=null WHERE id=$1", [
-      postId,
-    ]);
+    await db.query(
+      "UPDATE con.posts SET published_at=null,published_snapshot=null,published_version=null,published_updated_at=null WHERE id=$1",
+      [postId],
+    );
     return {
       ok: true,
       notice: "Removed from the website. Discord messages are retained.",
@@ -345,11 +381,21 @@ export async function publish(db, input) {
         [randomUUID(), postId, webhook.id, post.version],
       );
     }
-    if (input.website === true)
+    if (input.website === true) {
+      const snapshot = {
+        kind: post.kind,
+        title: post.title,
+        body: post.body,
+        link_url: post.link_url,
+        image_url: post.image_url,
+        featured: post.featured,
+        author_name: post.author_name,
+      };
       await client.query(
-        "UPDATE con.posts SET published_at=coalesce(published_at,now()) WHERE id=$1",
-        [postId],
+        "UPDATE con.posts SET published_at=coalesce(published_at,now()),published_snapshot=$2::jsonb,published_version=$3,published_updated_at=now() WHERE id=$1",
+        [postId, JSON.stringify(snapshot), post.version],
       );
+    }
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
@@ -410,8 +456,10 @@ export async function publish(db, input) {
 }
 
 // HEADER 005: Recover an uncertain send or import one of the existing channel posts.
-export async function reconcile(db, input) {
+export async function reconcile(db, input, staff) {
   const post = await findPost(db, input.post_id);
+  assertContent(staff, post.kind, "publish");
+  assertDestination(staff, input.webhook_id, false);
   const webhook = await findWebhook(db, input.webhook_id);
   const current = await db.query(
     "SELECT 1 FROM con.deliveries WHERE post_id=$1 AND webhook_id=$2 AND state='sending' AND updated_at > now() - interval '2 minutes'",
@@ -444,4 +492,23 @@ export async function reconcile(db, input) {
     notice:
       "Existing message linked. Publish again to update it with this draft.",
   };
+}
+
+// HEADER 007: Website and channel permissions are separate from content editing.
+export function assertDestination(staff, channelId, website) {
+  if (website && !hasPermission(staff, "website.publish"))
+    throw new AppError(
+      403,
+      "You do not have permission to publish to the website.",
+    );
+  if (
+    channelId &&
+    !staff?.owner &&
+    !staff?.all_channels &&
+    !staff?.channel_ids?.includes(channelId)
+  )
+    throw new AppError(
+      403,
+      "You do not have permission to post to this Discord channel.",
+    );
 }

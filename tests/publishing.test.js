@@ -153,7 +153,7 @@ test("database migration and delivery lifecycle", async (t) => {
         assert.deepEqual(await databaseStatus(db), {
           connected: true,
           initialized: true,
-          schema_version: 2,
+          schema_version: 3,
           needs_upgrade: false,
         });
         assert.equal(
@@ -202,9 +202,9 @@ test("database migration and delivery lifecycle", async (t) => {
           );
           assert.equal(calls, 1);
           const read = response();
-          await webhooks({ method: "GET" }, read, db, {});
+          await webhooks({ method: "GET" }, read, db, { owner: true });
           const hook = JSON.parse(read.body).webhooks[0];
-          assert.equal(hook.name, "Transmissions");
+          assert.equal(hook.name, "#Transmissions");
           assert.equal(read.body.includes(hookUrl), false);
           assert.equal(read.body.includes("url_cipher"), false);
         },
@@ -221,8 +221,8 @@ test("database migration and delivery lifecycle", async (t) => {
               channel_id: channel,
             });
           };
-          await publish(db, input);
-          await publish(db, input);
+          await publish(db, input, { owner: true });
+          await publish(db, input, { owner: true });
           assert.equal(calls[0].method, "POST");
           assert.match(calls[0].url, /\?wait=true$/);
           assert.equal(calls[1].method, "PATCH");
@@ -242,8 +242,14 @@ test("database migration and delivery lifecycle", async (t) => {
             calls++;
             throw new Error("timeout");
           };
-          await assert.rejects(publish(db, input), /unconfirmed/);
-          await assert.rejects(publish(db, input), /duplicate/);
+          await assert.rejects(
+            publish(db, input, { owner: true }),
+            /unconfirmed/,
+          );
+          await assert.rejects(
+            publish(db, input, { owner: true }),
+            /duplicate/,
+          );
           assert.equal(calls, 1);
           assert.equal(
             (await db.query("SELECT state FROM con.deliveries")).rows[0].state,
@@ -260,7 +266,10 @@ test("database migration and delivery lifecycle", async (t) => {
         async () => {
           const input = await seed();
           globalThis.fetch = async () => new Response("{}", { status: 429 });
-          await assert.rejects(publish(db, input), /rate limit/);
+          await assert.rejects(
+            publish(db, input, { owner: true }),
+            /rate limit/,
+          );
           const { rows } = await db.query(
             "SELECT state,message_id FROM con.deliveries",
           );
@@ -268,7 +277,7 @@ test("database migration and delivery lifecycle", async (t) => {
           assert.equal(rows[0].message_id, null);
           globalThis.fetch = async () =>
             Response.json({ id: "456789012345678901", channel_id: channel });
-          await publish(db, input);
+          await publish(db, input, { owner: true });
         },
       );
       await t.test(
@@ -279,7 +288,7 @@ test("database migration and delivery lifecycle", async (t) => {
             input.post_id,
           ]);
           await assert.rejects(
-            publish(db, input),
+            publish(db, input, { owner: true }),
             /changed since your preview/,
           );
           assert.equal(
@@ -295,8 +304,16 @@ test("database migration and delivery lifecycle", async (t) => {
           globalThis.fetch = async () => {
             throw new Error("Discord should not be called");
           };
-          await publish(db, { ...input, webhook_id: undefined });
-          await publish(db, { post_id: input.post_id, unpublish: true });
+          await publish(
+            db,
+            { ...input, webhook_id: undefined },
+            { owner: true },
+          );
+          await publish(
+            db,
+            { post_id: input.post_id, unpublish: true },
+            { owner: true },
+          );
           assert.equal(
             (await db.query("SELECT published_at FROM con.posts")).rows[0]
               .published_at,
@@ -318,7 +335,11 @@ test("database migration and delivery lifecycle", async (t) => {
               channel_id: channel,
               webhook_id: "123456789012345678",
             });
-          await reconcile(db, { ...input, message_id: "456789012345678901" });
+          await reconcile(
+            db,
+            { ...input, message_id: "456789012345678901" },
+            { owner: true },
+          );
           assert.equal(
             (await db.query("SELECT post_version FROM con.deliveries")).rows[0]
               .post_version,
@@ -331,7 +352,11 @@ test("database migration and delivery lifecycle", async (t) => {
               webhook_id: "123456789012345678",
             });
           await assert.rejects(
-            reconcile(db, { ...input, message_id: "456789012345678901" }),
+            reconcile(
+              db,
+              { ...input, message_id: "456789012345678901" },
+              { owner: true },
+            ),
             /another connection/,
           );
         },
