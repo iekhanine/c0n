@@ -9,7 +9,7 @@ export default function App() {
     user: { name: string } | null;
     authorized: boolean;
   } | null>(null);
-  const [search, setSearch] = useState("");
+  
   useEffect(() => {
     document.body.classList.add("showcase-page");
     const controller = new AbortController();
@@ -34,9 +34,11 @@ export default function App() {
         </a>
         <nav aria-label="Community">
           <a href="#projects">Explore</a>
-          <a href="#transmissions">Updates</a>
+          <a href="#projects">Projects</a>
+          <a href="#members">Members</a>
           <a href="#community">Community</a>
         </nav>
+        <a href="#project-search" aria-label="Search projects" className="header-search"><Search size={23}/></a>
         <a
           className="showcase-login"
           href={account?.user ? "/admin" : "/api/auth/discord/login"}
@@ -50,28 +52,8 @@ export default function App() {
         </a>
       </header>
       <main className="showcase-main">
-        <section className="showcase-intro">
-          <span className="eyebrow">
-            COMMUNITY SHOWCASE <i />
-          </span>
-          <h1>Look what they’re building.</h1>
-          <p>
-            Apps, websites, and beautifully unnecessary experiments from our
-            corner of the internet.
-          </p>
-        </section>
-        <label className="showcase-search">
-          <Search size={19} />
-          <input
-            aria-label="Search projects and updates"
-            placeholder="Find your next rabbit hole…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && <button onClick={() => setSearch("")}>Clear</button>}
-        </label>
-        <CommunityFeed search={search} />
-        <section className="showcase-about" id="community">
+        <CommunityFeed />
+        <details className="showcase-about" id="community"><summary>About the community</summary>
           <span className="eyebrow">YOU HAVE FOUND YOUR PEOPLE.</span>
           <h2>Our condolences.</h2>
           <p>
@@ -82,7 +64,7 @@ export default function App() {
           <a href="/api/auth/discord/login">
             Sign in with Discord <ArrowRight size={17} />
           </a>
-        </section>
+        </details>
         <footer>BUILD. SHARE. PRESERVE. QUESTION. SHIP.</footer>
       </main>
     </div>
