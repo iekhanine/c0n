@@ -19,19 +19,19 @@ export function canonicalRoleName(name) {
 // Ordinary chat and visibility permissions are safe for a participation role.
 // Never auto-manage roles with moderation, server management, or elevated powers.
 const unsafeBits = [
-  0x8n,             // Administrator
-  0x2n, 0x4n,       // Kick, Ban
-  0x10n, 0x20n,     // Manage Channels, Manage Guild
-  0x10000000n,      // Manage Roles
-  0x2000000n,       // Manage Webhooks
-  0x1000n,          // Manage Messages
-  0x2000n,          // Manage Threads
-  0x4000000n,       // Manage Events
-  0x40000000n,      // Manage Emojis and Stickers
-  0x8000000n,       // Manage Nicknames
-  0x10000000000n,   // Moderate Members
-  0x1000000n,       // Manage Expressions (alternative)
-  0x1000000000n,    // Manage Threads (alternative)
+  2n,                // Kick Members
+  4n,                // Ban Members
+  8n,                // Administrator
+  16n,               // Manage Channels
+  32n,               // Manage Server
+  8192n,             // Manage Messages
+  268435456n,        // Manage Roles
+  536870912n,        // Manage Webhooks
+  134217728n,        // Manage Nicknames
+  1073741824n,       // Manage Expressions
+  8589934592n,       // Manage Events
+  17179869184n,      // Manage Threads
+  1099511627776n,    // Moderate Members
 ].reduce((all, bit) => all | bit, 0n);
 export function safeParticipationRole(role) {
   return Boolean(role && !role.managed && role.id !== role.guild.id &&
