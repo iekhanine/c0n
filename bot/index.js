@@ -128,7 +128,13 @@ async function main() {
         reactionVersion = version;
         reactionConfig = config;
         if (config?.mappings?.length)
-          run(() => reconcileRoleReactions(guild, config));
+          run(() => reconcileRoleReactions(guild, config, (reaction, user) => {
+            recordParticipation(participationEvent(
+              "reaction", reaction.message.id, reaction.message.channelId,
+              user.id, Date.now(), reaction.emoji.id ||
+                [...(reaction.emoji.name || "")].map(c => c.codePointAt(0).toString(16)).join("-"),
+            ));
+          }));
       }
       if (!command) return;
       try {
