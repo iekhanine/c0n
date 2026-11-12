@@ -16,6 +16,24 @@ import {
 const fail = (status, message) => {
   throw Object.assign(Error(message), { status });
 };
+const participationReady = new WeakMap();
+async function ensureParticipation(db) {
+  if (!participationReady.has(db))
+    participationReady.set(db, db.query(`
+      CREATE TABLE IF NOT EXISTS con.discord_participation_events (
+       guild_id text NOT NULL, event_id text NOT NULL,
+       event_type text NOT NULL CHECK(event_type IN ('message','reaction')),
+       channel_id text NOT NULL, user_id text NOT NULL,
+       occurred_at timestamptz NOT NULL,
+       PRIMARY KEY(guild_id,event_type,event_id,user_id)
+      );
+      CREATE INDEX IF NOT EXISTS con_participation_user_time
+       ON con.discord_participation_events(guild_id,user_id,occurred_at);
+      ALTER TABLE con.discord_participation_events ENABLE ROW LEVEL SECURITY;
+      REVOKE ALL ON con.discord_participation_events FROM PUBLIC,anon,authenticated;
+    `).catch(e => { participationReady.delete(db); throw e; }));
+  await participationReady.get(db);
+}
 const snowflake = (s) => typeof s === "string" && /^\d{17,20}$/.test(s);
 const encryptionKey = () => {
   if ((process.env.WEBHOOK_ENCRYPTION_KEY || "").length < 32)
@@ -185,12 +203,15 @@ async function acceptSync(db, s, b, headers) {
       "snapshot_begin",
       "snapshot_end",
       "messages",
+      "participation",
+      "participation_check",
     ].includes(b.kind)
   )
     fail(400, "Unknown worker event.");
   if (b.kind !== "bootstrap" && b.guild_id !== s.guild_id)
     fail(403, "Wrong Discord server.");
   if (b.kind.startsWith("control_")) await ensureControl(db);
+  if (b.kind.startsWith("participation")) await ensureParticipation(db);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -215,6 +236,63 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    let progress = [];
+    if (b.kind === "participation" || b.kind === "participation_check") {
+      const userIds = new Set();
+      if (b.kind === "participation") {
+        if (!Array.isArray(b.events) || b.events.length > 100)
+          fail(400, "Invalid participation batch.");
+        for (const event of b.events) {
+          if (!["message", "reaction"].includes(event.type) ||
+              !snowflake(event.user_id) || !snowflake(event.channel_id) ||
+              typeof event.event_id !== "string" || !/^[\\w:-]{17,150}$/.test(event.event_id) ||
+              !date(event.at) ||
+              Math.abs(Date.now() - Date.parse(event.at)) > 172800000)
+            fail(400, "Invalid participation event.");
+          await client.query(
+            `INSERT INTO con.discord_participation_events
+             (guild_id,event_id,event_type,channel_id,user_id,occurred_at)
+             VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
+            [s.guild_id,event.event_id,event.type,event.channel_id,event.user_id,event.at],
+          );
+          userIds.add(event.user_id);
+        }
+      } else {
+        // Periodically promote members who become 14 days old even without new activity.
+        const eligible = await client.query(
+          `SELECT e.user_id FROM con.discord_participation_events e
+           JOIN con.discord_members m ON m.guild_id=e.guild_id AND m.discord_id=e.user_id
+           WHERE e.guild_id=$1 AND m.active=true AND m.is_bot=false
+            AND m.joined_at <= now()-interval '14 days'
+           GROUP BY e.user_id
+           HAVING count(*) FILTER (WHERE e.event_type='message') >= 30
+             AND count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date) >= 5
+           LIMIT 100`,
+          [s.guild_id],
+        );
+        for (const row of eligible.rows) userIds.add(row.user_id);
+      }
+      for (const userId of userIds) {
+        const result = await client.query(
+          `SELECT
+             count(e.event_id)::int > 0 AS participated,
+             count(e.event_id) FILTER (WHERE e.event_type='message')::int AS messages,
+             count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date)::int AS active_days,
+             m.joined_at <= now()-interval '14 days' AS mature
+           FROM con.discord_members m
+           LEFT JOIN con.discord_participation_events e
+             ON e.guild_id=m.guild_id AND e.user_id=m.discord_id
+           WHERE m.guild_id=$1 AND m.discord_id=$2 AND m.active=true AND m.is_bot=false
+           GROUP BY m.joined_at`,
+          [s.guild_id, userId],
+        );
+        const row = result.rows[0];
+        if (row) progress.push({
+          user_id: userId, participated: row.participated,
+          eligible_instigator: row.mature && row.messages >= 30 && row.active_days >= 5,
+        });
+      }
     }
     if (b.kind === "heartbeat") {
       if (
@@ -320,7 +398,7 @@ async function acceptSync(db, s, b, headers) {
       "DELETE FROM con.discord_events WHERE occurred_at<now()-interval '30 days'",
     );
     await client.query("COMMIT");
-    return { ok: true, guild_id: s.guild_id, channel_ids: s.channel_ids };
+    return { ok: true, guild_id: s.guild_id, channel_ids: s.channel_ids, ...(progress.length ? { progress } : {}) };
   } catch (e) {
     await client.query("ROLLBACK");
     throw e;
