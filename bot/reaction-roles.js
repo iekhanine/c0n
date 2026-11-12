@@ -1,4 +1,4 @@
-import { PermissionFlagsBits as P } from "discord.js";
+import { memberCanSelectRoles } from "./onboarding.js";
 
 // Roles selected by members must be dedicated access roles, not staff privileges.
 export function safeAccessRole(role) {
@@ -25,7 +25,7 @@ export async function handleRoleReaction(guild, config, incoming, user, remove =
     if (e.code === 10007) return null;
     throw e;
   });
-  if (!member) return false;
+  if (!member || !memberCanSelectRoles(member)) return false;
   if (remove) {
     if (member.roles.cache.has(roleId))
       await member.roles.remove(roleId, "C0N reaction-role selection removed");
