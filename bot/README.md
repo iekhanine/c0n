@@ -23,3 +23,15 @@ Message IDs, author IDs, channel IDs and timestamps are retained for 30 days; an
 ## Development
 
 From this directory, run `npm ci --ignore-scripts`, then configure the three runtime variables securely and run `npm start`. Keep local environment files out of Git. Run `npm run check` for syntax validation. Root tests cover HMAC verification, replay protection, owner authorization, channel filtering, metadata minimization, membership and private storage.
+
+## Server administration workspace
+
+C0N owner admin now has an Explorer-style Discord workspace. Commands are queued in private `con.discord_commands` storage; the Railway worker polls a signed bridge every five seconds. The browser never receives the bot token or webhook credentials. The table is created additively on first use; existing content is preserved.
+
+Supported controls: channel/category creation, editing, movement, slowmode, deletion and role permission overrides; role creation/editing/deletion; paged member browsing, role assignment/removal, nicknames, timeouts, kicks and bans; paged ban list and unban; server name, description, verification, notifications and content filter; incoming webhook creation/rename/deletion and message send/edit/delete; private action history with actor, target, reason and outcome. Existing publishing webhooks and update/project editors remain available separately.
+
+Open **Discord bot → Permissions** and use the permission-update invite. Move the bot's integration role above the roles and members it should manage. No Administrator permission is requested. The worker verifies the website actor's actual Discord permissions and role hierarchy, and checks the bot's permissions. Site-owner access alone cannot override Discord permissions. Administrator role grants, managed integration roles, self-moderation, server-owner moderation and bot self-moderation are blocked.
+
+Writes require an audit reason. Destructive actions require an exact target ID and UI confirmation. A unique request ID prevents duplicate submissions. Once claimed, a command is never automatically replayed; after a crash or lost response it is marked uncertain. Result delivery itself can safely retry. Queued commands expire after two minutes; overdue running commands appear uncertain after three minutes. Verify uncertain actions in Discord before retrying. Post mentions are suppressed for both sends and edits. The panel only edits messages belonging to the selected webhook.
+
+Owner-only access is intentional for this release; existing website staff grants do not automatically grant server moderation. Lists of members and bans are paged in groups of 100. Discord still controls supported channel features, webhook ownership, verification requirements and role order. This is server administration, not account administration: the panel cannot transfer server ownership, manage another bot's internal settings, or edit messages from unrelated users.

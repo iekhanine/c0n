@@ -90,7 +90,7 @@ export default function DiscordConnection() {
   const connected =
     status?.last_heartbeat &&
     Date.now() - Date.parse(status.last_heartbeat) < 180000;
-  const invite = `https://discord.com/oauth2/authorize?client_id=${status?.application_id || "1570103248453509281"}&scope=bot%20applications.commands&permissions=84992${guild ? "&guild_id=" + encodeURIComponent(guild) + "&disable_guild_select=true" : ""}`;
+  const invite = `https://discord.com/oauth2/authorize?client_id=${status?.application_id || "1570103248453509281"}&scope=bot%20applications.commands&permissions=1100451236918${guild ? "&guild_id=" + encodeURIComponent(guild) + "&disable_guild_select=true" : ""}`;
   return (
     <section className="member-workspace discord-connection">
       <header>
@@ -204,9 +204,8 @@ export default function DiscordConnection() {
             not required.
           </p>
           <p>
-            Use the C0N repository and the configuration file{" "}
-            <code>bot/railway.toml</code>. Keep the build root at the repository
-            root.
+            Use the C0N repository with <code>bot/Dockerfile</code>. Keep the
+            build root at the repository root and sleep mode disabled.
           </p>
           <dl>
             <dt>DISCORD_BOT_TOKEN</dt>

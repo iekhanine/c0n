@@ -1,7 +1,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "bot/Dockerfile"
-watchPatterns = ["bot/**", "shared/discord-signing.js"]
+watchPatterns = ["bot/**", "shared/discord-signing.js", "shared/discord-control.js"]
 [deploy]
 healthcheckPath = "/healthz"
 healthcheckTimeout = 180

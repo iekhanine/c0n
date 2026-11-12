@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
-import DiscordConnection from "./DiscordConnection";
+import DiscordExplorer from "./DiscordExplorer";
 import Posts from "./Posts";
 import Channels from "./Channels";
 import Staff from "./Staff";
@@ -27,7 +27,7 @@ type Tab =
 const pages = {
   discord: [
     "Discord bot",
-    "Connect the community website to your Discord server.",
+    "Channels, people, publishing, and server controls in one workspace.",
   ],
   update: ["Updates", "Write it once. Keep every posted copy in sync."],
   project: ["Featured projects", "Tell us what THEY built…"],
@@ -101,7 +101,7 @@ export default function Publishing({
     ["update", "Updates", Radio],
     ["project", "Featured projects", Terminal],
     ["reports", "Reports", BarChart3],
-    ["webhooks", "Channels", Hash],
+    ["webhooks", "Publishing webhooks", Hash],
     ["staff", "Staff approval", Users],
     ["database", "Database", Database],
     ["discord", "Discord bot", Radio],
@@ -174,7 +174,7 @@ export default function Publishing({
           This tool is not enabled for your account.
         </div>
       ) : tab === "discord" ? (
-        <DiscordConnection />
+        <DiscordExplorer />
       ) : tab === "database" || !status?.initialized || status.needs_upgrade ? (
         <div className="con-database-panel">
           <span className="con-label">STORAGE STATUS</span>
