@@ -246,7 +246,7 @@ async function acceptSync(db, s, b, headers) {
         for (const event of b.events) {
           if (!["message", "reaction"].includes(event.type) ||
               !snowflake(event.user_id) || !snowflake(event.channel_id) ||
-              typeof event.event_id !== "string" || !/^[\\w:-]{17,150}$/.test(event.event_id) ||
+              typeof event.event_id !== "string" || !/^[0-9a-f:-]{17,150}$/.test(event.event_id) ||
               !date(event.at) ||
               Math.abs(Date.now() - Date.parse(event.at)) > 172800000)
             fail(400, "Invalid participation event.");
