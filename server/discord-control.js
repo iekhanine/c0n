@@ -2,6 +2,12 @@ import { randomUUID } from "node:crypto";
 import { encryptWebhook, webhookUrl } from "./content.js";
 import { controlInput } from "../shared/discord-control.js";
 export const controlMigration = `
+CREATE TABLE IF NOT EXISTS con.discord_reaction_roles (
+ guild_id text PRIMARY KEY, channel_id text NOT NULL, message_id text NOT NULL,
+ mappings jsonb NOT NULL DEFAULT '[]'::jsonb, updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE con.discord_reaction_roles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON con.discord_reaction_roles FROM PUBLIC,anon,authenticated;
 CREATE TABLE IF NOT EXISTS con.discord_commands (
  id uuid PRIMARY KEY, guild_id text NOT NULL, actor_id text NOT NULL, actor_name text NOT NULL,
  operation text NOT NULL, payload jsonb NOT NULL, state text NOT NULL DEFAULT 'queued' CHECK(state IN ('queued','running','succeeded','failed','uncertain','expired')),
@@ -141,7 +147,11 @@ export async function controlSync(client, settings, body) {
         [settings.guild_id],
       )
     ).rows[0];
-    return { command: item || null };
+    const configured = (await client.query(
+      "SELECT guild_id,channel_id,message_id,mappings FROM con.discord_reaction_roles WHERE guild_id=$1",
+      [settings.guild_id],
+    )).rows[0] || null;
+    return { command: item || null, reaction_roles: configured };
   }
   if (
     !/^[\da-f-]{36}$/i.test(body.command_id || "") ||
