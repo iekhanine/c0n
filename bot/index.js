@@ -96,7 +96,36 @@ async function main() {
     await guild.channels.fetch();
     welcome = await ensureWelcomePost(guild, client.user.id);
   }
-  async function heartbeat() {
+  async function auditCategoryPermissions() {
+    await guild.channels.fetch();
+    await guild.roles.fetch();
+    const me = await guild.members.fetchMe();
+    const compact = value => [...String(value || "").toLowerCase()]
+      .map(c => Object.fromEntries([...("ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ")].map((x,i)=>[x,"abcdefghijklmnopqrstuvwxyz"[i]]))[c] || c)
+      .join("").replace(/[^a-z0-9]/g, "");
+    const wanted = new Set(["thecompound","theworkshop","thegallery","thearcade","thegames","thevoice","starthere","administration","theunspoken"]);
+    const list = [...guild.channels.cache.values()].filter(c =>
+      c.type === 4 && wanted.has(compact(c.name)));
+    const view = 1024n;
+    console.info("C0N access audit", JSON.stringify({
+      botRoles: me.roles.cache.map(r => ({ name: r.name, position: r.position })),
+      categories: list.map(c => {
+        const p = c.permissionsFor(me);
+        const world = c.permissionOverwrites.cache.get(guild.id);
+        return { name: c.name, id: c.id, botView: p?.has("ViewChannel"),
+          botManageRoles: p?.has("ManageRoles"),
+          worldViewDenied: Boolean(world && (world.deny.bitfield & view)),
+          worldViewAllowed: Boolean(world && (world.allow.bitfield & view)),
+          roleOverwrites: [...c.permissionOverwrites.cache.values()]
+            .filter(o=>o.id!==guild.id && ((o.allow.bitfield | o.deny.bitfield) & view)!==0n)
+            .map(o=>({ name: guild.roles.cache.get(o.id)?.name || "unknown",
+              allowView: Boolean(o.allow.bitfield & view),
+              denyView: Boolean(o.deny.bitfield & view) })),
+        };
+      }),
+    }));
+  }
+    async function heartbeat() {
     if (!guild || heartbeatBusy) return;
     heartbeatBusy = true;
     try {
@@ -278,6 +307,7 @@ async function main() {
         type: ActivityType.Watching,
       });
       state = "ready";
+      run(auditCategoryPermissions);
       run(checkProgress);
       console.log("C0N Discord worker connected.");
     }),
