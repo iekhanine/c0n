@@ -5,9 +5,21 @@ export const PARTICIPATION = Object.freeze({
   minimumMessages: 30,
   minimumActiveDays: 5,
 });
+// Discord role labels may use Unicode small caps. Normalize both plain-text
+// and styled names to the same canonical ASCII key without changing role IDs.
+const plain = "abcdefghijklmnopqrstuvwxyz";
+const small = [..."ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ"];
+const smallToPlain = new Map(small.map((character, index) => [character, plain[index]]));
+export function canonicalRoleName(name) {
+  return [...String(name).toLowerCase()]
+    .map(character => smallToPlain.get(character) || character)
+    .join("")
+    .replace(/[^a-z0-9]/g, "");
+}
 export function statusRole(guild, name) {
+  const target = canonicalRoleName(name);
   const found = [...guild.roles.cache.values()].filter(r =>
-    r.name.toLowerCase().replace(/[^a-z]/g, "") === name.toLowerCase().replace(/[^a-z]/g, ""));
+    canonicalRoleName(r.name) === target);
   if (found.length !== 1) return null;
   const role = found[0];
   const me = guild.members.me;
