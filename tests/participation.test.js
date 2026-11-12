@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  PARTICIPATION, statusRole, assignNewMemberStatus,
+  PARTICIPATION, statusRole, canonicalRoleName, assignNewMemberStatus,
   applyParticipationProgress, participationEvent,
 } from "../bot/participation.js";
 function fixture(initial = []) {
@@ -64,4 +64,23 @@ test("reaction records remain separate from message records", () => {
     "323456789012345678", 1794510000000, "1f3ae");
   assert.equal(event.type, "reaction");
   assert.match(event.event_id, /:1f3ae$/);
+});
+
+test("Unicode small caps and original role names resolve identically", async () => {
+  const samples = [
+    ["ɪɴɪᴛɪᴀᴛᴇᴅ", "Initiated"],
+    ["ᴛʜᴇ ᴜɴꜱᴘᴏᴋᴇɴ", "The Unspoken"],
+    ["ᴏʙꜱᴇʀᴠᴇʀ", "Observer"],
+    ["ɪɴꜱᴛɪɢᴀᴛᴏʀ", "Instigator"],
+  ];
+  for (const [styled, plain] of samples)
+    assert.equal(canonicalRoleName(styled), canonicalRoleName(plain));
+  const setup = fixture();
+  setup.roles.forEach((role, i) => { role.name = samples[i][0]; });
+  await assignNewMemberStatus(setup.member);
+  assert.deepEqual(setup.names(), ["ɪɴɪᴛɪᴀᴛᴇᴅ", "ᴛʜᴇ ᴜɴꜱᴘᴏᴋᴇɴ"]);
+  await applyParticipationProgress(setup.guild, {
+    user_id: setup.member.id, participated: true, eligible_instigator: false,
+  });
+  assert.deepEqual(setup.names(), ["ɪɴɪᴛɪᴀᴛᴇᴅ", "ᴏʙꜱᴇʀᴠᴇʀ"]);
 });
