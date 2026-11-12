@@ -16,6 +16,7 @@ import { Editable, CopyRegion } from "../../SiteText";
 import Posts from "./Posts";
 import Channels from "./Channels";
 import Staff from "./Staff";
+import ProjectReports from "./ProjectReports";
 import Reports from "./Reports";
 import "./Publishing.css";
 import "./Workflow.css";
@@ -27,7 +28,8 @@ type Tab =
   | "reports"
   | "database"
   | "discord"
-  | "audit";
+  | "audit"
+  | "projectReports";
 export default function Publishing({
   permissions,
   owner = false,
@@ -45,6 +47,10 @@ export default function Publishing({
 }) {
   const allowed = (tab: Tab) =>
     ({
+      projectReports:
+        owner ||
+        (permissions.includes("projects.publish") &&
+          permissions.includes("website.publish")),
       discord: owner,
       audit: owner,
       update: permissions.includes("updates.view"),
@@ -87,7 +93,8 @@ export default function Publishing({
   const items: [Tab, string, typeof Radio][] = [
     ["update", "Updates", Radio],
     ["project", "Featured projects", Terminal],
-    ["reports", "Reports", BarChart3],
+    ["reports", "Publishing reports", BarChart3],
+    ["projectReports", "Reported projects", BarChart3],
     ["webhooks", "Publishing webhooks", Hash],
     ["staff", "Staff approval", Users],
     ["database", "Database", Database],
@@ -246,6 +253,8 @@ export default function Publishing({
           allChannels={allChannels}
           channelIds={channelIds}
         />
+      ) : tab === "projectReports" ? (
+        <ProjectReports />
       ) : tab === "reports" ? (
         <Reports />
       ) : tab === "webhooks" ? (

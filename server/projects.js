@@ -1,3 +1,9 @@
+import {
+  ensureProjectModeration,
+  reportProject,
+  moderateProject,
+  reviewProjectReport,
+} from "./project-moderation.js";
 import { seedOwnerProjects } from "./starter-projects.js";
 import { randomUUID } from "node:crypto";
 import { database } from "./db.js";
@@ -56,10 +62,11 @@ const idOf = (s) => {
     fail(400, "Invalid project ID.");
   return s;
 };
-export async function publicProjects(db, userId = "") {
-  return (
+export async function publicProjects(db, userId = "", showcase = false) {
+  await ensureProjectModeration(db);
+  const projects = (
     await db.query(
-      `SELECT p.id,p.published,p.published_at,p.owner_id,p.owner_name,(SELECT count(*)::int FROM con.project_votes v WHERE v.project_id=p.id) AS votes,(SELECT count(*)::int FROM con.project_comments c WHERE c.project_id=p.id) AS comments,EXISTS(SELECT 1 FROM con.project_votes v WHERE v.project_id=p.id AND v.user_id=$1) AS voted FROM con.projects p WHERE p.published IS NOT NULL ORDER BY votes DESC,p.published_at DESC LIMIT 200`,
+      `SELECT p.id,p.published,p.published_at,p.owner_id,p.owner_name,p.homepage_pinned,p.homepage_hidden,(SELECT count(*)::int FROM con.project_votes v WHERE v.project_id=p.id) AS votes,(SELECT count(*)::int FROM con.project_comments c WHERE c.project_id=p.id) AS comments,EXISTS(SELECT 1 FROM con.project_votes v WHERE v.project_id=p.id AND v.user_id=$1) AS voted FROM con.projects p WHERE p.published IS NOT NULL ${showcase ? "AND NOT p.homepage_hidden" : ""} ORDER BY ${showcase ? "p.homepage_pinned DESC," : ""} votes DESC,p.published_at DESC LIMIT ${showcase ? 15 : 200}`,
       [userId],
     )
   ).rows.map((p) => ({
@@ -68,11 +75,19 @@ export async function publicProjects(db, userId = "") {
     kind: "project",
     author_name: p.owner_name,
     owner_id: p.owner_id,
+    homepage_pinned: p.homepage_pinned,
+    homepage_hidden: p.homepage_hidden,
     published_at: p.published_at,
     votes: p.votes,
     comments: p.comments,
     voted: p.voted,
   }));
+  if (!showcase) return projects;
+  const pinned = projects.filter((p) => p.homepage_pinned).slice(0, 5);
+  const normal = projects
+    .filter((p) => !p.homepage_pinned)
+    .slice(0, (5 - pinned.length) * 3);
+  return [...pinned, ...normal];
 }
 export async function projectsHandler(
   req,
@@ -110,8 +125,50 @@ export async function projectsHandler(
         fail(403, "Only the site owner can create starter projects.");
       return json(res, 200, await seedOwnerProjects(db, user));
     }
-    if (action === "list" && req.method === "GET")
-      return json(res, 200, { projects: await publicProjects(db, user?.id) });
+    if (action === "list" && req.method === "GET") {
+      const grant = user ? await accessLookup(session) : null;
+      return json(res, 200, {
+        projects: await publicProjects(
+          db,
+          user?.id,
+          url.searchParams.get("showcase") === "1",
+        ),
+        canManage: canReview(grant),
+      });
+    }
+    if (
+      ["report", "project_reports", "moderate", "review_report"].includes(
+        action,
+      )
+    ) {
+      if (!user) fail(401, "Sign in with Discord first.");
+      const grant = await accessLookup(session);
+      if (action !== "report" && !canReview(grant))
+        fail(
+          403,
+          "Project publishing and website publishing permissions are required.",
+        );
+      await ensureProjectModeration(db);
+      if (action === "project_reports" && req.method === "GET") {
+        const state = url.searchParams.get("state") || "open";
+        if (!["open", "dismissed", "removed"].includes(state))
+          fail(400, "Choose a valid report status.");
+        const reports = (
+          await db.query(
+            "SELECT r.*,p.homepage_pinned,p.homepage_hidden FROM con.project_reports r JOIN con.projects p ON p.id=r.project_id WHERE r.status=$1 ORDER BY r.created_at DESC LIMIT 200",
+            [state],
+          )
+        ).rows;
+        return json(res, 200, { reports });
+      }
+      if (action === "report" && req.method === "POST")
+        return json(res, 201, await reportProject(db, b, user));
+      if (action === "moderate" && req.method === "PUT")
+        return json(res, 200, await moderateProject(db, b, user.id));
+      if (action === "review_report" && req.method === "PUT")
+        return json(res, 200, await reviewProjectReport(db, b, user.id));
+      fail(405, "Unsupported moderation operation.");
+    }
     if (action === "mine" && req.method === "GET") {
       if (!user) fail(401, "Sign in first.");
       const grant = await accessLookup(session);

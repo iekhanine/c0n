@@ -12,6 +12,7 @@ import {
 } from "../../SiteText";
 import type { Access } from "./adminApi";
 import "./Admin.css";
+import "./Readability.css";
 import { PERMISSIONS, presetPermissions } from "../../../shared/permissions.js";
 
 type Session = {

@@ -1,3 +1,4 @@
+import ProjectCardMenu from "./ProjectCardMenu";
 import { StreamPage } from "./Social";
 import {
   useDiscordCommunity,
@@ -32,6 +33,8 @@ type Post = {
   author_name: string;
   published_at: string;
   owner_id: string;
+  homepage_pinned?: boolean;
+  homepage_hidden?: boolean;
   category?: string;
   votes?: number;
   comments?: number;
@@ -57,19 +60,25 @@ export default function CommunityFeed({
   const [category, setCategory] = useState("All projects"),
     [query, setQuery] = useState(""),
     [sort, setSort] = useState("featured");
+  const [canManage, setCanManage] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const [community, setCommunity] = useState<Post[]>([]);
   const [projectError, setProjectError] = useState("");
   useEffect(() => {
     const c = new AbortController();
     async function load() {
       try {
-        const r = await fetch("/api/projects", {
-          signal: c.signal,
-          cache: "no-store",
-        });
+        const r = await fetch(
+          "/api/projects" + (page === "explore" ? "?showcase=1" : ""),
+          {
+            signal: c.signal,
+            cache: "no-store",
+          },
+        );
         const d = await r.json();
         if (!r.ok) throw Error(d.error);
         setCommunity(d.projects);
+        setCanManage(d.canManage === true);
         setProjectError("");
       } catch {
         if (!c.signal.aborted)
@@ -84,9 +93,9 @@ export default function CommunityFeed({
       c.abort();
       window.removeEventListener("con-projects-changed", load);
     };
-  }, []);
+  }, [page, refresh]);
   const real = community;
-  const projects = [...real]
+  const ranked = [...real]
     .filter(
       (p) =>
         (category === "All projects" || p.category === category) &&
@@ -94,12 +103,21 @@ export default function CommunityFeed({
           .toLowerCase()
           .includes(query.toLowerCase()),
     )
-    .sort((a, b) =>
-      sort === "newest"
-        ? Date.parse(b.published_at) - Date.parse(a.published_at)
-        : (b.votes || 0) - (a.votes || 0) ||
-          Date.parse(b.published_at) - Date.parse(a.published_at),
+    .sort(
+      (a, b) =>
+        (page === "explore"
+          ? Number(Boolean(b.homepage_pinned)) -
+            Number(Boolean(a.homepage_pinned))
+          : 0) ||
+        (sort === "newest" && page !== "explore"
+          ? Date.parse(b.published_at) - Date.parse(a.published_at)
+          : (b.votes || 0) - (a.votes || 0) ||
+            Date.parse(b.published_at) - Date.parse(a.published_at)),
     );
+  const projects =
+    page === "explore"
+      ? ranked.filter((p) => !p.homepage_hidden).slice(0, 15)
+      : ranked;
   return (
     <>
       <section className="page-introduction">
@@ -146,15 +164,19 @@ export default function CommunityFeed({
                 ),
               )}
             </div>
-            <select
-              aria-label="Sort projects"
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-            >
-              <option value="featured">{text("copy.5")}</option>
-              <option value="newest">{text("copy.6")}</option>
-            </select>
-            <EditButton id={sort === "featured" ? "copy.5" : "copy.6"} />
+            {page !== "explore" && (
+              <>
+                <select
+                  aria-label="Sort projects"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                >
+                  <option value="featured">{text("copy.5")}</option>
+                  <option value="newest">{text("copy.6")}</option>
+                </select>
+                <EditButton id={sort === "featured" ? "copy.5" : "copy.6"} />
+              </>
+            )}
           </div>
           <label className="compact-search" id="project-search">
             <Search size={16} />
@@ -176,7 +198,18 @@ export default function CommunityFeed({
           )}
           <section className="showcase-grid" aria-label="Community projects">
             {projects.map((p) => (
-              <article className="project-card" key={p.id}>
+              <article
+                className={`project-card ${page === "explore" && p.homepage_pinned ? "project-card-pinned" : ""}`}
+                key={p.id}
+              >
+                <ProjectCardMenu
+                  project={p}
+                  canManage={canManage}
+                  onChange={() => setRefresh((n) => n + 1)}
+                />
+                {page === "explore" && p.homepage_pinned && (
+                  <span className="project-pinned-label">PINNED</span>
+                )}
                 <div className="project-preview">
                   <a href={`/projects/${p.id}`} aria-label={`View ${p.title}`}>
                     <img
@@ -224,15 +257,16 @@ export default function CommunityFeed({
                       <>
                         <VoteButton
                           project={p as Project}
-                          onChange={(votes, voted) =>
+                          onChange={(votes, voted) => {
                             setCommunity((prev) =>
                               prev.map((item) =>
                                 item.id === p.id
                                   ? { ...item, votes, voted }
                                   : item,
                               ),
-                            )
-                          }
+                            );
+                            setRefresh((n) => n + 1);
+                          }}
                         />
                         <a
                           className="sample-comments"
@@ -260,6 +294,11 @@ export default function CommunityFeed({
             <p className="showcase-empty">
               <Editable id="copy.9" />
             </p>
+          )}
+          {page === "explore" && (
+            <div className="home-transmissions">
+              <StreamPage compact />
+            </div>
           )}
         </div>
         <aside className="showcase-rail" aria-label="Community highlights">
@@ -337,7 +376,11 @@ export default function CommunityFeed({
             <DiscordActivity data={discord} />
           </section>
         </aside>
-        <StreamPage compact />
+        {page !== "explore" && (
+          <div className="home-transmissions">
+            <StreamPage compact />
+          </div>
+        )}
       </div>
     </>
   );

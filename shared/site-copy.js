@@ -1,5 +1,8 @@
 // Owner-editable public copy. Keys are stable and allowlisted by the server.
 export const SITE_COPY = {
+  "admin.projectReports.title": "Reported projects",
+  "admin.projectReports.description":
+    "Review member reports, dismiss them, or remove projects from the front page.",
   "admin.eyebrow": "CULT OF nix0n / COMMUNITY CONTROL",
   "admin.projectsLink": "My projects & submission reviews →",
   "admin.brand": "CULT OF nix0n",
