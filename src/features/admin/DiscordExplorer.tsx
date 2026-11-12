@@ -17,12 +17,14 @@ import {
   KeyRound,
 } from "lucide-react";
 import DiscordConnection from "./DiscordConnection";
+import ReactionRoles from "./ReactionRoles";
 import { destructive, smallCaps } from "../../../shared/discord-control.js";
 import "./DiscordExplorer.css";
 type Page =
   | "overview"
   | "channels"
   | "roles"
+  | "reaction-roles"
   | "members"
   | "bans"
   | "webhooks"
@@ -91,6 +93,7 @@ const groups: { name: string; items: [Page, string, typeof Folder][] }[] = [
       ["overview", "Overview", Folder],
       ["channels", "Channels & categories", Hash],
       ["roles", "Roles", Shield],
+      ["reaction-roles", "Reaction roles", Shield],
       ["settings", "Server settings", Settings],
     ],
   },
@@ -265,7 +268,7 @@ export default function DiscordExplorer() {
       setItems(d.items);
       return;
     }
-    if (target === "connection") return;
+    if (target === "connection" || target === "reaction-roles") return;
     const data = (await command(
       `${target}.list`,
       after ? { after } : {},
@@ -682,6 +685,8 @@ export default function DiscordExplorer() {
           )}
           {page === "connection" ? (
             <DiscordConnection />
+          ) : page === "reaction-roles" ? (
+            <ReactionRoles />
           ) : ["overview", "permissions"].includes(page) ? (
             <>
               {overview && (
