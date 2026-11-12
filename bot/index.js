@@ -13,6 +13,7 @@ import { publicChannels, memberRecord, activityRecord } from "./protocol.js";
 import { executeControl, controlError } from "./control.js";
 import { assignNewMemberStatus, applyParticipationProgress, participationEvent } from "./participation.js";
 import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js";
+import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 const SITE = process.env.CON_SITE_URL || "https://c0n.ivansays.com";
 if (new URL(SITE).origin !== "https://c0n.ivansays.com")
   throw Error("CON_SITE_URL must be the C0N production origin.");
@@ -71,6 +72,7 @@ async function send(payload) {
 }
 async function main() {
   let reactionConfig = null, reactionVersion = "";
+  let welcome = null;
   const client = new Client({
     rest: { timeout: 20000, retries: 0 },
     intents: [
@@ -89,6 +91,11 @@ async function main() {
           code: e.code || e.status || "operation",
         });
       });
+  async function refreshWelcome() {
+    if (!guild || !client.user) return;
+    await guild.channels.fetch();
+    welcome = await ensureWelcomePost(guild, client.user.id);
+  }
   async function heartbeat() {
     if (!guild || heartbeatBusy) return;
     heartbeatBusy = true;
@@ -224,6 +231,7 @@ async function main() {
         throw Error("Configure the server ID in C0N Admin → Discord bot.");
       guild = await client.guilds.fetch(config.guild_id);
       await guild.fetch();
+      await refreshWelcome();
       await heartbeat();
       const snapshot = randomUUID();
       await send({
@@ -272,6 +280,15 @@ async function main() {
       console.log("C0N Discord worker connected.");
     }),
   );
+  client.on(Events.ChannelUpdate, (before, after) => {
+    if (after.guild.id === guildId &&
+        (isFirstContactChannel(before) || isFirstContactChannel(after)))
+      run(refreshWelcome);
+  });
+  client.on(Events.ChannelCreate, (channel) => {
+    if (channel.guild.id === guildId && isFirstContactChannel(channel))
+      run(refreshWelcome);
+  });
   client.on(Events.GuildMemberAdd, (m) => {
     if (m.guild.id === guildId) {
       memberChanges.set(m.id, { id: m.id, member: memberRecord(m) });
@@ -290,7 +307,7 @@ async function main() {
     const id = `${event.type}:${event.event_id}:${event.user_id}`;
     if (participationPending.size >= 10000)
       participationPending.delete(participationPending.keys().next().value);
-    participationPending.set(id, event);
+    participationPending.set(id, { ...event, onboarding: onboardingEligible(event, welcome) });
   };
   client.on(Events.MessageReactionAdd, (reaction, user) => {
     if (reaction.message.guildId === guildId && !user.bot)
@@ -365,11 +382,14 @@ async function main() {
   );
   const flushTimer = setInterval(() => run(flush), 15000),
     heartbeatTimer = setInterval(() => run(heartbeat), 60000),
+    welcomeTimer = setInterval(() => { if (!welcome?.messageId) run(refreshWelcome); }, 300000),
+    progressTimer = setInterval(() => run(checkProgress), 3600000),
     controlTimer = setInterval(() => run(commands), 5000);
   const shutdown = async () => {
     state = "stopping";
     clearInterval(controlTimer);
     clearInterval(progressTimer);
+    clearInterval(welcomeTimer);
     clearInterval(flushTimer);
     clearInterval(heartbeatTimer);
     await flush().catch(() => {});
