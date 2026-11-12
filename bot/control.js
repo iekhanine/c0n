@@ -151,6 +151,19 @@ export async function executeControl(guild, command) {
       fail("Your Discord account cannot manage this channel.");
     return c;
   }
+  if (op === "reaction_roles.prepare") {
+    const c = await guild.channels.fetch(p.channel_id);
+    if (!c || ![0,5].includes(c.type) ||
+        !c.permissionsFor(actor)?.has(P.ViewChannel) ||
+        !c.permissionsFor(me)?.has([P.ViewChannel, P.ReadMessageHistory, P.AddReactions]))
+      fail("The bot needs View Channel, Read Message History and Add Reactions.");
+    const message = await c.messages.fetch(p.message_id);
+    const emojis = ["💬","💻","🎨","🎮","🎲","🎙️"];
+    const actual = [...message.reactions.cache.values()].map(r => r.emoji.name);
+    for (const emoji of emojis)
+      if (!actual.includes(emoji)) await message.react(emoji);
+    return { message_id: message.id, emojis };
+  }
   if (op === "reaction_roles.inspect") {
     const c = await guild.channels.fetch(p.channel_id);
     if (!c || ![0, 5].includes(c.type) ||
