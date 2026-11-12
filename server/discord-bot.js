@@ -24,9 +24,10 @@ async function ensureParticipation(db) {
        guild_id text NOT NULL, event_id text NOT NULL,
        event_type text NOT NULL CHECK(event_type IN ('message','reaction')),
        channel_id text NOT NULL, user_id text NOT NULL,
-       occurred_at timestamptz NOT NULL,
+       occurred_at timestamptz NOT NULL, onboarding boolean NOT NULL DEFAULT false,
        PRIMARY KEY(guild_id,event_type,event_id,user_id)
       );
+      ALTER TABLE con.discord_participation_events ADD COLUMN IF NOT EXISTS onboarding boolean NOT NULL DEFAULT false;
       CREATE INDEX IF NOT EXISTS con_participation_user_time
        ON con.discord_participation_events(guild_id,user_id,occurred_at);
       ALTER TABLE con.discord_participation_events ENABLE ROW LEVEL SECURITY;
@@ -247,14 +248,15 @@ async function acceptSync(db, s, b, headers) {
           if (!["message", "reaction"].includes(event.type) ||
               !snowflake(event.user_id) || !snowflake(event.channel_id) ||
               typeof event.event_id !== "string" || !/^[0-9a-f:-]{17,150}$/.test(event.event_id) ||
+              typeof event.onboarding !== "boolean" ||
               !date(event.at) ||
               Math.abs(Date.now() - Date.parse(event.at)) > 172800000)
             fail(400, "Invalid participation event.");
           await client.query(
             `INSERT INTO con.discord_participation_events
-             (guild_id,event_id,event_type,channel_id,user_id,occurred_at)
-             VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
-            [s.guild_id,event.event_id,event.type,event.channel_id,event.user_id,event.at],
+             (guild_id,event_id,event_type,channel_id,user_id,occurred_at,onboarding)
+             VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`,
+            [s.guild_id,event.event_id,event.type,event.channel_id,event.user_id,event.at,event.onboarding],
           );
           userIds.add(event.user_id);
         }
@@ -266,7 +268,7 @@ async function acceptSync(db, s, b, headers) {
            WHERE e.guild_id=$1 AND m.active=true AND m.is_bot=false
             AND m.joined_at <= now()-interval '14 days'
            GROUP BY e.user_id
-           HAVING count(*) FILTER (WHERE e.event_type='message') >= 30
+           HAVING bool_or(e.onboarding) AND count(*) FILTER (WHERE e.event_type='message') >= 30
              AND count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date) FILTER (WHERE e.event_type='message') >= 5
            LIMIT 100`,
           [s.guild_id],
@@ -276,7 +278,7 @@ async function acceptSync(db, s, b, headers) {
       for (const userId of userIds) {
         const result = await client.query(
           `SELECT
-             count(e.event_id)::int > 0 AS participated,
+             COALESCE(bool_or(e.onboarding), false) AS participated,
              count(e.event_id) FILTER (WHERE e.event_type='message')::int AS messages,
              count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date) FILTER (WHERE e.event_type='message')::int AS active_days,
              m.joined_at <= now()-interval '14 days' AS mature
@@ -290,7 +292,7 @@ async function acceptSync(db, s, b, headers) {
         const row = result.rows[0];
         if (row) progress.push({
           user_id: userId, participated: row.participated,
-          eligible_instigator: row.mature && row.messages >= 30 && row.active_days >= 5,
+          eligible_instigator: row.participated && row.mature && row.messages >= 30 && row.active_days >= 5,
         });
       }
     }
