@@ -16,6 +16,27 @@ export function canonicalRoleName(name) {
     .join("")
     .replace(/[^a-z0-9]/g, "");
 }
+// Ordinary chat and visibility permissions are safe for a participation role.
+// Never auto-manage roles with moderation, server management, or elevated powers.
+const unsafeBits = [
+  0x8n,             // Administrator
+  0x2n, 0x4n,       // Kick, Ban
+  0x10n, 0x20n,     // Manage Channels, Manage Guild
+  0x10000000n,      // Manage Roles
+  0x2000000n,       // Manage Webhooks
+  0x1000n,          // Manage Messages
+  0x2000n,          // Manage Threads
+  0x4000000n,       // Manage Events
+  0x40000000n,      // Manage Emojis and Stickers
+  0x8000000n,       // Manage Nicknames
+  0x10000000000n,   // Moderate Members
+  0x1000000n,       // Manage Expressions (alternative)
+  0x1000000000n,    // Manage Threads (alternative)
+].reduce((all, bit) => all | bit, 0n);
+export function safeParticipationRole(role) {
+  return Boolean(role && !role.managed && role.id !== role.guild.id &&
+    (BigInt(role.permissions.bitfield) & unsafeBits) === 0n);
+}
 export function statusRole(guild, name) {
   const target = canonicalRoleName(name);
   const found = [...guild.roles.cache.values()].filter(r =>
@@ -23,7 +44,7 @@ export function statusRole(guild, name) {
   if (found.length !== 1) return null;
   const role = found[0];
   const me = guild.members.me;
-  return role.id !== guild.id && !role.managed && role.permissions.bitfield === 0n &&
+  return safeParticipationRole(role) &&
     !!me && me.roles.highest.comparePositionTo(role) > 0 ? role : null;
 }
 export async function assignNewMemberStatus(member) {
