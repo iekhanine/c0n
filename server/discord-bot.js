@@ -261,16 +261,14 @@ async function acceptSync(db, s, b, headers) {
           userIds.add(event.user_id);
         }
       } else {
-        // Periodically promote members who become 14 days old even without new activity.
+        // Re-evaluate members who completed First Contact. This also repairs
+        // an interrupted role assignment after a restart or permission fix.
         const eligible = await client.query(
-          `SELECT e.user_id FROM con.discord_participation_events e
+          `SELECT DISTINCT e.user_id FROM con.discord_participation_events e
            JOIN con.discord_members m ON m.guild_id=e.guild_id AND m.discord_id=e.user_id
-           WHERE e.guild_id=$1 AND m.active=true AND m.is_bot=false
-            AND m.joined_at <= now()-interval '14 days'
-           GROUP BY e.user_id
-           HAVING bool_or(e.onboarding) AND count(*) FILTER (WHERE e.event_type='message') >= 30
-             AND count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date) FILTER (WHERE e.event_type='message') >= 5
-           LIMIT 100`,
+           WHERE e.guild_id=$1 AND e.onboarding=true
+            AND m.active=true AND m.is_bot=false
+           ORDER BY e.user_id LIMIT 500`,
           [s.guild_id],
         );
         for (const row of eligible.rows) userIds.add(row.user_id);
