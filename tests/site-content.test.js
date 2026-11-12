@@ -103,3 +103,107 @@ test("owner saves persist, public reads omit attribution, stale edits conflict",
     await pg.close();
   }
 });
+
+test("removal and historical restoration are durable, private and version checked", async () => {
+  const pg = new PGlite();
+  await pg.exec(
+    "CREATE ROLE anon;CREATE ROLE authenticated;CREATE SCHEMA con;CREATE TABLE con.schema_migrations(version integer,app text);INSERT INTO con.schema_migrations VALUES(1,'cult-of-nix0n');",
+  );
+  const client = {
+    query: (sql, args) =>
+      sql.includes("pg_advisory_xact_lock")
+        ? Promise.resolve({ rows: [] })
+        : sql.includes("CREATE TABLE")
+          ? pg.exec(sql).then(() => ({ rows: [] }))
+          : pg.query(sql, args),
+    release() {},
+  };
+  const db = { query: client.query, connect: async () => client };
+  async function call(method, body, action = "", who = owner) {
+    const r = response(),
+      request = await req(who, body);
+    request.method = method;
+    request.url = "/api/site-content" + (action ? "?action=" + action : "");
+    await siteContentHandler(request, r, () => db);
+    return r;
+  }
+  try {
+    const edited = await call("PUT", {
+      key: "admin.discord.title",
+      value: "Server control",
+      version: 0,
+    });
+    assert.equal(edited.statusCode, 200);
+    assert.ok(edited.body.event_id);
+    const hidden = await call("PUT", {
+      key: "admin.discord.title",
+      value: "",
+      removed: true,
+      version: 1,
+    });
+    assert.equal(hidden.statusCode, 200);
+    assert.equal(hidden.body.value, "Server control");
+    assert.equal(hidden.body.removed, true);
+    const publicRead = await call("GET", undefined, "", null);
+    const entry = publicRead.body.entries.find(
+      (e) => e.key === "admin.discord.title",
+    );
+    assert.equal(entry.value, "");
+    assert.equal(entry.removed, true);
+    assert.equal(
+      JSON.stringify(publicRead.body).includes("Server control"),
+      false,
+    );
+    for (const who of [null, admin])
+      assert.equal(
+        (await call("GET", undefined, "history", who)).statusCode,
+        who ? 403 : 401,
+      );
+    const history = await call("GET", undefined, "history");
+    assert.equal(history.body.history.length, 2);
+    assert.equal(history.body.history[0].before_value, "Server control");
+    assert.equal(history.body.defaults["admin.discord.title"], "Discord bot");
+    const undo = await call(
+      "POST",
+      { event_id: hidden.body.event_id, version: 2 },
+      "restore",
+    );
+    assert.equal(undo.statusCode, 200);
+    assert.equal(undo.body.removed, false);
+    assert.equal(undo.body.value, "Server control");
+    assert.equal(undo.body.version, 3);
+    assert.equal(
+      (
+        await call(
+          "POST",
+          { event_id: edited.body.event_id, version: 2 },
+          "restore",
+        )
+      ).statusCode,
+      409,
+    );
+    const earlier = await call(
+      "POST",
+      { event_id: edited.body.event_id, version: 3, side: "before" },
+      "restore",
+    );
+    assert.equal(earlier.body.value, "Discord bot");
+    assert.equal(earlier.body.version, 4);
+    const originalRemovedVersion = await call(
+      "POST",
+      { event_id: hidden.body.event_id, version: 4, side: "after" },
+      "restore",
+    );
+    assert.equal(originalRemovedVersion.body.removed, true);
+    assert.equal(originalRemovedVersion.body.value, "Server control");
+    const refreshedHistory = await call("GET", undefined, "history");
+    assert.equal(refreshedHistory.body.history.length, 5);
+    assert.equal(refreshedHistory.body.history[0].action, "restore");
+    const allowed = await pg.query(
+      "SELECT has_table_privilege('anon','con.site_content_history','SELECT') AS allowed",
+    );
+    assert.equal(allowed.rows[0].allowed, false);
+  } finally {
+    await pg.close();
+  }
+});
