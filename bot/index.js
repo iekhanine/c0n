@@ -96,7 +96,38 @@ async function main() {
     await guild.channels.fetch();
     welcome = await ensureWelcomePost(guild, client.user.id);
   }
-  async function auditCategoryPermissions() {
+  async function repairBotCategoryAccess() {
+    // Repair the two categories restricted by the earlier setup sequence.
+    // Never change @everyone, member, staff, or category access role permissions.
+    await guild.channels.fetch();
+    await guild.roles.fetch();
+    const me = await guild.members.fetchMe();
+    const compact = value => [...String(value || "").toLowerCase()]
+      .map(c => Object.fromEntries([...("ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ")].map((x,i)=>[x,"abcdefghijklmnopqrstuvwxyz"[i]]))[c] || c)
+      .join("").replace(/[^a-z0-9]/g, "");
+    const botRole = me.roles.cache.find(r => compact(r.name) === "cultofnixon");
+    if (!botRole || !me.permissions.has("ManageRoles")) {
+      console.warn("C0N access repair skipped: bot role or Manage Roles permission unavailable.");
+      return;
+    }
+    for (const name of ["thecompound", "theworkshop"]) {
+      const category = [...guild.channels.cache.values()].find(c =>
+        c.type === 4 && compact(c.name) === name);
+      if (!category || category.permissionsFor(me)?.has("ViewChannel")) continue;
+      try {
+        await category.permissionOverwrites.edit(botRole, { ViewChannel: true }, {
+          reason: "Repair C0N bot visibility after interrupted category access setup",
+        });
+        console.info("C0N access repair", JSON.stringify({ category: category.name,
+          botView: category.permissionsFor(me)?.has("ViewChannel"), status: "updated" }));
+      } catch (e) {
+        console.error("C0N access repair rejected", JSON.stringify({
+          category: category.name, code: e.code || e.status || "unknown",
+        }));
+      }
+    }
+  }
+    async function auditCategoryPermissions() {
     await guild.channels.fetch();
     await guild.roles.fetch();
     const me = await guild.members.fetchMe();
@@ -307,7 +338,7 @@ async function main() {
         type: ActivityType.Watching,
       });
       state = "ready";
-      run(auditCategoryPermissions);
+      run(async () => { await repairBotCategoryAccess(); await auditCategoryPermissions(); });
       run(checkProgress);
       console.log("C0N Discord worker connected.");
     }),
