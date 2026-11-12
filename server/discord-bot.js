@@ -8,6 +8,11 @@ import { ORIGIN, json, readSession, accessFor } from "./auth.js";
 import { database, initializeDatabase } from "./db.js";
 import { discordMigration } from "./discord-schema.js";
 import { verifyBridge, canonicalJson } from "../shared/discord-signing.js";
+import {
+  ensureControl,
+  controlRequest,
+  controlSync,
+} from "./discord-control.js";
 const fail = (status, message) => {
   throw Object.assign(Error(message), { status });
 };
@@ -171,6 +176,8 @@ async function acceptSync(db, s, b, headers) {
   if (
     !b ||
     ![
+      "control_poll",
+      "control_result",
       "bootstrap",
       "heartbeat",
       "members",
@@ -183,6 +190,7 @@ async function acceptSync(db, s, b, headers) {
     fail(400, "Unknown worker event.");
   if (b.kind !== "bootstrap" && b.guild_id !== s.guild_id)
     fail(403, "Wrong Discord server.");
+  if (b.kind.startsWith("control_")) await ensureControl(db);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -203,6 +211,11 @@ async function acceptSync(db, s, b, headers) {
       [headers["x-con-nonce"]],
     );
     if (!receipt.rowCount) fail(409, "Worker request already received.");
+    if (b.kind.startsWith("control_")) {
+      const result = await controlSync(client, s, b);
+      await client.query("COMMIT");
+      return { ...result, guild_id: s.guild_id };
+    }
     if (b.kind === "heartbeat") {
       if (
         !snowflake(b.bot_id) ||
@@ -326,7 +339,10 @@ export async function discordBotHandler(
       new URL(req.url, ORIGIN).searchParams.get("action") || "status";
     const b =
       typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-    if (Buffer.byteLength(canonicalJson(b) || "") > 65536)
+    if (
+      Buffer.byteLength(canonicalJson(b) || "") >
+      (action === "sync" && b?.kind === "control_result" ? 512000 : 65536)
+    )
       fail(413, "Request too large.");
     if (action === "public" && req.method === "GET")
       return json(res, 200, await publicDiscord(dbFactory()));
@@ -345,6 +361,22 @@ export async function discordBotHandler(
     if (req.method !== "GET" && req.headers.origin !== ORIGIN)
       fail(403, "Invalid origin.");
     const db = dbFactory();
+    if (action.startsWith("control_")) {
+      const s = await settings(db);
+      return json(
+        res,
+        200,
+        await controlRequest(
+          db,
+          action,
+          req.method,
+          b,
+          session,
+          s?.guild_id,
+          new URL(req.url, ORIGIN).searchParams,
+        ),
+      );
+    }
     if (action === "status" && req.method === "GET")
       return json(res, 200, {
         ...safeSettings(await settings(db)),

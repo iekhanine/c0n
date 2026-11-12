@@ -9,6 +9,7 @@ import {
 } from "discord.js";
 import { canonicalJson, signBridge } from "../shared/discord-signing.js";
 import { publicChannels, memberRecord, activityRecord } from "./protocol.js";
+import { executeControl, controlError } from "./control.js";
 const SITE = process.env.CON_SITE_URL || "https://c0n.ivansays.com";
 if (new URL(SITE).origin !== "https://c0n.ivansays.com")
   throw Error("CON_SITE_URL must be the C0N production origin.");
@@ -66,6 +67,7 @@ async function send(payload) {
 }
 async function main() {
   const client = new Client({
+    rest: { timeout: 20000, retries: 0 },
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
@@ -96,6 +98,54 @@ async function main() {
       });
     } finally {
       heartbeatBusy = false;
+    }
+  }
+  let controlBusy = false,
+    receipt = null;
+  async function commands() {
+    if (state !== "ready" || !guild || controlBusy) return;
+    controlBusy = true;
+    try {
+      // Retain the result until acknowledged. Never re-run the Discord mutation.
+      if (receipt) {
+        await send(receipt);
+        receipt = null;
+      }
+      const { command } = await send({
+        kind: "control_poll",
+        guild_id: guildId,
+      });
+      if (!command) return;
+      try {
+        const result = await executeControl(guild, command);
+        if (Buffer.byteLength(JSON.stringify(result)) > 390000)
+          throw Object.assign(
+            Error(
+              "This result is too large to display. Reduce server permission overrides before loading the full channel list.",
+            ),
+            { safe: true },
+          );
+        receipt = {
+          kind: "control_result",
+          guild_id: guildId,
+          command_id: command.id,
+          state: "succeeded",
+          result,
+        };
+      } catch (e) {
+        const uncertain = !e.safe && (!e.code || Number(e.status) >= 500);
+        receipt = {
+          kind: "control_result",
+          guild_id: guildId,
+          command_id: command.id,
+          state: uncertain ? "uncertain" : "failed",
+          error: controlError(e),
+        };
+      }
+      await send(receipt);
+      receipt = null;
+    } finally {
+      controlBusy = false;
     }
   }
   async function flush() {
@@ -252,9 +302,11 @@ async function main() {
     console.error("Discord client error", { code: e.code || "connection" }),
   );
   const flushTimer = setInterval(() => run(flush), 15000),
-    heartbeatTimer = setInterval(() => run(heartbeat), 60000);
+    heartbeatTimer = setInterval(() => run(heartbeat), 60000),
+    controlTimer = setInterval(() => run(commands), 5000);
   const shutdown = async () => {
     state = "stopping";
+    clearInterval(controlTimer);
     clearInterval(flushTimer);
     clearInterval(heartbeatTimer);
     await flush().catch(() => {});
