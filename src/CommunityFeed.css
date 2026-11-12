@@ -1755,3 +1755,25 @@ body.showcase-page {
   margin-top: 16px;
 }
 .discord-status-card{padding:20px;border:1px solid #687f48;border-radius:10px;background:#1e2818;margin:25px 0}.discord-status-card strong{color:#d1f77b;letter-spacing:1px}.discord-connection .workspace-layout{grid-template-columns:1fr 1fr}.discord-connection input[type=checkbox]{width:auto;display:inline;margin-right:10px}.discord-connection dd{margin:4px 0 15px;color:#c2cfb4;font-size:14px}.discord-connection dt{font-weight:700}.discord-connection code{color:#d5e9b4;background:#14200e}.discord-channel-option{padding:7px;border-bottom:1px solid #425131}.discord-member-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover}.discord-activity-empty{color:#b0bd9e;font-size:14px}.discord-sync-label{font-size:12px;color:#aabb95}.discord-status-dot{width:8px;height:8px;border-radius:50%;background:#929a87;display:inline-block;margin-right:7px}.discord-status-dot.live{background:#cef77b}@media(max-width:800px){.discord-connection .workspace-layout{grid-template-columns:1fr}}
+
+/* Discord photos and initials share one fixed footprint in both member panels. */
+.fresh-members .discord-member-avatar,
+.activity-member .discord-member-avatar {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  max-width: 34px;
+  max-height: 34px;
+  flex: 0 0 34px;
+  padding: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  font-size: 12px;
+  line-height: 1;
+  overflow: hidden;
+}

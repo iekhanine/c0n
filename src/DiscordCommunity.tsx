@@ -41,16 +41,21 @@ export function useDiscordCommunity() {
   return data;
 }
 function Avatar({ member }: { member: Member }) {
-  return member.avatar ? (
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const source = member.avatar
+    ? `https://cdn.discordapp.com/avatars/${member.discord_id}/${member.avatar}.png?size=64`
+    : null;
+  return source && failedSource !== source ? (
     <img
       className="discord-member-avatar"
-      src={`https://cdn.discordapp.com/avatars/${member.discord_id}/${member.avatar}.png?size=64`}
+      src={source}
       alt=""
       loading="lazy"
+      onError={() => setFailedSource(source)}
     />
   ) : (
-    <span className="member-initial">
-      {member.name.slice(0, 2).toUpperCase()}
+    <span className="discord-member-avatar member-initial" aria-hidden="true">
+      {[...member.name.trim()].slice(0, 2).join("").toUpperCase() || "?"}
     </span>
   );
 }
@@ -131,8 +136,9 @@ export function DiscordActivity({ data }: { data: DiscordData | null }) {
     </>
   ) : (
     <p className="discord-activity-empty">
-      Live activity will appear after the bot connects. Message text stays in
-      Discord.
+      {data?.connected
+        ? "No activity recorded in the selected channels yet. Message text stays in Discord."
+        : "Live activity will appear after the bot connects. Message text stays in Discord."}
     </p>
   );
 }
