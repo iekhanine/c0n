@@ -8,14 +8,17 @@ export function safeAccessRole(role) {
     role.permissions.bitfield === 0n && role.id !== role.guild.id &&
     dedicatedNames.has(canonicalRoleName(role.name)));
 }
+export function emojiKey(value) {
+  return String(value || "").replace(/\uFE0F/g, "");
+}
 export function reactionKey(reaction) {
-  return reaction.emoji.id || reaction.emoji.name;
+  return emojiKey(reaction.emoji.id || reaction.emoji.name);
 }
 export function matchingRole(config, reaction) {
   if (!config || reaction.message.id !== config.message_id ||
       reaction.message.channelId !== config.channel_id ||
       reaction.message.guildId !== config.guild_id) return null;
-  return config.mappings.find(m => m.emoji === reactionKey(reaction))?.role_id || null;
+  return config.mappings.find(m => emojiKey(m.emoji) === reactionKey(reaction))?.role_id || null;
 }
 export async function handleRoleReaction(guild, config, incoming, user, remove = false) {
   if (!guild || !user || user.bot || !config || incoming.message.guildId !== guild.id) return false;
@@ -45,7 +48,7 @@ export async function reconcileRoleReactions(guild, config, onExistingReaction =
   if (!channel?.isTextBased() || !channel.messages) return;
   const message = await channel.messages.fetch(config.message_id);
   for (const mapping of config.mappings) {
-    const reaction = message.reactions.cache.find(r => reactionKey(r) === mapping.emoji);
+    const reaction = message.reactions.cache.find(r => reactionKey(r) === emojiKey(mapping.emoji));
     if (!reaction) continue;
     let after;
     for (let page = 0; page < 100; page++) {
