@@ -1,3 +1,11 @@
+import {
+  useDiscordCommunity,
+  DiscordStatus,
+  DiscordMembers,
+  DiscordChannels,
+  DiscordActivity,
+  DiscordBuilders,
+} from "./DiscordCommunity";
 import { VoteButton, type Project } from "./ProjectPages";
 import { Editable, Copy, EditButton, useSiteCopy } from "./SiteText";
 import { useEffect, useState } from "react";
@@ -44,6 +52,7 @@ export default function CommunityFeed({
   page?: "explore" | "projects" | "members" | "community";
 }) {
   const text = useSiteCopy();
+  const discord = useDiscordCommunity();
   const [posts, setPosts] = useState<Post[]>([]),
     [error, setError] = useState(false),
     [category, setCategory] = useState("All projects"),
@@ -261,9 +270,7 @@ export default function CommunityFeed({
                 <h2>
                   <Editable id="copy.10" />
                 </h2>
-                <p>
-                  <Editable id="discord.connection" />
-                </p>
+                <DiscordStatus data={discord} />
               </div>
             </div>
             <a
@@ -301,47 +308,33 @@ export default function CommunityFeed({
               </p>
             )}
           </section>
+          <section className="rail-card">
+            <h2>
+              <MessageCircle size={23} />
+              <Editable id="discord.channels.title" />
+            </h2>
+            <DiscordChannels data={discord} />
+          </section>
           <section className="rail-card" id="members">
             <h2>
               <Zap size={25} />
-              <Editable id="copy.14" />
+              <Editable id="discord.members.title" />
             </h2>
-            {real.slice(0, 3).map((p) => (
-              <a
-                href={`/projects/${p.id}`}
-                className="activity-member"
-                key={p.id}
-              >
-                <span className="member-initial">
-                  {p.author_name.slice(0, 2).toUpperCase()}
-                </span>
-                <strong>{p.author_name}</strong>
-                <span>{p.title}</span>
-              </a>
-            ))}
-            {!real.length && (
-              <p>
-                <Editable id="projects.empty" />
-              </p>
-            )}
+            <DiscordBuilders data={discord} />
           </section>
           <section className="rail-card">
             <h2>
               <Users size={23} />
               <Editable id="copy.15" />
             </h2>
-            <p>
-              <Editable id="members.connection" />
-            </p>
+            <DiscordMembers data={discord} />
           </section>
           <section className="rail-card">
             <h2>
               <MessageCircle size={23} />
               <Editable id="copy.17" />
             </h2>
-            <p>
-              <Editable id="activity.connection" />
-            </p>
+            <DiscordActivity data={discord} />
           </section>
         </aside>
         <section

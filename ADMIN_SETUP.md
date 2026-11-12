@@ -82,3 +82,9 @@ The static showcase examples and illustrative member/activity entries have been 
 On the site owner's next authenticated visit, the public app calls the owner-only starter action. It adds Cult of nix0n and OneTime Labs as approved projects owned by that authenticated Discord account, with zero votes/comments. It initializes CoN project storage if required through the same validated migration helper. A private durable marker prevents duplicating records or republishing them after an owner edit/unpublish. No user accounts, votes or comments are fabricated. Owner-side errors expose a retry action.
 
 Project drafts now accept an optional HTTPS Git repository URL. GitHub, GitLab, Codeberg and other HTTPS hosts are supported. It is validated alongside other project URLs, shown to reviewers, and displayed on the approved project page. Older projects without this field remain editable.
+
+## Discord bot connection
+
+The owner-only **Discord bot** admin screen creates isolated private bot tables after validating the existing CoN schema. It stores the server ID, explicitly selected activity channels, public-member setting and an authenticated encrypted worker key. It does not change Discord roles or website staff permissions. Public statistics come from `/api/discord-bot?action=public`; signed worker updates use the same endpoint with `action=sync`. Neither public stats nor owner status reads return worker credentials.
+
+The separate Node worker in `bot/` runs on Railway with `bot/railway.toml` and `bot/Dockerfile`, using the repository root as build context. See `bot/README.md` for launch and secret configuration. A website deployment alone does not start the Discord Gateway worker. Real connection requires the bot token, guild installation, Server Members intent and a running worker. Bot setup is owner-only; staff permission checkboxes remain independent.

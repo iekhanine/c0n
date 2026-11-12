@@ -1,5 +1,7 @@
 // Owner-editable public copy. Keys are stable and allowlisted by the server.
 export const SITE_COPY = {
+  "discord.channels.title": "Most active channels",
+  "discord.members.title": "Active this week",
   "discord.connection": "Join the conversation in our Discord server.",
   "members.connection":
     "New member announcements will appear when Discord is connected.",

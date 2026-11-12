@@ -9,14 +9,26 @@ import {
 } from "lucide-react";
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
+import DiscordConnection from "./DiscordConnection";
 import Posts from "./Posts";
 import Channels from "./Channels";
 import Staff from "./Staff";
 import Reports from "./Reports";
 import "./Publishing.css";
 import "./Workflow.css";
-type Tab = "update" | "project" | "webhooks" | "staff" | "reports" | "database";
+type Tab =
+  | "update"
+  | "project"
+  | "webhooks"
+  | "staff"
+  | "reports"
+  | "database"
+  | "discord";
 const pages = {
+  discord: [
+    "Discord bot",
+    "Connect the community website to your Discord server.",
+  ],
   update: ["Updates", "Write it once. Keep every posted copy in sync."],
   project: ["Featured projects", "Tell us what THEY built…"],
   webhooks: [
@@ -32,12 +44,14 @@ const pages = {
 };
 export default function Publishing({
   permissions,
+  owner = false,
   authorName,
   currentId,
   allChannels,
   channelIds,
 }: {
   permissions: string[];
+  owner?: boolean;
   authorName: string;
   currentId: string;
   allChannels: boolean;
@@ -45,6 +59,7 @@ export default function Publishing({
 }) {
   const allowed = (tab: Tab) =>
     ({
+      discord: owner,
       update: permissions.includes("updates.view"),
       project: permissions.includes("projects.view"),
       webhooks: permissions.includes("channels.manage"),
@@ -89,6 +104,7 @@ export default function Publishing({
     ["webhooks", "Channels", Hash],
     ["staff", "Staff approval", Users],
     ["database", "Database", Database],
+    ["discord", "Discord bot", Radio],
   ];
   async function storage(update = false) {
     setBusy(true);
@@ -157,6 +173,8 @@ export default function Publishing({
         <div className="con-tool-empty">
           This tool is not enabled for your account.
         </div>
+      ) : tab === "discord" ? (
+        <DiscordConnection />
       ) : tab === "database" || !status?.initialized || status.needs_upgrade ? (
         <div className="con-database-panel">
           <span className="con-label">STORAGE STATUS</span>
