@@ -88,3 +88,13 @@ Project drafts now accept an optional HTTPS Git repository URL. GitHub, GitLab, 
 The owner-only **Discord bot** admin screen creates isolated private bot tables after validating the existing CoN schema. It stores the server ID, explicitly selected activity channels, public-member setting and an authenticated encrypted worker key. It does not change Discord roles or website staff permissions. Public statistics come from `/api/discord-bot?action=public`; signed worker updates use the same endpoint with `action=sync`. Neither public stats nor owner status reads return worker credentials.
 
 The separate Node worker in `bot/` runs on Railway with `bot/railway.toml` and `bot/Dockerfile`, using the repository root as build context. See `bot/README.md` for launch and secret configuration. A website deployment alone does not start the Discord Gateway worker. Real connection requires the bot token, guild installation, Server Members intent and a running worker. Bot setup is owner-only; staff permission checkboxes remain independent.
+
+## Reversible website text and content audit
+
+The owner can enable **Edit website** on public pages and in admin. Every inline text edit control now includes **Remove**. Admin workspace headings, their descriptions/eyebrow, and the styled **My projects & submission reviews** link use the same system. Removal stores a hidden state; it never deletes the saved value. Hidden copy renders no visible heading/link for visitors, while editing mode exposes restore controls.
+
+The editor stays open after Save or Remove and offers **Undo last change**. Inline removals also show an Undo notice in the same browser window. These notices are convenience controls; persistent recovery is in **Admin → Content audit & restore**. The content inventory includes every allowlisted text location and can filter removed items. History records before/after text and visibility, actor, timestamp, source restoration and version. Restoring either side creates another history entry. All writes use optimistic versions, so a stale tab cannot overwrite a newer change silently.
+
+The additive `con.site_content_history` table and `removed` column are initialized on owner use. History is owner-only and denied to browser database roles. Public responses omit removed text values and all audit metadata. Existing saved text remains intact; versions from before this feature cannot be reconstructed beyond the value present at its first recorded change.
+
+This history applies to editable website copy. It does not promise recovery of permanent Discord channel/message deletions, member moderation, or database entities such as project comments and publishing drafts. Those are separate operations from inline copy removal.

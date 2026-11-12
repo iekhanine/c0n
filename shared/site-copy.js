@@ -1,5 +1,30 @@
 // Owner-editable public copy. Keys are stable and allowlisted by the server.
 export const SITE_COPY = {
+  "admin.eyebrow": "CULT OF nix0n / COMMUNITY CONTROL",
+  "admin.projectsLink": "My projects & submission reviews →",
+  "admin.brand": "CULT OF nix0n",
+  "admin.brand.subtitle": "COMMUNITY CONTROL",
+  "admin.viewSite": "View site",
+  "admin.update.title": "Updates",
+  "admin.update.description": "Write it once. Keep every posted copy in sync.",
+  "admin.project.title": "Featured projects",
+  "admin.project.description": "Tell us what THEY built…",
+  "admin.webhooks.title": "Channels",
+  "admin.webhooks.description":
+    "Connect Discord channels by pasting their webhook URLs.",
+  "admin.staff.title": "Staff access",
+  "admin.staff.description":
+    "Review sign-in requests and choose exactly what each person can do.",
+  "admin.reports.title": "Reports",
+  "admin.reports.description": "Publishing totals and delivery history.",
+  "admin.database.title": "Database",
+  "admin.database.description": "Connection status and storage updates.",
+  "admin.discord.title": "Discord bot",
+  "admin.discord.description":
+    "Channels, people, publishing, and server controls in one workspace.",
+  "admin.audit.title": "Content audit & restore",
+  "admin.audit.description":
+    "Review changes, recover removed content, and undo earlier actions.",
   "discord.channels.title": "Most active channels",
   "discord.members.title": "Active this week",
   "discord.connection": "Join the conversation in our Discord server.",

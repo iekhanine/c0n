@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  History,
   Database,
   Hash,
   Radio,
@@ -10,6 +11,8 @@ import {
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
+import ContentAudit from "./ContentAudit";
+import { Editable, CopyRegion } from "../../SiteText";
 import Posts from "./Posts";
 import Channels from "./Channels";
 import Staff from "./Staff";
@@ -23,25 +26,8 @@ type Tab =
   | "staff"
   | "reports"
   | "database"
-  | "discord";
-const pages = {
-  discord: [
-    "Discord bot",
-    "Channels, people, publishing, and server controls in one workspace.",
-  ],
-  update: ["Updates", "Write it once. Keep every posted copy in sync."],
-  project: ["Featured projects", "Tell us what THEY built…"],
-  webhooks: [
-    "Channels",
-    "Connect Discord channels by pasting their webhook URLs.",
-  ],
-  staff: [
-    "Staff access",
-    "Review sign-in requests and choose exactly what each person can do.",
-  ],
-  reports: ["Reports", "Publishing totals and delivery history."],
-  database: ["Database", "Connection status and storage updates."],
-};
+  | "discord"
+  | "audit";
 export default function Publishing({
   permissions,
   owner = false,
@@ -60,6 +46,7 @@ export default function Publishing({
   const allowed = (tab: Tab) =>
     ({
       discord: owner,
+      audit: owner,
       update: permissions.includes("updates.view"),
       project: permissions.includes("projects.view"),
       webhooks: permissions.includes("channels.manage"),
@@ -105,6 +92,7 @@ export default function Publishing({
     ["staff", "Staff approval", Users],
     ["database", "Database", Database],
     ["discord", "Discord bot", Radio],
+    ["audit", "Content audit & restore", History],
   ];
   async function storage(update = false) {
     setBusy(true);
@@ -149,11 +137,31 @@ export default function Publishing({
           Community control<small>BUILD. SHARE. SHIP.</small>
         </div>
       </nav>
-      <header className="con-workspace-heading">
-        <span className="con-label">CULT OF nix0n / COMMUNITY CONTROL</span>
-        <h1>{pages[tab][0]}</h1>
-        <p>{pages[tab][1]}</p>
-      </header>
+      <CopyRegion
+        ids={[
+          "admin.eyebrow",
+          `admin.${tab}.title`,
+          `admin.${tab}.description`,
+        ]}
+      >
+        <header className="con-workspace-heading">
+          <CopyRegion ids={["admin.eyebrow"]}>
+            <span className="con-label">
+              <Editable id="admin.eyebrow" />
+            </span>
+          </CopyRegion>
+          <CopyRegion ids={[`admin.${tab}.title`]}>
+            <h1>
+              <Editable id={`admin.${tab}.title`} />
+            </h1>
+          </CopyRegion>
+          <CopyRegion ids={[`admin.${tab}.description`]}>
+            <p>
+              <Editable id={`admin.${tab}.description`} />
+            </p>
+          </CopyRegion>
+        </header>
+      </CopyRegion>
       {error && (
         <div role="alert" className="con-tool-error">
           {error}
@@ -173,6 +181,8 @@ export default function Publishing({
         <div className="con-tool-empty">
           This tool is not enabled for your account.
         </div>
+      ) : tab === "audit" ? (
+        <ContentAudit />
       ) : tab === "discord" ? (
         <DiscordExplorer />
       ) : tab === "database" || !status?.initialized || status.needs_upgrade ? (

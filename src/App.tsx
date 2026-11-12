@@ -3,6 +3,7 @@ import { ArrowRight, Search } from "lucide-react";
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import CommunityFeed from "./CommunityFeed";
 import {
+  CopyRegion,
   Editable,
   SiteTextProvider,
   Copy,
@@ -80,15 +81,17 @@ export default function App() {
               ["/members", "nav.members"],
               ["/community", "nav.community"],
             ].map(([href, id]) => (
-              <div className="nav-entry" key={id}>
-                <a
-                  aria-current={path === href ? "page" : undefined}
-                  href={href}
-                >
-                  <Copy id={id} />
-                </a>
-                <EditButton id={id} />
-              </div>
+              <CopyRegion ids={[id]} key={id}>
+                <div className="nav-entry">
+                  <a
+                    aria-current={path === href ? "page" : undefined}
+                    href={href}
+                  >
+                    <Copy id={id} />
+                  </a>
+                  <EditButton id={id} />
+                </div>
+              </CopyRegion>
             ))}
           </nav>
           <a
@@ -107,28 +110,46 @@ export default function App() {
             <Copy id="discord.join" />
           </a>
           <WebsiteEditToggle />
-          <div className="account-entry">
-            <a
-              className="showcase-login"
-              href={
-                account?.authorized
-                  ? "/admin"
-                  : account?.user
-                    ? "/my-projects"
-                    : "/api/auth/discord/login"
-              }
-            >
-              {account?.authorized ? (
-                <Copy id="account.admin" />
-              ) : account?.user ? (
-                <Copy id="account.projects" />
-              ) : (
-                <Copy id="login" />
-              )}
-              <ArrowRight size={16} />
-            </a>
-            <EditButton id={account?.authorized ? "account.admin" : "login"} />
-          </div>
+          <CopyRegion
+            ids={[
+              account?.authorized
+                ? "account.admin"
+                : account?.user
+                  ? "account.projects"
+                  : "login",
+            ]}
+          >
+            <div className="account-entry">
+              <a
+                className="showcase-login"
+                href={
+                  account?.authorized
+                    ? "/admin"
+                    : account?.user
+                      ? "/my-projects"
+                      : "/api/auth/discord/login"
+                }
+              >
+                {account?.authorized ? (
+                  <Copy id="account.admin" />
+                ) : account?.user ? (
+                  <Copy id="account.projects" />
+                ) : (
+                  <Copy id="login" />
+                )}
+                <ArrowRight size={16} />
+              </a>
+              <EditButton
+                id={
+                  account?.authorized
+                    ? "account.admin"
+                    : account?.user
+                      ? "account.projects"
+                      : "login"
+                }
+              />
+            </div>
+          </CopyRegion>
         </header>
         <main className="showcase-main">
           {account?.owner && seedError && (
@@ -179,9 +200,11 @@ export default function App() {
               </div>
             </section>
           )}
-          <footer>
-            <Editable id="footer" />
-          </footer>
+          <CopyRegion ids={["footer"]}>
+            <footer>
+              <Editable id="footer" />
+            </footer>
+          </CopyRegion>
         </main>
       </div>
     </SiteTextProvider>
