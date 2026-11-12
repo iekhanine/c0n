@@ -9,6 +9,7 @@ export const CONTROL_OPERATIONS = [
   "channels.permissions",
   "roles.list",
   "reaction_roles.inspect",
+  "reaction_roles.prepare",
   "roles.create",
   "roles.edit",
   "roles.delete",
@@ -85,7 +86,7 @@ export function controlInput(op, input = {}) {
   )
     bad("Unknown Discord command.");
   const p = {};
-  if (op === "reaction_roles.inspect") {
+  if (op === "reaction_roles.inspect" || op === "reaction_roles.prepare") {
     p.channel_id = id(input.channel_id);
     p.message_id = id(input.message_id);
   }
