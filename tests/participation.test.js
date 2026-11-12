@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  PARTICIPATION, statusRole, canonicalRoleName, assignNewMemberStatus,
+  PARTICIPATION, statusRole, safeParticipationRole, canonicalRoleName, assignNewMemberStatus,
   applyParticipationProgress, participationEvent,
 } from "../bot/participation.js";
 function fixture(initial = []) {
@@ -83,4 +83,14 @@ test("Unicode small caps and original role names resolve identically", async () 
     user_id: setup.member.id, participated: true, eligible_instigator: false,
   });
   assert.deepEqual(setup.names(), ["ɪɴɪᴛɪᴀᴛᴇᴅ", "ᴏʙꜱᴇʀᴠᴇʀ"]);
+});
+
+test("Observer with ordinary channel visibility is manageable while staff privileges are blocked", () => {
+  const setup = fixture();
+  setup.roles[2].permissions.bitfield = 1024n | 2048n | 65536n;
+  assert.equal(statusRole(setup.guild, "Observer")?.id, setup.roles[2].id);
+  setup.roles[2].permissions.bitfield |= 268435456n;
+  assert.equal(statusRole(setup.guild, "Observer"), null);
+  setup.roles[2].permissions.bitfield = 536870912n;
+  assert.equal(safeParticipationRole(setup.roles[2]), false);
 });
