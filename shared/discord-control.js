@@ -8,6 +8,7 @@ export const CONTROL_OPERATIONS = [
   "channels.delete",
   "channels.permissions",
   "roles.list",
+  "reaction_roles.inspect",
   "roles.create",
   "roles.edit",
   "roles.delete",
@@ -39,7 +40,7 @@ export const destructive = (op) =>
     "webhooks.delete",
     "webhooks.message.delete",
   ].includes(op);
-export const readOperation = (op) => op === "overview" || op.endsWith(".list");
+export const readOperation = (op) => op === "overview" || op.endsWith(".list") || op === "reaction_roles.inspect";
 const bad = (message) => {
   throw Object.assign(Error(message), { status: 400 });
 };
@@ -84,6 +85,10 @@ export function controlInput(op, input = {}) {
   )
     bad("Unknown Discord command.");
   const p = {};
+  if (op === "reaction_roles.inspect") {
+    p.channel_id = id(input.channel_id);
+    p.message_id = id(input.message_id);
+  }
   if (op === "messages.pin") {
     p.channel_id = id(input.channel_id);
     p.message_id = id(input.message_id);
