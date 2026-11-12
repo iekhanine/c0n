@@ -36,7 +36,7 @@ export async function handleRoleReaction(guild, config, incoming, user, remove =
 }
 // On startup or mapping changes, incorporate reactions already placed on the post.
 // Reconciliation only adds roles; it does not remove unrelated/manual assignments.
-export async function reconcileRoleReactions(guild, config) {
+export async function reconcileRoleReactions(guild, config, onExistingReaction = null) {
   if (!guild || !config || !config.mappings?.length) return;
   const channel = await guild.channels.fetch(config.channel_id);
   if (!channel?.isTextBased() || !channel.messages) return;
@@ -49,6 +49,7 @@ export async function reconcileRoleReactions(guild, config) {
       const users = await reaction.users.fetch({ limit: 100, ...(after ? { after } : {}) });
       for (const user of users.values()) {
         if (user.bot) continue;
+        if (onExistingReaction) onExistingReaction(reaction, user);
         await handleRoleReaction(guild, config, reaction, user).catch(e =>
           console.error("Reaction role reconciliation failed", { code: e.code || e.status || "role" }));
       }
