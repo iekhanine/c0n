@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { botCommand } from "./botCommand";
+import AccessSetup from "./AccessSetup";
 
 type Item = { id: string; name: string; type?: number; permissions?: string; managed?: boolean };
 type Mapping = { emoji: string; role_id: string };
@@ -74,6 +75,7 @@ export default function ReactionRoles() {
     finally { setBusy(false); }
   }
   return <div className="dx-panel dx-form" aria-busy={busy}>
+    <AccessSetup />
     <h3>Reaction roles</h3>
     <p>Map the reactions already on the published roles message to dedicated access roles. The bot assigns a role when a member reacts and removes it when they remove their reaction.</p>
     <p>Only roles with no server-wide permissions and below the bot can be assigned. Staff, managed and privileged roles are excluded by the worker.</p>
