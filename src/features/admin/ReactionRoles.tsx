@@ -7,6 +7,12 @@ type Mapping = { emoji: string; role_id: string };
 type Config = { channel_id: string; message_id: string; mappings: Mapping[] };
 type Reaction = { emoji: string; display: string; count: number };
 const MESSAGE_ID = "1570527636030103675";
+const chars = [..."ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ"];
+const ascii = "abcdefghijklmnopqrstuvwxyz";
+const normalize = (s: string) => [...s.toLowerCase()]
+  .map(ch => chars.includes(ch) ? ascii[chars.indexOf(ch)] : ch)
+  .join("").replace(/[^a-z0-9]/g, "");
+const allowedAccess = new Set(["compoundaccess","workshopaccess","galleryaccess","arcadeaccess","gamesaccess","voiceaccess"]);
 async function api(method = "GET", data?: unknown) {
   const response = await fetch("/api/discord-bot?action=reaction_roles", {
     method, cache: "no-store",
@@ -36,7 +42,7 @@ export default function ReactionRoles() {
       if (!active) return;
       setConfig({ channel_id: saved.channel_id || "", message_id: saved.message_id || MESSAGE_ID, mappings: saved.mappings || [] });
       setChannels(channelList.items.filter(c => c.type === 0 || c.type === 5));
-      setRoles(roleList.items.filter(r => !r.managed && r.permissions === "0" && r.name !== "@everyone"));
+      setRoles(roleList.items.filter(r => !r.managed && r.permissions === "0" && allowedAccess.has(normalize(r.name))));
     }).catch(e => { if (active) setError(e.message); })
       .finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
@@ -78,7 +84,7 @@ export default function ReactionRoles() {
     <AccessSetup />
     <h3>Reaction roles</h3>
     <p>Map the reactions already on the published roles message to dedicated access roles. The bot assigns a role when a member reacts and removes it when they remove their reaction.</p>
-    <p>Only roles with no server-wide permissions and below the bot can be assigned. Staff, managed and privileged roles are excluded by the worker.</p>
+    <p>Only the six dedicated category access roles can be self-assigned. Staff, VIP, onboarding, managed and privileged roles are excluded by the worker. After running guided setup, refresh this page to load the new mappings.</p>
     <label>Roles channel
       <select value={config.channel_id} onChange={e => setConfig(v => ({ ...v, channel_id: e.target.value }))}>
         <option value="">Choose a channel</option>
