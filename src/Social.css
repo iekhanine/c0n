@@ -500,3 +500,71 @@
     font-size: 26px;
   }
 }
+
+.social-post-dialog {
+  width: min(640px, calc(100% - 28px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid #454d59;
+  border-radius: 14px;
+  color: #f0f1f3;
+  background: #171b22;
+  overflow: auto;
+}
+.social-post-dialog::backdrop {
+  background: rgb(0 0 0 / 0.75);
+  backdrop-filter: blur(4px);
+}
+.social-post-dialog .social-composer {
+  border: 0;
+  margin: 0;
+}
+.social-post-dialog input,
+.social-post-dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  background: #0f1319;
+  color: #f0f1f3;
+  border: 1px solid #454d59;
+  border-radius: 7px;
+  font: inherit;
+}
+.social-post-dialog textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.social-post-dialog fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+.social-post-dialog button {
+  background: #272d36;
+  color: #e9edf1;
+  border: 1px solid #46505e;
+  border-radius: 6px;
+  padding: 9px 18px;
+  font: inherit;
+  cursor: pointer;
+}
+.social-post-dialog button.social-primary {
+  background: #bfd384;
+  color: #171310;
+  border-color: #bfd384;
+  font-weight: 700;
+}
+.social-post-dialog button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.social-profile-post-action {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 20px;
+}
+.social-profile-post-action button {
+  min-width: 110px;
+  letter-spacing: 0.08em;
+}

@@ -2,7 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { randomUUID } from "node:crypto";
-import { socialHandler, profileInput } from "../server/social.js";
+import {
+  socialHandler,
+  profileInput,
+  memberPostInput,
+  canBlog,
+} from "../server/social.js";
 import { migration, staffMigration, approvalMigration } from "../server/db.js";
 import { projectMigration } from "../server/project-schema.js";
 import { ORIGIN, seal } from "../server/auth.js";
@@ -108,8 +113,30 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
       (await call(alice, "profile", "PUT", profile)).statusCode,
       200,
     );
+    assert.equal(
+      (
+        await call(alice, "post", "POST", {
+          body: "x".repeat(1201),
+          can_blog: true,
+        })
+      ).statusCode,
+      400,
+    );
+    assert.equal(
+      (
+        await call(alice, "post", "POST", {
+          title: "Not a member feature",
+          body: "Short",
+        })
+      ).statusCode,
+      400,
+    );
+    assert.equal(
+      (await call(alice, "profile&id=" + alice)).body.can_blog,
+      false,
+    );
     const created = await call(alice, "post", "POST", {
-      title: "Launch notes",
+      title: "",
       body: "Hello community",
       image_url: "https://example.com/photo.png",
     });
@@ -121,12 +148,17 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     assert.equal(publicPost.can_edit, false);
     const edit = {
       id: postId,
-      title: "Updated",
+      title: "",
       body: "Changed",
       image_url: "",
       version: 1,
       pinned: true,
     };
+    assert.equal(
+      (await call(alice, "post", "PUT", { ...edit, body: "x".repeat(1201) }))
+        .statusCode,
+      400,
+    );
     assert.equal((await call(bob, "post", "PUT", edit)).statusCode, 403);
     assert.equal((await call(alice, "post", "PUT", edit)).statusCode, 200);
     assert.equal((await call(alice, "post", "PUT", edit)).statusCode, 409);
@@ -185,7 +217,9 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
       "Published copy",
     );
     const feed = (await call(null, "feed")).body.posts;
-    assert.equal(feed.length, 2);
+    assert.equal(feed.length, 1);
+    assert.ok(feed.every((p) => p.kind === "update"));
+    assert.ok(!feed.some((p) => p.id === postId));
     assert.ok(feed.some((p) => p.id === transmission));
     await db.query("UPDATE con.posts SET published_at=NULL WHERE id=$1", [
       transmission,
@@ -291,4 +325,20 @@ test("pin commands validate exact targets and refuse staff without destination a
     ),
     (e) => e.status === 403,
   );
+});
+
+test("regular member posts stop at 1200 characters; approved staff retain blog posts", () => {
+  assert.equal(memberPostInput({ body: "x".repeat(1200) }).body.length, 1200);
+  assert.throws(() => memberPostInput({ body: "x".repeat(1201) }));
+  assert.throws(() => memberPostInput({ title: "Blog title", body: "Short" }));
+  assert.equal(canBlog({ authorized: true, access: "moderator" }), true);
+  assert.equal(canBlog({ authorized: true, access: "admin" }), true);
+  assert.equal(canBlog({ authorized: false, access: "moderator" }), false);
+  assert.equal(canBlog({ authorized: true, access: "report" }), false);
+  assert.equal(
+    memberPostInput({ title: "Blog title", body: "x".repeat(10000) }, true).body
+      .length,
+    10000,
+  );
+  assert.throws(() => memberPostInput({ body: "x".repeat(10001) }, true));
 });

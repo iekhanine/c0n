@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Heart,
   MessageCircle,
@@ -307,18 +307,26 @@ function Composer({
   onSave,
   post,
   onCancel,
+  blog = false,
+  onBusyChange,
 }: {
   onSave: () => void;
   post?: SocialPost;
   onCancel?: () => void;
+  blog?: boolean;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [uploading, setUploading] = useState(false);
-  const [title, setTitle] = useState(post?.title || ""),
+  const [title, setTitle] = useState(blog ? post?.title || "" : ""),
     [body, setBody] = useState(post?.body || ""),
     [image, setImage] = useState(post?.image_url || ""),
     [pinned, setPinned] = useState(post?.pinned || false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  useEffect(() => {
+    onBusyChange?.(busy || uploading);
+  }, [busy, uploading, onBusyChange]);
+  const limit = blog ? 10000 : 1200;
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -344,29 +352,36 @@ function Composer({
   }
   return (
     <form className="social-composer" onSubmit={(e) => void save(e)}>
-      <h2>{post ? "Edit your post" : "What are you working on?"}</h2>
+      <h2 id="post-composer-title">
+        {post ? "Edit post" : blog ? "New post" : "Quick post"}
+      </h2>
       <fieldset disabled={busy || uploading}>
-        <label>
-          Title (optional)
-          <input
-            maxLength={200}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="A quick update, a new idea, a longer story…"
-          />
-        </label>
+        {blog && (
+          <label>
+            Title (optional)
+            <input
+              maxLength={200}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="A quick update, a new idea, a longer story…"
+            />
+          </label>
+        )}
         <label>
           Your post
           <textarea
+            autoFocus
             required
-            maxLength={10000}
-            rows={5}
+            maxLength={limit}
+            rows={blog ? 7 : 4}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Share something with the community."
           />
         </label>
-        <small>{body.length.toLocaleString()} / 10,000</small>
+        <small>
+          {body.length.toLocaleString()} / {limit.toLocaleString()}
+        </small>
         <ImageUpload onUpload={setImage} onBusyChange={setUploading} />
         {image && (
           <>
@@ -391,8 +406,11 @@ function Composer({
           </label>
         )}
         <div className="social-form-actions">
-          <button className="social-primary" disabled={busy || !body.trim()}>
-            {busy ? "Saving…" : post ? "Save changes" : "Publish post"}
+          <button
+            className="social-primary"
+            disabled={busy || uploading || !body.trim() || body.length > limit}
+          >
+            {busy ? "Saving…" : post ? "Save changes" : "POST"}
           </button>
           {onCancel && (
             <button type="button" onClick={onCancel}>
@@ -409,9 +427,51 @@ function Composer({
     </form>
   );
 }
+function ComposerOverlay({
+  post,
+  blog,
+  onSave,
+  onClose,
+}: {
+  post?: SocialPost;
+  blog: boolean;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [pending, setPending] = useState(false);
+  useEffect(() => {
+    const el = dialog.current;
+    el?.showModal();
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      el?.close();
+      document.body.style.overflow = previous;
+    };
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="social-post-dialog"
+      aria-labelledby="post-composer-title"
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!pending) onClose();
+      }}
+    >
+      <Composer
+        post={post}
+        blog={blog}
+        onBusyChange={setPending}
+        onSave={onSave}
+        onCancel={onClose}
+      />
+    </dialog>
+  );
+}
 export function StreamPage({ compact = false }: { compact?: boolean }) {
-  const user = useUser(),
-    [posts, setPosts] = useState<SocialPost[]>([]),
+  const [posts, setPosts] = useState<SocialPost[]>([]),
     [error, setError] = useState(""),
     [next, setNext] = useState<string | null>(null),
     [loading, setLoading] = useState(true);
@@ -435,21 +495,10 @@ export function StreamPage({ compact = false }: { compact?: boolean }) {
   }, []);
   return (
     <section className={"social-stream " + (compact ? "social-compact" : "")}>
-      <div className="social-page-heading">
-        <span className="eyebrow">FROM THE COMMUNITY</span>
-        <h1>{compact ? "Latest transmissions & posts" : "Community"}</h1>
-        <p>Ideas, updates, projects, and whatever else is on your mind.</p>
-        {user && <a href={"/members/" + user.id}>My profile →</a>}
-      </div>
-      {user && !compact ? (
-        <Composer onSave={() => void load()} />
-      ) : (
-        !compact && (
-          <p>
-            <a href="/api/auth/discord/login">Sign in with Discord</a> to post,
-            like, and reply.
-          </p>
-        )
+      {compact && (
+        <div className="social-page-heading">
+          <h2>Latest transmissions</h2>
+        </div>
       )}
       {error && (
         <p role="alert" className="social-error">
@@ -461,12 +510,10 @@ export function StreamPage({ compact = false }: { compact?: boolean }) {
         <PostCard key={p.id} post={p} />
       ))}
       {loading && <p role="status">Loading posts…</p>}
-      {!loading && !posts.length && !error && (
-        <p>No posts yet. Start the conversation.</p>
-      )}
+      {!loading && !posts.length && !error && <p>No transmissions yet.</p>}
       {compact ? (
         <a className="social-read" href="/community">
-          All community posts →
+          All transmissions →
         </a>
       ) : (
         next && (
@@ -484,6 +531,7 @@ export function PostPage({ id }: { id: string }) {
       post: SocialPost;
       replies: Reply[];
       can_moderate: boolean;
+      can_blog: boolean;
     } | null>(null),
     [error, setError] = useState(""),
     [reply, setReply] = useState(""),
@@ -531,9 +579,10 @@ export function PostPage({ id }: { id: string }) {
       {data && (
         <>
           {editing ? (
-            <Composer
+            <ComposerOverlay
+              blog={data.can_blog}
               post={data.post}
-              onCancel={() => setEditing(false)}
+              onClose={() => setEditing(false)}
               onSave={() => {
                 setEditing(false);
                 void load();
@@ -798,9 +847,11 @@ export function ProfilePage({ id }: { id: string }) {
         published: { title: string; body: string; image_url: string };
       }[];
       own: boolean;
+      can_blog: boolean;
     } | null>(null),
     [error, setError] = useState(""),
     [editing, setEditing] = useState(false),
+    [composing, setComposing] = useState(false),
     [tab, setTab] = useState("posts");
   async function load() {
     try {
@@ -895,7 +946,26 @@ export function ProfilePage({ id }: { id: string }) {
       </nav>
       {tab === "posts" ? (
         <>
-          {data.own && <Composer onSave={() => void load()} />}{" "}
+          {data.own && (
+            <div className="social-profile-post-action">
+              <button
+                className="social-primary"
+                onClick={() => setComposing(true)}
+              >
+                POST
+              </button>
+            </div>
+          )}
+          {composing && (
+            <ComposerOverlay
+              blog={data.can_blog}
+              onClose={() => setComposing(false)}
+              onSave={() => {
+                setComposing(false);
+                void load();
+              }}
+            />
+          )}
           {data.posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}

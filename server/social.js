@@ -68,10 +68,17 @@ export function profileInput(b) {
     })),
   };
 }
-export function memberPostInput(b) {
+export const canBlog = (grant) =>
+  Boolean(
+    grant?.owner ||
+    (grant?.authorized && ["admin", "moderator"].includes(grant.access)),
+  );
+export function memberPostInput(b, blog = false) {
+  if (!blog && b.title)
+    throw new AppError(400, "Member posts do not use titles.");
   return {
     title: text(b.title ?? "", 200),
-    body: text(b.body, 10000, true),
+    body: text(b.body, blog ? 10000 : 1200, true),
     image_url: httpsUrl(b.image_url ?? ""),
   };
 }
@@ -249,6 +256,9 @@ export async function socialHandler(req, res, dbFactory = database) {
         projects,
         posts,
         own: uid === user?.id,
+        can_blog: user
+          ? canBlog(await accessFor(session, (uid) => lookupStaff(uid, db)))
+          : false,
       });
     }
     if (action === "profile" && req.method === "PUT") {
@@ -273,13 +283,6 @@ export async function socialHandler(req, res, dbFactory = database) {
       const before = url.searchParams.get("before");
       if (before && !Number.isFinite(Date.parse(before)))
         throw new AppError(400, "Invalid page cursor.");
-      const rows = (
-        await db.query(
-          memberSelect +
-            " WHERE m.created_at < $1::timestamptz ORDER BY m.created_at DESC LIMIT 51",
-          [before || "infinity"],
-        )
-      ).rows;
       const updates = (
         await db.query(
           "SELECT id,author_id,published_snapshot,published_at FROM con.posts WHERE kind='update' AND published_at IS NOT NULL AND published_snapshot IS NOT NULL AND published_at < $1::timestamptz ORDER BY published_at DESC LIMIT 51",
@@ -292,9 +295,7 @@ export async function socialHandler(req, res, dbFactory = database) {
         published_at: r.published_at,
         kind: "update",
       }));
-      const merged = [...rows, ...updates].sort(
-        (a, b) => new Date(b.published_at) - new Date(a.published_at),
-      );
+      const merged = updates;
       const page = merged.slice(0, 50);
       return json(res, 200, {
         posts: await decorate(db, page, user?.id),
@@ -302,7 +303,10 @@ export async function socialHandler(req, res, dbFactory = database) {
       });
     }
     if (action === "post" && req.method === "POST") {
-      const v = memberPostInput(b),
+      const v = memberPostInput(
+          b,
+          canBlog(await accessFor(session, (uid) => lookupStaff(uid, db))),
+        ),
         postId = randomUUID();
       const recent = await db.query(
         "SELECT 1 FROM con.member_posts WHERE user_id=$1 AND created_at>now()-interval '10 seconds' LIMIT 1",
@@ -329,6 +333,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       return json(res, 200, {
         post,
         replies,
+        can_blog: canBlog(grant),
         can_moderate: Boolean(
           grant?.owner || hasPermission(grant, "updates.delete"),
         ),
@@ -337,7 +342,10 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "post" && req.method === "PUT") {
       if (!post.can_edit)
         throw new AppError(403, "You can edit only your own member posts.");
-      const v = memberPostInput(b);
+      const v = memberPostInput(
+        b,
+        canBlog(await accessFor(session, (uid) => lookupStaff(uid, db))),
+      );
       if (typeof b.pinned !== "boolean" || !Number.isSafeInteger(b.version))
         throw new AppError(400, "Missing post version or pin option.");
       const result = await db.query(
