@@ -11,6 +11,7 @@ import {
 import { canonicalJson, signBridge } from "../shared/discord-signing.js";
 import { publicChannels, memberRecord, activityRecord } from "./protocol.js";
 import { executeControl, controlError } from "./control.js";
+import { assignNewMemberStatus, applyParticipationProgress, participationEvent } from "./participation.js";
 import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://c0n.ivansays.com";
 if (new URL(SITE).origin !== "https://c0n.ivansays.com")
@@ -27,6 +28,7 @@ let state = "starting",
   heartbeatBusy = false;
 const pending = new Map();
 const memberChanges = new Map();
+const participationPending = new Map();
 const health = createServer((req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
@@ -161,8 +163,14 @@ async function main() {
       controlBusy = false;
     }
   }
+  async function checkProgress() {
+    if (!guild || state !== "ready") return;
+    const result = await send({ kind: "participation_check", guild_id: guildId });
+    for (const progress of result.progress || [])
+      await applyParticipationProgress(guild, progress);
+  }
   async function flush() {
-    if (flushBusy || (!pending.size && !memberChanges.size)) return;
+    if (flushBusy || (!pending.size && !memberChanges.size && !participationPending.size)) return;
     flushBusy = true;
     try {
       const changes = [...memberChanges.values()].slice(0, 100);
@@ -182,6 +190,17 @@ async function main() {
           user_id: item.id,
         });
         if (memberChanges.get(item.id) === item) memberChanges.delete(item.id);
+      }
+      const activity = [...participationPending.entries()].slice(0, 100);
+      if (activity.length) {
+        const result = await send({
+          kind: "participation", guild_id: guildId,
+          events: activity.map(([, value]) => value),
+        });
+        for (const [id, value] of activity)
+          if (participationPending.get(id) === value) participationPending.delete(id);
+        for (const progress of result.progress || [])
+          await applyParticipationProgress(guild, progress);
       }
       const batch = [...pending.values()].slice(0, 100);
       if (batch.length) {
@@ -243,12 +262,15 @@ async function main() {
         type: ActivityType.Watching,
       });
       state = "ready";
+      run(checkProgress);
       console.log("C0N Discord worker connected.");
     }),
   );
   client.on(Events.GuildMemberAdd, (m) => {
-    if (m.guild.id === guildId)
+    if (m.guild.id === guildId) {
       memberChanges.set(m.id, { id: m.id, member: memberRecord(m) });
+      run(() => assignNewMemberStatus(m));
+    }
   });
   client.on(Events.GuildMemberUpdate, (_, m) => {
     if (m.guild.id === guildId)
@@ -258,7 +280,18 @@ async function main() {
     if (m.guild.id === guildId)
       memberChanges.set(m.id, { id: m.id, removed: true });
   });
+  const recordParticipation = (event) => {
+    const id = `${event.type}:${event.event_id}:${event.user_id}`;
+    if (participationPending.size >= 10000)
+      participationPending.delete(participationPending.keys().next().value);
+    participationPending.set(id, event);
+  };
   client.on(Events.MessageReactionAdd, (reaction, user) => {
+    if (reaction.message.guildId === guildId && !user.bot)
+      recordParticipation(participationEvent(
+        "reaction", reaction.message.id, reaction.message.channelId,
+        user.id, Date.now(), reaction.emoji.id || [...(reaction.emoji.name || "")].map(c => c.codePointAt(0).toString(16)).join("-"),
+      ));
     if (reactionConfig)
       run(() => handleRoleReaction(guild, reactionConfig, reaction, user, false));
   });
@@ -267,6 +300,8 @@ async function main() {
       run(() => handleRoleReaction(guild, reactionConfig, reaction, user, true));
   });
   client.on(Events.MessageCreate, (m) => {
+    if (m.guildId === guildId && !m.author.bot && !m.webhookId)
+      recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
     const record = activityRecord(m, allowedIds, publicIds, guildId);
     if (record) {
       if (pending.size >= 10000) pending.delete(pending.keys().next().value);
@@ -328,6 +363,7 @@ async function main() {
   const shutdown = async () => {
     state = "stopping";
     clearInterval(controlTimer);
+    clearInterval(progressTimer);
     clearInterval(flushTimer);
     clearInterval(heartbeatTimer);
     await flush().catch(() => {});
