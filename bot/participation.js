@@ -68,35 +68,44 @@ export async function applyParticipationProgress(guild, progress) {
   const unspoken = statusRole(guild, "The Unspoken");
   const observer = statusRole(guild, "Observer");
   const instigator = statusRole(guild, "Instigator");
-  if (!unspoken || !observer || !instigator) {
-    const names = ["The Unspoken", "Observer", "Instigator"];
-    console.warn("C0N participation role lookup blocked", {
-      missing: names.filter((name, index) => ![unspoken, observer, instigator][index]),
-      candidateNames: names.map(name => [...guild.roles.cache.values()]
-        .filter(role => canonicalRoleName(role.name) === canonicalRoleName(name))
+  const has = role => Boolean(role && member.roles.cache.has(role.id));
+  // Recognize an already-earned Instigator even when it is not manageable.
+  // Never attempt to downgrade an existing VIP.
+  const existingVip = [...guild.roles.cache.values()].find(role =>
+    canonicalRoleName(role.name) === canonicalRoleName("Instigator") && has(role));
+  if (existingVip) return;
+
+  if (!progress.participated) return;
+  if (!observer) {
+    console.warn("C0N onboarding cannot assign Observer", {
+      matchingRoles: [...guild.roles.cache.values()]
+        .filter(role => canonicalRoleName(role.name) === canonicalRoleName("Observer"))
         .map(role => ({
-          name: role.name,
-          managed: role.managed,
-          safe: safeParticipationRole(role),
+          managed: role.managed, safe: safeParticipationRole(role),
           belowBot: Boolean(guild.members.me &&
             guild.members.me.roles.highest.comparePositionTo(role) > 0),
-        }))),
+        })),
     });
     return;
   }
-  const has = role => member.roles.cache.has(role.id);
-  // Never demote an Instigator or remove it because of inactivity.
-  if (has(instigator)) return;
-  console.info("C0N participation member status", { participated: progress.participated, eligible: progress.eligible_instigator, unspoken: has(unspoken), observer: has(observer) });
-  if (progress.eligible_instigator) {
-    // A promotion is additive first; only then clear obsolete status roles.
+  if (progress.eligible_instigator && instigator) {
     await member.roles.add(instigator, "C0N activity milestone: 14 days, 30 messages, 5 active days");
     if (has(observer)) await member.roles.remove(observer, "C0N promoted to Instigator");
     if (has(unspoken)) await member.roles.remove(unspoken, "C0N promoted to Instigator");
-  } else if (progress.participated) {
-    if (!has(observer)) await member.roles.add(observer, "C0N first participation");
-    if (has(unspoken)) await member.roles.remove(unspoken, "C0N first participation");
+    return;
   }
+  if (progress.eligible_instigator && !instigator)
+    console.warn("C0N Instigator promotion unavailable; preserving Observer", {
+      matchingRoles: [...guild.roles.cache.values()]
+        .filter(role => canonicalRoleName(role.name) === canonicalRoleName("Instigator"))
+        .map(role => ({
+          managed: role.managed, safe: safeParticipationRole(role),
+          belowBot: Boolean(guild.members.me &&
+            guild.members.me.roles.highest.comparePositionTo(role) > 0),
+        })),
+    });
+  if (!has(observer)) await member.roles.add(observer, "C0N first participation");
+  if (has(unspoken)) await member.roles.remove(unspoken, "C0N first participation");
 }
 export function participationEvent(type, messageId, channelId, userId, timestamp = Date.now(), emoji) {
   const eventId = type === "reaction" ? `${messageId}:${emoji}` : messageId;
