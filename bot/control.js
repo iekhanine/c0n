@@ -158,7 +158,7 @@ export async function executeControl(guild, command) {
         !c.permissionsFor(me)?.has([P.ViewChannel, P.ReadMessageHistory, P.AddReactions]))
       fail("The bot needs View Channel, Read Message History and Add Reactions.");
     const message = await c.messages.fetch(p.message_id);
-    const emojis = ["💬","💻","🎨","🎮","🎲","🎙️"];
+    const emojis = ["💻","🎨","🎮","🎲","🎙️"];
     const actual = [...message.reactions.cache.values()].map(r => r.emoji.name);
     for (const emoji of emojis)
       if (!actual.includes(emoji)) await message.react(emoji);
