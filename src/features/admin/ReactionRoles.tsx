@@ -12,7 +12,7 @@ const ascii = "abcdefghijklmnopqrstuvwxyz";
 const normalize = (s: string) => [...s.toLowerCase()]
   .map(ch => chars.includes(ch) ? ascii[chars.indexOf(ch)] : ch)
   .join("").replace(/[^a-z0-9]/g, "");
-const allowedAccess = new Set(["compoundaccess","workshopaccess","galleryaccess","arcadeaccess","gamesaccess","voiceaccess"]);
+const allowedAccess = new Set(["workshopaccess","galleryaccess","arcadeaccess","gamesaccess","voiceaccess"]);
 async function api(method = "GET", data?: unknown) {
   const response = await fetch("/api/discord-bot?action=reaction_roles", {
     method, cache: "no-store",
