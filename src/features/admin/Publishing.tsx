@@ -256,6 +256,7 @@ export default function Publishing({
           kind={tab === "project" ? "project" : "update"}
           permissions={permissions}
           authorName={authorName}
+          owner={owner}
           onDirty={setDirty}
         />
       )}

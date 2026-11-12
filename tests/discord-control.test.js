@@ -212,6 +212,48 @@ test("private durable command queue authenticates owner, rejects replay and clai
       401,
     );
     assert.equal((await call(targetId, "control_history")).statusCode, 403);
+    const connectId = randomUUID();
+    await call(owner, "control_command", "POST", {
+      operation: "webhooks.connect",
+      request_id: connectId,
+      payload: { channel_id: channelId, reason: "Publish transmissions" },
+    });
+    assert.equal((await sync(poll)).body.command.id, connectId);
+    const secretUrl = `https://discord.com/api/webhooks/${targetId}/${"a".repeat(60)}`;
+    const receipt = {
+      kind: "control_result",
+      guild_id: guildId,
+      command_id: connectId,
+      state: "succeeded",
+      result: {
+        url: secretUrl,
+        discord_id: targetId,
+        channel_id: channelId,
+        guild_id: guildId,
+        name: "announcements",
+      },
+    };
+    assert.equal(
+      (
+        await sync({
+          ...receipt,
+          result: { ...receipt.result, channel_id: targetId },
+        })
+      ).statusCode,
+      400,
+    );
+    assert.equal((await sync(receipt)).statusCode, 200);
+    assert.equal((await sync(receipt)).statusCode, 200);
+    const connection = await call(owner, `control_result&id=${connectId}`);
+    assert.equal(connection.body.result.channel_id, channelId);
+    assert.ok(connection.body.result.id);
+    assert.equal(JSON.stringify(connection.body).includes(secretUrl), false);
+    const stored = await pg.query(
+      "SELECT url_cipher FROM con.webhooks WHERE discord_id=$1",
+      [targetId],
+    );
+    assert.equal(stored.rows.length, 1);
+    assert.notEqual(stored.rows[0].url_cipher, secretUrl);
     const access = await pg.query(
       "SELECT has_table_privilege('anon','con.discord_commands','SELECT') AS allowed",
     );
@@ -400,5 +442,49 @@ test("channel edits validate category parents and role grants never allow Admini
       payload: { name: "bad", permissions: "8", reason: "test" },
     }),
     /Administrator/,
+  );
+});
+
+test("publishing connection reuses a bot-owned webhook and checks channel access", async () => {
+  const guild = fakeGuild();
+  let created = 0;
+  const hook = {
+    id: targetId,
+    name: "C0N Transmissions",
+    owner: { id: botId },
+    token: "secret",
+    url: `https://discord.com/api/webhooks/${targetId}/${"x".repeat(60)}`,
+  };
+  const hooks = new Map();
+  const channel = {
+    id: channelId,
+    guildId,
+    type: 0,
+    name: "announcements",
+    isThread: () => false,
+    permissionsFor: () => ({ has: () => true }),
+    fetchWebhooks: async () => hooks,
+    createWebhook: async () => {
+      created++;
+      hooks.set(hook.id, hook);
+      return hook;
+    },
+  };
+  guild.channels.fetch = async () => channel;
+  const cmd = {
+    operation: "webhooks.connect",
+    actor_id: owner,
+    payload: { channel_id: channelId, reason: "Publishing" },
+  };
+  const receipt = await executeControl(guild, cmd);
+  assert.equal(receipt.channel_id, channelId);
+  assert.equal(receipt.guild_id, guildId);
+  assert.equal(receipt.url, hook.url);
+  await executeControl(guild, cmd);
+  assert.equal(created, 1);
+  channel.permissionsFor = () => ({ has: () => false });
+  await assert.rejects(
+    executeControl(guild, cmd),
+    /cannot manage this channel/,
   );
 });

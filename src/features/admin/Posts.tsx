@@ -1,3 +1,4 @@
+import { botCommand } from "./botCommand";
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -48,7 +49,7 @@ type Draft = Pick<
   Post,
   "kind" | "title" | "body" | "link_url" | "image_url" | "featured"
 >;
-type Hook = { id: string; name: string; enabled: boolean };
+type Hook = { id: string; name: string; enabled: boolean; channel_id: string };
 const blank = (kind: Post["kind"]): Draft => ({
   kind,
   title: "",
@@ -71,11 +72,13 @@ export default function Posts({
   kind,
   permissions,
   authorName,
+  owner = false,
   onDirty,
 }: {
   kind: Post["kind"];
   permissions: string[];
   authorName: string;
+  owner?: boolean;
   onDirty: (dirty: boolean) => void;
 }) {
   const prefix = contentPrefix(kind),
@@ -93,6 +96,27 @@ export default function Posts({
     [dirty, setDirty] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [serverChannels, setServerChannels] = useState<
+    { id: string; name: string; type: number }[]
+  >([]);
+  const [channelsLoading, setChannelsLoading] = useState(false);
+  async function fetchChannels() {
+    setChannelsLoading(true);
+    setError("");
+    try {
+      const result = await botCommand<{
+        items: { id: string; name: string; type: number }[];
+      }>("channels.list");
+      setServerChannels(result.items.filter((c) => [0, 5].includes(c.type)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load channels.");
+    } finally {
+      setChannelsLoading(false);
+    }
+  }
+  useEffect(() => {
+    if (owner && can("publish")) void fetchChannels();
+  }, [owner, kind]);
   const formRef = useRef<HTMLFormElement>(null);
   const editable = selected ? can("edit") : can("create");
   const active = selected?.deliveries.find((d) => d.webhook_id === destination);
@@ -228,12 +252,26 @@ export default function Posts({
       return;
     await run(async () => {
       const p = !selected || dirty ? await save() : selected;
+      let webhookId = destination;
+      if (destination.startsWith("channel:")) {
+        setNotice("Connecting the selected channel through the bot…");
+        const connection = await botCommand<{ id: string }>(
+          "webhooks.connect",
+          {
+            channel_id: destination.slice(8),
+            reason: "Connect transmission publishing destination",
+          },
+        );
+        webhookId = connection.id;
+        await load();
+        setDestination(webhookId);
+      }
       try {
         const result = await api<{ notice: string }>("publish", "POST", {
           post_id: p.id,
           version: p.version,
           website,
-          webhook_id: destination || undefined,
+          webhook_id: webhookId || undefined,
         });
         setNotice(result.notice);
       } finally {
@@ -444,8 +482,31 @@ export default function Posts({
                               {channelLabel(h.name)}
                             </option>
                           ))}
+                        {serverChannels
+                          .filter(
+                            (c) =>
+                              !hooks.some(
+                                (h) => h.enabled && h.channel_id === c.id,
+                              ),
+                          )
+                          .map((c) => (
+                            <option key={c.id} value={`channel:${c.id}`}>
+                              {channelLabel(c.name)}
+                            </option>
+                          ))}
                       </select>
                     </label>
+                    {owner && (
+                      <button
+                        type="button"
+                        disabled={busy || channelsLoading}
+                        onClick={() => void fetchChannels()}
+                      >
+                        {channelsLoading
+                          ? "Loading server channels…"
+                          : "Refresh server channels"}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p className="con-tool-hint">
@@ -463,8 +524,9 @@ export default function Posts({
                 )}
                 {!hooks.length && can("publish") && (
                   <p className="con-tool-hint">
-                    Ask an administrator to connect a Discord channel, or choose
-                    Website only.
+                    {owner
+                      ? "Refresh server channels to choose a destination. The bot connects it when you publish."
+                      : "Ask an administrator to connect a Discord channel, or choose Website only."}
                   </p>
                 )}
               </section>
@@ -543,17 +605,68 @@ export default function Posts({
                         />
                       </label>
                       <label>
-                        Image URL
+                        Upload image
                         <input
-                          type="url"
-                          pattern="https://.*"
-                          maxLength={2000}
-                          value={draft.image_url}
-                          onChange={(e) => change("image_url", e.target.value)}
-                          placeholder="https://…/image.png"
+                          type="file"
+                          accept="image/png,image/jpeg,image/gif,image/webp"
+                          disabled={!editable || busy}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (file)
+                              void run(async () => {
+                                if (file.size > 2 * 1024 * 1024)
+                                  throw new Error(
+                                    "Choose an image up to 2 MB.",
+                                  );
+                                const data = await new Promise<string>(
+                                  (resolve, reject) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () =>
+                                      resolve(
+                                        String(reader.result).split(",")[1],
+                                      );
+                                    reader.onerror = () =>
+                                      reject(
+                                        new Error("Could not read image."),
+                                      );
+                                    reader.readAsDataURL(file);
+                                  },
+                                );
+                                const result = await api<{ image_url: string }>(
+                                  "images",
+                                  "POST",
+                                  { kind, data },
+                                );
+                                change("image_url", result.image_url);
+                                setNotice(
+                                  "Image uploaded. Save or publish to include it in your post.",
+                                );
+                              });
+                          }}
                         />
+                        <small>
+                          PNG, JPEG, GIF or WebP. Maximum 2 MB. Images are
+                          public so Discord can display them.
+                        </small>
                       </label>
+                      {draft.image_url && (
+                        <button
+                          type="button"
+                          disabled={!editable || busy}
+                          onClick={() => change("image_url", "")}
+                        >
+                          Remove image
+                        </button>
+                      )}
                     </div>
+                    {draft.image_url && (
+                      <img
+                        className="con-preview-image"
+                        src={draft.image_url}
+                        alt="Selected transmission banner"
+                      />
+                    )}
                     {kind === "project" && (
                       <label className="con-check">
                         <input

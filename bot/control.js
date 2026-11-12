@@ -328,6 +328,33 @@ export async function executeControl(guild, command) {
     });
     return { id: guild.id, name: guild.name };
   }
+  if (op === "webhooks.connect") {
+    const c = await channelTarget(p.channel_id);
+    if (![0, 5].includes(c.type))
+      fail("Choose a text or announcement channel.");
+    if (
+      !c
+        .permissionsFor(me)
+        ?.has([P.ViewChannel, P.SendMessages, P.EmbedLinks, P.ManageWebhooks])
+    )
+      fail(
+        "The bot needs View Channel, Send Messages, Embed Links and Manage Webhooks here.",
+      );
+    const hooks = await c.fetchWebhooks();
+    const h =
+      [...hooks.values()].find(
+        (h) =>
+          h.owner?.id === me.id && h.name === "C0N Transmissions" && h.token,
+      ) || (await c.createWebhook({ name: "C0N Transmissions", reason }));
+    // This credential travels only over the signed bridge, never to the browser.
+    return {
+      url: h.url,
+      discord_id: h.id,
+      channel_id: c.id,
+      guild_id: guild.id,
+      name: c.name,
+    };
+  }
   if (op === "webhooks.create") {
     const c = await channelTarget(p.channel_id);
     if (![0, 5].includes(c.type))

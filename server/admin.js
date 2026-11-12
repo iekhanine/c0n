@@ -1,3 +1,4 @@
+import { uploadImage } from "./images.js";
 import { randomUUID } from "node:crypto";
 import { ORIGIN, json, requireStaff } from "./auth.js";
 import { database, databaseStatus, initializeDatabase } from "./db.js";
@@ -84,6 +85,20 @@ export async function adminHandler(req, res) {
       return json(res, 200, await initializeDatabase());
     }
     if (action === "webhooks") return await webhooks(req, res, db, staff);
+    if (action === "images") {
+      expectMethod(req, "POST");
+      const input =
+        typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      if (
+        !input ||
+        !["update", "project"].includes(input.kind) ||
+        !["create", "edit"].some((op) =>
+          hasPermission(staff, `${contentPrefix(input.kind)}.${op}`),
+        )
+      )
+        throw new AppError(403, "You cannot upload images for this content.");
+      return json(res, 201, await uploadImage(db, input, staff));
+    }
     if (action === "posts") return await posts(req, res, db, staff);
     if (action === "staff") {
       if (req.method === "GET")

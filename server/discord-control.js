@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { encryptWebhook, webhookUrl } from "./content.js";
 import { controlInput } from "../shared/discord-control.js";
 export const controlMigration = `
 CREATE TABLE IF NOT EXISTS con.discord_commands (
@@ -148,7 +150,7 @@ export async function controlSync(client, settings, body) {
     fail(400, "Invalid command receipt.");
   const item = (
     await client.query(
-      "SELECT state,operation FROM con.discord_commands WHERE id=$1 AND guild_id=$2 FOR UPDATE",
+      "SELECT state,operation,actor_id,payload,result FROM con.discord_commands WHERE id=$1 AND guild_id=$2 FOR UPDATE",
       [body.command_id, settings.guild_id],
     )
   ).rows[0];
@@ -160,7 +162,36 @@ export async function controlSync(client, settings, body) {
     return { ok: true };
   if (!item || !["running", "uncertain"].includes(item.state))
     fail(409, "Command is not awaiting a result.");
-  const result = JSON.stringify(body.result ?? null);
+  let safeResult = body.result ?? null;
+  if (item.operation === "webhooks.connect" && body.state === "succeeded") {
+    const receipt = body.result;
+    const url = webhookUrl(receipt?.url);
+    const parsed = new URL(url);
+    if (
+      receipt.guild_id !== settings.guild_id ||
+      receipt.channel_id !== item.payload.channel_id ||
+      !/^\d{17,20}$/.test(receipt.discord_id || "") ||
+      !parsed.pathname.includes(`/webhooks/${receipt.discord_id}/`)
+    )
+      fail(400, "Invalid publishing connection receipt.");
+    const saved = await client.query(
+      `INSERT INTO con.webhooks(id,name,url_cipher,discord_id,channel_id,guild_id,enabled,created_by)
+       VALUES($1,$2,$3,$4,$5,$6,true,$7)
+       ON CONFLICT(discord_id) DO UPDATE SET name=$2,url_cipher=$3,enabled=true,updated_at=now()
+       RETURNING id,name,channel_id`,
+      [
+        randomUUID(),
+        String(receipt.name).slice(0, 80),
+        encryptWebhook(url),
+        receipt.discord_id,
+        receipt.channel_id,
+        settings.guild_id,
+        item.actor_id,
+      ],
+    );
+    safeResult = saved.rows[0];
+  }
+  const result = JSON.stringify(safeResult);
   if (Buffer.byteLength(result) > 400000) fail(413, "Result too large.");
   const error =
     typeof body.error === "string" ? body.error.slice(0, 500) : null;

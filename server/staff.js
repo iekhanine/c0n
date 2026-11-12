@@ -29,6 +29,18 @@ export function canAccess(grant, action, method) {
       (method === "GET" && p.includes("staff.manage")) ||
       (method === "GET" && p.some((key) => key.endsWith(".publish")))
     );
+  if (action === "images")
+    return (
+      method === "POST" &&
+      p.some((key) =>
+        [
+          "updates.create",
+          "updates.edit",
+          "projects.create",
+          "projects.edit",
+        ].includes(key),
+      )
+    );
   if (action === "posts") {
     const operation = {
       GET: "view",

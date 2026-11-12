@@ -21,6 +21,7 @@ export const CONTROL_OPERATIONS = [
   "guild.edit",
   "webhooks.list",
   "webhooks.create",
+  "webhooks.connect",
   "webhooks.edit",
   "webhooks.delete",
   "webhooks.send",
@@ -163,7 +164,8 @@ export function controlInput(op, input = {}) {
   }
   if (["webhooks.create", "webhooks.edit"].includes(op))
     p.name = str(input.name, 80, "webhook name");
-  if (op === "webhooks.create") p.channel_id = id(input.channel_id);
+  if (["webhooks.create", "webhooks.connect"].includes(op))
+    p.channel_id = id(input.channel_id);
   if (op === "webhooks.send" || op === "webhooks.message.edit")
     p.content = str(input.content, 2000, "message");
   if (op.startsWith("webhooks.message.")) p.message_id = id(input.message_id);
