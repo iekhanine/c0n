@@ -94,3 +94,12 @@ test("Observer with ordinary channel visibility is manageable while staff privil
   setup.roles[2].permissions.bitfield = 536870912n;
   assert.equal(safeParticipationRole(setup.roles[2]), false);
 });
+
+test("unsafe Instigator does not block first-contact Observer assignment", async () => {
+  const setup = fixture(["Initiated", "THE UNSPOKEN"]);
+  setup.roles[3].permissions.bitfield = 8n;
+  await applyParticipationProgress(setup.guild, {
+    user_id: setup.member.id, participated: true, eligible_instigator: false,
+  });
+  assert.deepEqual(setup.names(), ["Initiated", "Observer"]);
+});
