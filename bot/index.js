@@ -179,6 +179,7 @@ async function main() {
   async function checkProgress() {
     if (!guild || state !== "ready") return;
     const result = await send({ kind: "participation_check", guild_id: guildId });
+    console.info("C0N participation reconciliation", { candidates: (result.progress || []).length });
     for (const progress of result.progress || [])
       await applyParticipationProgress(guild, progress);
   }
@@ -212,6 +213,7 @@ async function main() {
         });
         for (const [id, value] of activity)
           if (participationPending.get(id) === value) participationPending.delete(id);
+        console.info("C0N participation batch", { sent: activity.length, onboarding: activity.filter(([, event]) => event.onboarding).length, candidates: (result.progress || []).length });
         for (const progress of result.progress || [])
           await applyParticipationProgress(guild, progress);
       }
