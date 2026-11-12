@@ -29,9 +29,18 @@ export function canAccess(grant, action, method) {
       (method === "GET" && p.includes("staff.manage")) ||
       (method === "GET" && p.some((key) => key.endsWith(".publish")))
     );
+  if (action === "pin")
+    return (
+      ["GET", "POST"].includes(method) &&
+      p.some((key) => key.endsWith(".publish"))
+    );
+  if (action === "images" && method === "GET")
+    return p.some(
+      (key) => key.startsWith("updates.") || key.startsWith("projects."),
+    );
   if (action === "images")
     return (
-      method === "POST" &&
+      ["POST", "PATCH"].includes(method) &&
       p.some((key) =>
         [
           "updates.create",

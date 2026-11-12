@@ -234,6 +234,7 @@ export async function projectsHandler(
           id,
           ...(p.published || p.draft),
           author_name: p.owner_name,
+          owner_id: p.owner_id,
           published_at: p.published_at,
           ...stats,
         },

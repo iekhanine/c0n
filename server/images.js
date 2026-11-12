@@ -38,17 +38,40 @@ export function imageInput(input) {
   else throw new AppError(400, "Choose a PNG, JPEG, GIF or WebP image.");
   return { bytes, type };
 }
-export async function uploadImage(db, input, staff) {
-  const { bytes, type } = imageInput(input);
+export async function ensureImages(db) {
   await db.query(`CREATE TABLE IF NOT EXISTS con.post_images (
     id uuid PRIMARY KEY, content_type text NOT NULL, data bytea NOT NULL,
     created_by text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
-  );`);
+  )`);
+  await db.query(
+    "ALTER TABLE con.post_images ADD COLUMN IF NOT EXISTS name text NOT NULL DEFAULT 'Untitled image', ADD COLUMN IF NOT EXISTS shared boolean NOT NULL DEFAULT true",
+  );
   await db.query("ALTER TABLE con.post_images ENABLE ROW LEVEL SECURITY");
+}
+export function imageName(value) {
+  if (typeof value !== "string" || !value.trim() || value.length > 100)
+    throw new AppError(400, "Name the image using 1–100 characters.");
+  return value.trim();
+}
+export async function listImages(db) {
+  await ensureImages(db);
+  return (
+    await db.query(
+      "SELECT id,name,created_at FROM con.post_images WHERE shared=true ORDER BY created_at DESC",
+    )
+  ).rows.map((row) => ({
+    ...row,
+    image_url: `${ORIGIN}/api/image?id=${row.id}`,
+  }));
+}
+export async function uploadImage(db, input, staff, shared = true) {
+  const { bytes, type } = imageInput(input);
+  const name = imageName(input.name ?? "Untitled image");
+  await ensureImages(db);
   const id = randomUUID();
   await db.query(
-    "INSERT INTO con.post_images(id,content_type,data,created_by) VALUES($1,$2,$3,$4)",
-    [id, type, bytes, staff.user.id],
+    "INSERT INTO con.post_images(id,content_type,data,created_by,name,shared) VALUES($1,$2,$3,$4,$5,$6)",
+    [id, type, bytes, staff.user.id, name, shared],
   );
-  return { image_url: `${ORIGIN}/api/image?id=${id}` };
+  return { id, name, image_url: `${ORIGIN}/api/image?id=${id}` };
 }

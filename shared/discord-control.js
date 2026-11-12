@@ -1,6 +1,7 @@
 // Shared command validation. Never accept arbitrary Discord routes or webhook URLs.
 export const CONTROL_OPERATIONS = [
   "overview",
+  "messages.pin",
   "channels.list",
   "channels.create",
   "channels.edit",
@@ -83,6 +84,11 @@ export function controlInput(op, input = {}) {
   )
     bad("Unknown Discord command.");
   const p = {};
+  if (op === "messages.pin") {
+    p.channel_id = id(input.channel_id);
+    p.message_id = id(input.message_id);
+    p.pinned = bool(input.pinned);
+  }
   const copy = (key, validate) => {
     if (input[key] !== undefined) p[key] = validate(input[key]);
   };

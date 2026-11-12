@@ -1,0 +1,294 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { PGlite } from "@electric-sql/pglite";
+import { randomUUID } from "node:crypto";
+import { socialHandler, profileInput } from "../server/social.js";
+import { migration, staffMigration, approvalMigration } from "../server/db.js";
+import { projectMigration } from "../server/project-schema.js";
+import { ORIGIN, seal } from "../server/auth.js";
+import { listImages, uploadImage } from "../server/images.js";
+import { pinRequest } from "../server/pins.js";
+import { controlInput } from "../shared/discord-control.js";
+const alice = "123456789012345678",
+  bob = "234567890123456789";
+process.env.SESSION_SECRET =
+  "community-test-session-secret-at-least-32-characters";
+const profile = {
+  name: "Alice",
+  headline: "Product manager",
+  bio: "Ideas and stories",
+  location: "",
+  avatar_url: "",
+  cover_url: "",
+  links: [{ label: "Website", url: "https://example.com" }],
+  show_projects: true,
+};
+test("profile validation rejects unsafe links and oversized content", () => {
+  assert.equal(profileInput(profile).name, "Alice");
+  for (const patch of [
+    { name: "" },
+    { bio: "x".repeat(3001) },
+    { avatar_url: "javascript:alert(1)" },
+    { links: [{ label: "Bad", url: "http://example.com" }] },
+    { show_projects: "yes" },
+  ])
+    assert.throws(() => profileInput({ ...profile, ...patch }));
+});
+test("member posts, profiles, likes, replies and published transmissions keep ownership and visibility", async () => {
+  const pg = new PGlite();
+  try {
+    await pg.exec("CREATE ROLE anon; CREATE ROLE authenticated;");
+    await pg.exec(migration);
+    await pg.exec(staffMigration);
+    await pg.exec(approvalMigration);
+    await pg.exec(projectMigration);
+    const db = {
+      async query(sql, args) {
+        const r = await pg.query(sql, args);
+        return { ...r, rowCount: r.affectedRows ?? r.rows.length };
+      },
+    };
+    async function call(
+      uid,
+      action,
+      method = "GET",
+      body = {},
+      extraHeaders = {},
+    ) {
+      const res = {
+        setHeader() {},
+        end(s) {
+          this.body = JSON.parse(s);
+        },
+      };
+      await socialHandler(
+        {
+          method,
+          url: "/api/social?action=" + action,
+          body,
+          headers: {
+            origin: ORIGIN,
+            ...(uid
+              ? {
+                  cookie:
+                    "__Host-con_session=" +
+                    (await seal(
+                      {
+                        user: {
+                          id: uid,
+                          name: uid === alice ? "Alice" : "Bob",
+                          username: uid === alice ? "alice" : "bob",
+                        },
+                      },
+                      60,
+                    )),
+                }
+              : {}),
+            ...extraHeaders,
+          },
+        },
+        res,
+        () => db,
+      );
+      return res;
+    }
+    assert.equal(
+      (await call(null, "post", "POST", { body: "Hello" })).statusCode,
+      401,
+    );
+    assert.equal(
+      (
+        await call(alice, "profile", "PUT", profile, {
+          origin: "https://evil.example",
+        })
+      ).statusCode,
+      403,
+    );
+    assert.equal(
+      (await call(alice, "profile", "PUT", profile)).statusCode,
+      200,
+    );
+    const created = await call(alice, "post", "POST", {
+      title: "Launch notes",
+      body: "Hello community",
+      image_url: "https://example.com/photo.png",
+    });
+    assert.equal(created.statusCode, 201);
+    const postId = created.body.id;
+    const publicPost = (await call(null, "post&id=" + postId)).body.post;
+    assert.equal(publicPost.image_url, "https://example.com/photo.png");
+    assert.equal(publicPost.author_id, alice);
+    assert.equal(publicPost.can_edit, false);
+    const edit = {
+      id: postId,
+      title: "Updated",
+      body: "Changed",
+      image_url: "",
+      version: 1,
+      pinned: true,
+    };
+    assert.equal((await call(bob, "post", "PUT", edit)).statusCode, 403);
+    assert.equal((await call(alice, "post", "PUT", edit)).statusCode, 200);
+    assert.equal((await call(alice, "post", "PUT", edit)).statusCode, 409);
+    assert.equal(
+      (await call(bob, "like", "PUT", { id: postId, liked: true })).statusCode,
+      200,
+    );
+    await call(bob, "like", "PUT", { id: postId, liked: true });
+    assert.equal((await call(bob, "post&id=" + postId)).body.post.likes, 1);
+    assert.equal(
+      (await call(bob, "reply", "POST", { id: postId, body: "Great work!" }))
+        .statusCode,
+      201,
+    );
+    const reply = (await call(null, "post&id=" + postId)).body.replies[0];
+    assert.equal(
+      (await call(alice, "reply", "DELETE", { id: postId, reply_id: reply.id }))
+        .statusCode,
+      403,
+    );
+    assert.equal(
+      (await call(bob, "reply", "DELETE", { id: postId, reply_id: reply.id }))
+        .statusCode,
+      200,
+    );
+    const projectId = randomUUID();
+    await db.query(
+      "INSERT INTO con.projects(id,owner_id,owner_name,draft,published,status)VALUES($1,$2,'Alice',$3,$3,'approved')",
+      [projectId, alice, JSON.stringify({ title: "My app", body: "Project" })],
+    );
+    assert.equal(
+      (await call(null, "profile&id=" + alice)).body.projects.length,
+      1,
+    );
+    await call(alice, "profile", "PUT", { ...profile, show_projects: false });
+    assert.equal(
+      (await call(null, "profile&id=" + alice)).body.projects.length,
+      0,
+    );
+    const transmission = randomUUID();
+    await db.query(
+      "INSERT INTO con.posts(id,kind,body,author_id,author_name,published_at,published_snapshot)VALUES($1,'update','Unsaved draft',$2,'Alice',now(),$3)",
+      [
+        transmission,
+        alice,
+        JSON.stringify({
+          title: "Announcement",
+          body: "Published copy",
+          image_url: "https://example.com/banner.png",
+          author_name: "Alice",
+        }),
+      ],
+    );
+    assert.equal(
+      (await call(null, "post&id=" + transmission)).body.post.body,
+      "Published copy",
+    );
+    const feed = (await call(null, "feed")).body.posts;
+    assert.equal(feed.length, 2);
+    assert.ok(feed.some((p) => p.id === transmission));
+    await db.query("UPDATE con.posts SET published_at=NULL WHERE id=$1", [
+      transmission,
+    ]);
+    assert.equal((await call(null, "post&id=" + transmission)).statusCode, 404);
+    assert.equal(
+      (await call(bob, "post", "DELETE", { id: postId })).statusCode,
+      403,
+    );
+    assert.equal(
+      (await call(alice, "post", "DELETE", { id: postId })).statusCode,
+      200,
+    );
+    assert.equal((await call(null, "post&id=" + postId)).statusCode, 404);
+    const security = await db.query(
+      "SELECT relrowsecurity FROM pg_class WHERE oid='con.member_posts'::regclass",
+    );
+    assert.equal(security.rows[0].relrowsecurity, true);
+  } finally {
+    await pg.close();
+  }
+});
+test("named shared images are visible to staff while member uploads stay out of the picker", async () => {
+  const pg = new PGlite();
+  try {
+    await pg.exec("CREATE SCHEMA con");
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=";
+    await uploadImage(
+      pg,
+      { data: png, name: "Announcement" },
+      { user: { id: alice } },
+    );
+    await uploadImage(
+      pg,
+      { data: png, name: "Avatar" },
+      { user: { id: bob } },
+      false,
+    );
+    const images = await listImages(pg);
+    assert.equal(images.length, 1);
+    assert.equal(images[0].name, "Announcement");
+    assert.ok(images[0].image_url.startsWith(ORIGIN));
+    await assert.rejects(
+      uploadImage(pg, { data: png, name: "   " }, { user: { id: alice } }),
+    );
+  } finally {
+    await pg.close();
+  }
+});
+test("pin commands validate exact targets and refuse staff without destination access", async () => {
+  assert.throws(() =>
+    controlInput("messages.pin", {
+      channel_id: "arbitrary",
+      message_id: alice,
+      pinned: true,
+      reason: "Pin",
+    }),
+  );
+  assert.throws(() =>
+    controlInput("messages.pin", {
+      channel_id: bob,
+      message_id: alice,
+      pinned: "yes",
+      reason: "Pin",
+    }),
+  );
+  assert.equal(
+    controlInput("messages.pin", {
+      channel_id: bob,
+      message_id: alice,
+      pinned: true,
+      reason: "Pin",
+    }).pinned,
+    true,
+  );
+  const db = {
+    query: async () => ({
+      rows: [
+        {
+          message_id: alice,
+          channel_id: bob,
+          kind: "update",
+          webhook_id: "restricted",
+        },
+      ],
+    }),
+  };
+  await assert.rejects(
+    pinRequest(
+      db,
+      {
+        method: "POST",
+        url: "/api/admin?action=pin",
+        body: { delivery_id: randomUUID(), pinned: true },
+      },
+      {
+        user: { id: alice },
+        permissions: ["updates.publish"],
+        all_channels: false,
+        channel_ids: [],
+      },
+    ),
+    (e) => e.status === 403,
+  );
+});

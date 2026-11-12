@@ -43,27 +43,29 @@ const channelView = (c) => ({
     : [],
 });
 const required = (op) =>
-  op === "channels.permissions"
-    ? P.ManageRoles
-    : op.startsWith("channels.")
-      ? op === "channels.list"
-        ? P.ManageGuild
-        : P.ManageChannels
-      : op.startsWith("roles.") || op === "members.role"
-        ? op === "roles.list"
+  op === "messages.pin"
+    ? (P.PinMessages ?? P.ManageMessages)
+    : op === "channels.permissions"
+      ? P.ManageRoles
+      : op.startsWith("channels.")
+        ? op === "channels.list"
           ? P.ManageGuild
-          : P.ManageRoles
-        : op.startsWith("webhooks.")
-          ? P.ManageWebhooks
-          : op.startsWith("bans.") || op === "members.ban"
-            ? P.BanMembers
-            : op === "members.kick"
-              ? P.KickMembers
-              : op === "members.timeout"
-                ? P.ModerateMembers
-                : op === "members.nickname"
-                  ? P.ManageNicknames
-                  : P.ManageGuild;
+          : P.ManageChannels
+        : op.startsWith("roles.") || op === "members.role"
+          ? op === "roles.list"
+            ? P.ManageGuild
+            : P.ManageRoles
+          : op.startsWith("webhooks.")
+            ? P.ManageWebhooks
+            : op.startsWith("bans.") || op === "members.ban"
+              ? P.BanMembers
+              : op === "members.kick"
+                ? P.KickMembers
+                : op === "members.timeout"
+                  ? P.ModerateMembers
+                  : op === "members.nickname"
+                    ? P.ManageNicknames
+                    : P.ManageGuild;
 const botRequired = (op) =>
   readOperation(op) && !op.startsWith("bans.") && !op.startsWith("webhooks.")
     ? null
@@ -77,6 +79,8 @@ export const requiredPermissions = [
   "ManageGuild",
   "ManageRoles",
   "ManageWebhooks",
+  "ManageMessages",
+  ...(P.PinMessages ? ["PinMessages"] : []),
   "ManageNicknames",
   "KickMembers",
   "BanMembers",
@@ -146,6 +150,23 @@ export async function executeControl(guild, command) {
     )
       fail("Your Discord account cannot manage this channel.");
     return c;
+  }
+  if (op === "messages.pin") {
+    const c = await guild.channels.fetch(p.channel_id);
+    if (
+      !c ||
+      ![0, 5].includes(c.type) ||
+      !c.permissionsFor(actor)?.has(P.ViewChannel) ||
+      !c.permissionsFor(actor)?.has(required(op)) ||
+      !c.permissionsFor(me)?.has(required(op))
+    )
+      fail("You or the bot cannot pin messages in this channel.");
+    const message = await c.messages.fetch(p.message_id);
+    if (!message.webhookId)
+      fail("Only published webhook messages can be pinned here.");
+    if (p.pinned) await message.pin(reason);
+    else await message.unpin(reason);
+    return { pinned: p.pinned, message_id: message.id };
   }
   if (op === "overview") {
     await guild.fetch();

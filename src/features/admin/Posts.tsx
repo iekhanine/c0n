@@ -16,6 +16,7 @@ import {
   discordMessageTime,
 } from "../../../shared/permissions.js";
 
+type SharedImage = { id: string; name: string; image_url: string };
 type Delivery = {
   id: string;
   webhook_id: string;
@@ -99,6 +100,58 @@ export default function Posts({
   const [serverChannels, setServerChannels] = useState<
     { id: string; name: string; type: number }[]
   >([]);
+  const [images, setImages] = useState<SharedImage[]>([]);
+  const [imageName, setImageName] = useState("");
+  const [imageLoading, setImageLoading] = useState(false);
+  async function loadImages() {
+    setImageLoading(true);
+    try {
+      const result = await api<{ images: SharedImage[] }>("images");
+      setImages(result.images);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not load shared images.",
+      );
+    } finally {
+      setImageLoading(false);
+    }
+  }
+  useEffect(() => {
+    void loadImages();
+    const refresh = () => {
+      void loadImages();
+    };
+    window.addEventListener("focus", refresh);
+    const timer = window.setInterval(refresh, 15000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(timer);
+    };
+  }, []);
+  async function pinDelivery(delivery: Delivery, pinned: boolean) {
+    await run(async () => {
+      const { id } = await api<{ id: string }>("pin", "POST", {
+        delivery_id: delivery.id,
+        pinned,
+      });
+      setNotice("Waiting for Discord to confirm…");
+      for (let i = 0; i < 60; i++) {
+        const result = await api<{ state: string; error?: string }>(
+          `pin&id=${id}`,
+        );
+        if (result.state === "succeeded") {
+          setNotice(pinned ? "Pinned in Discord." : "Unpinned in Discord.");
+          return;
+        }
+        if (["failed", "uncertain", "expired"].includes(result.state))
+          throw new Error(result.error || "Check Discord before retrying.");
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      throw new Error(
+        "Pin confirmation is pending. Check Discord before retrying.",
+      );
+    });
+  }
   const [channelsLoading, setChannelsLoading] = useState(false);
   async function fetchChannels() {
     setChannelsLoading(true);
@@ -206,6 +259,7 @@ export default function Posts({
     );
     setDirty(false);
     setMessageId("");
+    setImageName("");
     setNotice("");
   }
   function select(post: Post | null) {
@@ -605,11 +659,81 @@ export default function Posts({
                         />
                       </label>
                       <label>
-                        Upload image
+                        Shared post image
+                        <select
+                          value={draft.image_url}
+                          onFocus={() => void loadImages()}
+                          disabled={busy}
+                          onChange={(e) => {
+                            change("image_url", e.target.value);
+                            setImageName(
+                              images.find((i) => i.image_url === e.target.value)
+                                ?.name || "",
+                            );
+                          }}
+                        >
+                          <option value="">No image</option>
+                          {images.map((image) => (
+                            <option key={image.id} value={image.image_url}>
+                              {image.name}
+                            </option>
+                          ))}
+                          {draft.image_url &&
+                            !images.some(
+                              (i) => i.image_url === draft.image_url,
+                            ) && (
+                              <option value={draft.image_url}>
+                                Existing post image
+                              </option>
+                            )}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={imageLoading || busy}
+                        onClick={() => void loadImages()}
+                      >
+                        {imageLoading
+                          ? "Loading images…"
+                          : "Refresh shared images"}
+                      </button>
+                      <label>
+                        Image name
+                        <textarea
+                          rows={2}
+                          maxLength={100}
+                          value={imageName}
+                          onChange={(e) => setImageName(e.target.value)}
+                          placeholder="Announcement, Server Feature Added…"
+                        />
+                      </label>
+                      {images.some((i) => i.image_url === draft.image_url) && (
+                        <button
+                          type="button"
+                          disabled={busy || !imageName.trim()}
+                          onClick={() =>
+                            void run(async () => {
+                              const image = images.find(
+                                (i) => i.image_url === draft.image_url,
+                              )!;
+                              await api("images", "PATCH", {
+                                id: image.id,
+                                name: imageName,
+                              });
+                              await loadImages();
+                              setNotice("Image name updated for everyone.");
+                            })
+                          }
+                        >
+                          Rename selected image
+                        </button>
+                      )}
+                      <label>
+                        Upload to shared images
                         <input
                           type="file"
                           accept="image/png,image/jpeg,image/gif,image/webp"
-                          disabled={!editable || busy}
+                          disabled={!editable || busy || !imageName.trim()}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             e.target.value = "";
@@ -633,21 +757,22 @@ export default function Posts({
                                     reader.readAsDataURL(file);
                                   },
                                 );
-                                const result = await api<{ image_url: string }>(
+                                const result = await api<SharedImage>(
                                   "images",
                                   "POST",
-                                  { kind, data },
+                                  { kind, data, name: imageName },
                                 );
                                 change("image_url", result.image_url);
+                                await loadImages();
                                 setNotice(
-                                  "Image uploaded. Save or publish to include it in your post.",
+                                  "Image uploaded and available to all admins and moderators.",
                                 );
                               });
                           }}
                         />
                         <small>
-                          PNG, JPEG, GIF or WebP. Maximum 2 MB. Images are
-                          public so Discord can display them.
+                          Name the image first, then choose a file. PNG, JPEG,
+                          GIF or WebP, up to 2 MB. Uploaded images are public.
                         </small>
                       </label>
                       {draft.image_url && (
@@ -656,7 +781,7 @@ export default function Posts({
                           disabled={!editable || busy}
                           onClick={() => change("image_url", "")}
                         >
-                          Remove image
+                          Remove image from this post
                         </button>
                       )}
                     </div>
@@ -787,6 +912,24 @@ export default function Posts({
                         </p>
                         {d.last_error && <p>{d.last_error}</p>}
                       </div>
+                      {d.message_id && d.state === "sent" && can("publish") && (
+                        <div>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void pinDelivery(d, true)}
+                          >
+                            Pin in Discord
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void pinDelivery(d, false)}
+                          >
+                            Unpin
+                          </button>
+                        </div>
+                      )}
                       {d.message_id && (
                         <a
                           href={`https://discord.com/channels/${d.guild_id || "@me"}/${d.channel_id}/${d.message_id}`}

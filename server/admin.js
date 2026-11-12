@@ -1,4 +1,5 @@
-import { uploadImage } from "./images.js";
+import { pinRequest } from "./pins.js";
+import { uploadImage, listImages, imageName, ensureImages } from "./images.js";
 import { randomUUID } from "node:crypto";
 import { ORIGIN, json, requireStaff } from "./auth.js";
 import { database, databaseStatus, initializeDatabase } from "./db.js";
@@ -85,7 +86,21 @@ export async function adminHandler(req, res) {
       return json(res, 200, await initializeDatabase());
     }
     if (action === "webhooks") return await webhooks(req, res, db, staff);
+    if (action === "pin")
+      return json(res, 200, await pinRequest(db, req, staff));
     if (action === "images") {
+      if (req.method === "GET")
+        return json(res, 200, { images: await listImages(db) });
+      if (req.method === "PATCH") {
+        const b = bodyOf(req);
+        await ensureImages(db);
+        const result = await db.query(
+          "UPDATE con.post_images SET name=$2 WHERE id=$1 AND shared=true RETURNING id",
+          [id(b.id), imageName(b.name)],
+        );
+        if (!result.rowCount) throw new AppError(404, "Image not found.");
+        return json(res, 200, { ok: true });
+      }
       expectMethod(req, "POST");
       const input =
         typeof req.body === "string" ? JSON.parse(req.body) : req.body;

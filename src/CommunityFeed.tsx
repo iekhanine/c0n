@@ -1,3 +1,4 @@
+import { StreamPage } from "./Social";
 import {
   useDiscordCommunity,
   DiscordStatus,
@@ -18,7 +19,6 @@ import {
   Trophy,
   Search,
   Gamepad2,
-  Radio,
 } from "lucide-react";
 type Post = {
   id: string;
@@ -31,6 +31,7 @@ type Post = {
   featured: boolean;
   author_name: string;
   published_at: string;
+  owner_id: string;
   category?: string;
   votes?: number;
   comments?: number;
@@ -53,9 +54,7 @@ export default function CommunityFeed({
 }) {
   const text = useSiteCopy();
   const discord = useDiscordCommunity();
-  const [posts, setPosts] = useState<Post[]>([]),
-    [error, setError] = useState(false),
-    [category, setCategory] = useState("All projects"),
+  const [category, setCategory] = useState("All projects"),
     [query, setQuery] = useState(""),
     [sort, setSort] = useState("featured");
   const [community, setCommunity] = useState<Post[]>([]);
@@ -85,19 +84,6 @@ export default function CommunityFeed({
       c.abort();
       window.removeEventListener("con-projects-changed", load);
     };
-  }, []);
-  useEffect(() => {
-    const c = new AbortController();
-    void fetch("/api/feed", { signal: c.signal, cache: "no-store" })
-      .then((r) => {
-        if (!r.ok) throw Error();
-        return r.json();
-      })
-      .then((d) => setPosts(d.posts))
-      .catch(() => {
-        if (!c.signal.aborted) setError(true);
-      });
-    return () => c.abort();
   }, []);
   const real = community;
   const projects = [...real]
@@ -188,38 +174,52 @@ export default function CommunityFeed({
               {projectError}
             </p>
           )}
-          {error && (
-            <p role="alert" className="muted">
-              <Editable id="copy.8" />
-            </p>
-          )}
           <section className="showcase-grid" aria-label="Community projects">
             {projects.map((p) => (
               <article className="project-card" key={p.id}>
                 <div className="project-preview">
-                  <img
-                    src={safe(p.image_url) || "/con-logo.png"}
-                    alt={`${p.title} project preview`}
-                    loading="lazy"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = "/con-logo.png";
-                    }}
-                  />
+                  <a href={`/projects/${p.id}`} aria-label={`View ${p.title}`}>
+                    <img
+                      src={safe(p.image_url) || "/con-logo.png"}
+                      alt={`${p.title} project preview`}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/con-logo.png";
+                      }}
+                    />
+                  </a>
                 </div>
                 <div className="project-copy">
                   <div className="project-title">
                     <span className="project-tag">
                       {p.category || "Project"}
                     </span>
-                    <h2>{p.title}</h2>
+                    <h2>
+                      <a href={`/projects/${p.id}`}>{p.title}</a>
+                    </h2>
                   </div>
                   <p>{p.body}</p>
+                  {safe(p.link_url) && (
+                    <a
+                      className="social-external"
+                      href={safe(p.link_url)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Visit project <ArrowUpRight size={14} />
+                    </a>
+                  )}
                   <div className="project-meta">
                     <span className="member-initial">
                       {p.author_name.slice(0, 2).toUpperCase()}
                     </span>
-                    <strong>@{p.author_name}</strong>
+                    <a
+                      className="member-profile-link"
+                      href={`/members/${p.owner_id}`}
+                    >
+                      <strong>@{p.author_name}</strong>
+                    </a>
                     {
                       <>
                         <VoteButton
@@ -337,38 +337,7 @@ export default function CommunityFeed({
             <DiscordActivity data={discord} />
           </section>
         </aside>
-        <section
-          id="transmissions"
-          className="showcase-updates reference-updates"
-        >
-          <div className="section-title">
-            <Radio size={21} />
-            <h2>
-              <Editable id="copy.18" />
-            </h2>
-          </div>
-          {posts
-            .filter((p) => p.kind === "update")
-            .map((p) => (
-              <article className="transmission" key={p.id}>
-                <header>
-                  <strong>{p.author_name}</strong>
-                  <time dateTime={p.published_at}>
-                    {new Date(p.published_at).toLocaleDateString()}
-                  </time>
-                </header>
-                <h3>{p.title}</h3>
-                <p>{p.body}</p>
-                {safe(p.link_url) && (
-                  <a href={safe(p.link_url)} target="_blank" rel="noreferrer">
-                    <Copy id="copy.19" />
-                    <ArrowUpRight size={16} />
-                  </a>
-                )}
-                <EditButton id="copy.19" />
-              </article>
-            ))}
-        </section>
+        <StreamPage compact />
       </div>
     </>
   );

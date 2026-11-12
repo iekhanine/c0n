@@ -488,3 +488,53 @@ test("publishing connection reuses a bot-owned webhook and checks channel access
     /cannot manage this channel/,
   );
 });
+
+test("pin worker verifies channel permissions and confirms the exact webhook message", async () => {
+  const actor = { id: owner, permissions: { has: () => true } };
+  const me = { id: botId, permissions: { has: () => true } };
+  let pins = 0,
+    unpins = 0;
+  const channel = {
+    type: 0,
+    permissionsFor: () => ({ has: () => true }),
+    messages: {
+      fetch: async (id) => ({
+        id,
+        webhookId: "345678901234567890",
+        pin: async () => {
+          pins++;
+        },
+        unpin: async () => {
+          unpins++;
+        },
+      }),
+    },
+  };
+  const guild = {
+    members: { fetch: async () => actor, fetchMe: async () => me },
+    channels: { fetch: async () => channel },
+  };
+  const command = {
+    operation: "messages.pin",
+    actor_id: owner,
+    payload: {
+      channel_id: channelId,
+      message_id: targetId,
+      pinned: true,
+      reason: "Pin announcement",
+    },
+  };
+  assert.deepEqual(await executeControl(guild, command), {
+    pinned: true,
+    message_id: targetId,
+  });
+  await executeControl(guild, {
+    ...command,
+    payload: { ...command.payload, pinned: false },
+  });
+  assert.equal(pins, 1);
+  assert.equal(unpins, 1);
+  channel.permissionsFor = () => ({ has: () => false });
+  await assert.rejects(executeControl(guild, command), /cannot pin/);
+  assert.equal(pins, 1);
+});

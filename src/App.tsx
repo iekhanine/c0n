@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
+import { ProfilePage, PostPage, StreamPage, MemberDirectory } from "./Social";
 import CommunityFeed from "./CommunityFeed";
 import {
   CopyRegion,
@@ -13,7 +14,7 @@ import {
 import "./CommunityFeed.css";
 export default function App() {
   const [account, setAccount] = useState<{
-    user: { name: string } | null;
+    user: { id: string; name: string } | null;
     authorized: boolean;
     owner?: boolean;
   } | null>(null);
@@ -45,19 +46,23 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path.startsWith("/projects/")
-    ? "detail"
-    : path === "/my-projects"
-      ? "workspace"
-      : path === "/projects"
-        ? "projects"
-        : path === "/members"
-          ? "members"
-          : path === "/community"
-            ? "community"
-            : path === "/"
-              ? "explore"
-              : "missing";
+  const page = path.startsWith("/members/")
+    ? "profile"
+    : path.startsWith("/posts/")
+      ? "post"
+      : path.startsWith("/projects/")
+        ? "detail"
+        : path === "/my-projects"
+          ? "workspace"
+          : path === "/projects"
+            ? "projects"
+            : path === "/members"
+              ? "members"
+              : path === "/community"
+                ? "community"
+                : path === "/"
+                  ? "explore"
+                  : "missing";
   return (
     <SiteTextProvider owner={account?.owner === true}>
       <div className={`showcase page-${page}`}>
@@ -110,6 +115,11 @@ export default function App() {
             <Copy id="discord.join" />
           </a>
           <WebsiteEditToggle />
+          {account?.user && (
+            <a className="showcase-login" href={"/members/" + account.user.id}>
+              My profile
+            </a>
+          )}
           <CopyRegion
             ids={[
               account?.authorized
@@ -160,7 +170,15 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "detail" ? (
+          {page === "profile" ? (
+            <ProfilePage id={path.split("/")[2]} />
+          ) : page === "post" ? (
+            <PostPage id={path.split("/")[2]} />
+          ) : page === "community" ? (
+            <StreamPage />
+          ) : page === "members" ? (
+            <MemberDirectory />
+          ) : page === "detail" ? (
             <ProjectPage id={path.split("/")[2]} />
           ) : page === "workspace" ? (
             <MemberProjects />
@@ -176,29 +194,6 @@ export default function App() {
             </section>
           ) : (
             <CommunityFeed page={page} />
-          )}
-          {page === "community" && (
-            <section className="showcase-about">
-              <span className="eyebrow">
-                <Editable id="about.eyebrow" />
-              </span>
-              <h2>
-                <Editable id="about.title" />
-              </h2>
-              <p>
-                <Editable id="about.body" />
-              </p>
-              <p>
-                <Editable id="about.beliefs" />
-              </p>
-              <div className="editable-link">
-                <a href="/api/auth/discord/login">
-                  <Copy id="about.login" />
-                  <ArrowRight size={17} />
-                </a>
-                <EditButton id="about.login" />
-              </div>
-            </section>
           )}
           <CopyRegion ids={["footer"]}>
             <footer>
