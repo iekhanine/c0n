@@ -148,6 +148,7 @@ export default function Admin() {
         )}
         {authorized && user ? (
           <Publishing
+            owner={session.owner === true}
             permissions={
               session.owner
                 ? PERMISSIONS
