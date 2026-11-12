@@ -2,7 +2,7 @@ import { memberCanSelectRoles } from "./onboarding.js";
 import { canonicalRoleName } from "./participation.js";
 
 // Roles selected by members must be dedicated access roles, not staff privileges.
-const dedicatedNames = new Set(["compoundaccess","workshopaccess","galleryaccess","arcadeaccess","gamesaccess","voiceaccess"]);
+const dedicatedNames = new Set(["workshopaccess","galleryaccess","arcadeaccess","gamesaccess","voiceaccess"]);
 export function safeAccessRole(role) {
   return Boolean(role && !role.managed && role.editable &&
     role.permissions.bitfield === 0n && role.id !== role.guild.id &&
