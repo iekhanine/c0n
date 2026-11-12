@@ -14,7 +14,6 @@ function normalized(s: string) {
   return [...s.toLowerCase()].map(char => special.get(char) || char).join("").replace(/[^a-z0-9]/g, "");
 }
 const categories = [
-  { key: "thecompound", role: "compoundaccess", name: "Compound Access", emoji: "💬" },
   { key: "theworkshop", role: "workshopaccess", name: "Workshop Access", emoji: "💻" },
   { key: "thegallery", role: "galleryaccess", name: "Gallery Access", emoji: "🎨" },
   { key: "thearcade", role: "arcadeaccess", name: "Arcade Access", emoji: "🎮" },
@@ -69,13 +68,18 @@ export default function AccessSetup() {
     category: channels.find(c => c.type === 4 && normalized(c.name) === spec.key),
     existingRole: roles.find(r => normalized(r.name) === spec.role),
   }));
+  const observer = roles.find(r => normalized(r.name) === "observer");
   const instigator = roles.find(r => normalized(r.name) === "instigator");
+  const compound = channels.find(c => c.type === 4 && normalized(c.name) === "thecompound");
   const botRole = roles.find(r => r.id === info?.bot_role_id);
   const unsafeInstigator = instigator && BigInt(instigator.permissions || "0") !== 0n;
 
   async function setup() {
     if (!info || !channelId || !/^\d{17,20}$/.test(messageId)) {
       setProblem("Choose the #roles channel and a valid message ID."); return;
+    }
+    if (!compound || !observer || !instigator) {
+      setProblem("Compound, Observer or Instigator missing. Refresh Discord."); return;
     }
     if (matches.some(m => !m.category)) {
       setProblem("A required category is missing. Refresh Discord data and review the category names."); return;
@@ -86,12 +90,26 @@ export default function AccessSetup() {
       setProblem("An existing access role is managed, privileged, or above the bot. Fix its permissions before setup."); return;
     }
     const confirmed = window.confirm(
-      "Configure six C0N category-access roles? This will create any missing access roles, deny @everyone View Channel on those six categories, allow their matching access roles, add six reactions to the selected post, and save emoji mappings. Other categories and other permission bits will be preserved. Continue?"
+      "Configure five optional category access roles and automatic Compound access for Observer and Instigator? Other category permissions remain separate. Continue?"
     );
     if (!confirmed) return;
     setWorking(true); setProblem(""); setDone(false);
     try {
       const mapped: { emoji: string; role_id: string }[] = [];
+      if (!info.bot_role_id) throw Error("Bot role missing.");
+      setProgress("Configuring default Compound access…");
+      for (const roleId of [info.bot_role_id, observer.id, instigator.id]) {
+        await botCommand("channels.permissions", {
+          id: compound.id, role_id: roleId,
+          ...permissionsFor(compound, roleId, true),
+          reason: "C0N default Compound access after First Contact",
+        });
+      }
+      await botCommand("channels.permissions", {
+        id: compound.id, role_id: info.id,
+        ...permissionsFor(compound, info.id, false),
+        reason: "C0N keep Compound hidden from unonboarded members",
+      });
       for (const item of matches) {
         const category = item.category!;
         let role: RoleResult | Role | undefined = item.existingRole;
@@ -132,7 +150,7 @@ export default function AccessSetup() {
       setProgress("Saving access mappings…");
       await saveMappings({ channel_id: channelId, message_id: messageId, mappings: mapped });
       setDone(true);
-      setProgress("Configured! Six category access roles and emoji mappings are saved.");
+      setProgress("Configured! Compound opens automatically; five optional categories are mapped.");
       await refresh();
     } catch (e) {
       setProblem((e instanceof Error ? e.message : "Configuration failed.") +
@@ -157,7 +175,7 @@ export default function AccessSetup() {
 
   return <section className="dx-panel dx-form">
     <h3>Guided category access setup</h3>
-    <p>Configure the six self-selectable areas using dedicated roles. Staff, First Contact, The Unspoken, Live, and Administration are not modified.</p>
+    <p>The Compound opens automatically to Observers and Instigators. Configure five optional categories. Staff, First Contact, The Unspoken, Live, and Administration are not modified.</p>
     <div className="dx-form">
       <label>Roles message channel
         <select value={channelId} onChange={e => setChannelId(e.target.value)} disabled={working}>
@@ -177,7 +195,7 @@ export default function AccessSetup() {
       </div>
       <p><strong>Important:</strong> Existing member roles can still grant access, and child channels with unsynced permissions may differ from their categories. Review those in Discord after setup.</p>
       <button type="button" disabled={working || !info} onClick={() => void setup()}>
-        {working ? "Applying configuration…" : "Configure six access roles and categories"}
+        {working ? "Applying configuration…" : "Configure Compound and five optional categories"}
       </button>
       <button type="button" disabled={working} onClick={() => void refresh()}>Refresh Discord roles and categories</button>
     </div>
