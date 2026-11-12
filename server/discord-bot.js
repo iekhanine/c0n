@@ -267,7 +267,7 @@ async function acceptSync(db, s, b, headers) {
             AND m.joined_at <= now()-interval '14 days'
            GROUP BY e.user_id
            HAVING count(*) FILTER (WHERE e.event_type='message') >= 30
-             AND count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date) >= 5
+             AND count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date) FILTER (WHERE e.event_type='message') >= 5
            LIMIT 100`,
           [s.guild_id],
         );
@@ -278,7 +278,7 @@ async function acceptSync(db, s, b, headers) {
           `SELECT
              count(e.event_id)::int > 0 AS participated,
              count(e.event_id) FILTER (WHERE e.event_type='message')::int AS messages,
-             count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date)::int AS active_days,
+             count(DISTINCT (e.occurred_at AT TIME ZONE 'UTC')::date) FILTER (WHERE e.event_type='message')::int AS active_days,
              m.joined_at <= now()-interval '14 days' AS mature
            FROM con.discord_members m
            LEFT JOIN con.discord_participation_events e
