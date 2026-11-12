@@ -6,10 +6,12 @@ import {
   GatewayIntentBits,
   ActivityType,
   MessageFlags,
+  Partials,
 } from "discord.js";
 import { canonicalJson, signBridge } from "../shared/discord-signing.js";
 import { publicChannels, memberRecord, activityRecord } from "./protocol.js";
 import { executeControl, controlError } from "./control.js";
+import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://c0n.ivansays.com";
 if (new URL(SITE).origin !== "https://c0n.ivansays.com")
   throw Error("CON_SITE_URL must be the C0N production origin.");
@@ -66,13 +68,16 @@ async function send(payload) {
   return data;
 }
 async function main() {
+  let reactionConfig = null, reactionVersion = "";
   const client = new Client({
     rest: { timeout: 20000, retries: 0 },
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildMessageReactions,
     ],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   });
   const run = (fn) =>
     void Promise.resolve()
@@ -111,10 +116,18 @@ async function main() {
         await send(receipt);
         receipt = null;
       }
-      const { command } = await send({
+      const { command, reaction_roles } = await send({
         kind: "control_poll",
         guild_id: guildId,
       });
+      const config = reaction_roles || null;
+      const version = JSON.stringify(config);
+      if (version !== reactionVersion) {
+        reactionVersion = version;
+        reactionConfig = config;
+        if (config?.mappings?.length)
+          run(() => reconcileRoleReactions(guild, config));
+      }
       if (!command) return;
       try {
         const result = await executeControl(guild, command);
@@ -244,6 +257,14 @@ async function main() {
   client.on(Events.GuildMemberRemove, (m) => {
     if (m.guild.id === guildId)
       memberChanges.set(m.id, { id: m.id, removed: true });
+  });
+  client.on(Events.MessageReactionAdd, (reaction, user) => {
+    if (reactionConfig)
+      run(() => handleRoleReaction(guild, reactionConfig, reaction, user, false));
+  });
+  client.on(Events.MessageReactionRemove, (reaction, user) => {
+    if (reactionConfig)
+      run(() => handleRoleReaction(guild, reactionConfig, reaction, user, true));
   });
   client.on(Events.MessageCreate, (m) => {
     const record = activityRecord(m, allowedIds, publicIds, guildId);
