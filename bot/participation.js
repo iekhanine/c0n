@@ -68,10 +68,26 @@ export async function applyParticipationProgress(guild, progress) {
   const unspoken = statusRole(guild, "The Unspoken");
   const observer = statusRole(guild, "Observer");
   const instigator = statusRole(guild, "Instigator");
-  if (!unspoken || !observer || !instigator) return;
+  if (!unspoken || !observer || !instigator) {
+    const names = ["The Unspoken", "Observer", "Instigator"];
+    console.warn("C0N participation role lookup blocked", {
+      missing: names.filter((name, index) => ![unspoken, observer, instigator][index]),
+      candidateNames: names.map(name => [...guild.roles.cache.values()]
+        .filter(role => canonicalRoleName(role.name) === canonicalRoleName(name))
+        .map(role => ({
+          name: role.name,
+          managed: role.managed,
+          safe: safeParticipationRole(role),
+          belowBot: Boolean(guild.members.me &&
+            guild.members.me.roles.highest.comparePositionTo(role) > 0),
+        }))),
+    });
+    return;
+  }
   const has = role => member.roles.cache.has(role.id);
   // Never demote an Instigator or remove it because of inactivity.
   if (has(instigator)) return;
+  console.info("C0N participation member status", { participated: progress.participated, eligible: progress.eligible_instigator, unspoken: has(unspoken), observer: has(observer) });
   if (progress.eligible_instigator) {
     // A promotion is additive first; only then clear obsolete status roles.
     await member.roles.add(instigator, "C0N activity milestone: 14 days, 30 messages, 5 active days");
