@@ -6,9 +6,10 @@ CREATE INDEX IF NOT EXISTS con_discord_event_time ON con.discord_events(guild_id
 CREATE TABLE IF NOT EXISTS con.discord_participation_events (
  guild_id text NOT NULL, event_id text NOT NULL, event_type text NOT NULL
  CHECK(event_type IN ('message','reaction')), channel_id text NOT NULL,
- user_id text NOT NULL, occurred_at timestamptz NOT NULL,
+ user_id text NOT NULL, occurred_at timestamptz NOT NULL, onboarding boolean NOT NULL DEFAULT false,
  PRIMARY KEY(guild_id,event_type,event_id,user_id)
 );
+ALTER TABLE con.discord_participation_events ADD COLUMN IF NOT EXISTS onboarding boolean NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS con_participation_user_time
  ON con.discord_participation_events(guild_id,user_id,occurred_at);
 CREATE TABLE IF NOT EXISTS con.discord_receipts(nonce text PRIMARY KEY,created_at timestamptz NOT NULL DEFAULT now());
