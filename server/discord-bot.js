@@ -377,6 +377,40 @@ export async function discordBotHandler(
         ),
       );
     }
+    if (action === "reaction_roles" && ["GET", "PUT"].includes(req.method)) {
+      const current = await settings(db);
+      if (!current?.guild_id) fail(409, "Connect a Discord server first.");
+      await ensureControl(db);
+      if (req.method === "GET") {
+        const result = await db.query(
+          "SELECT guild_id,channel_id,message_id,mappings FROM con.discord_reaction_roles WHERE guild_id=$1",
+          [current.guild_id],
+        );
+        return json(res, 200, result.rows[0] || {
+          guild_id: current.guild_id, channel_id: "", message_id: "1570527636030103675", mappings: [],
+        });
+      }
+      if (!snowflake(b.channel_id) || !snowflake(b.message_id) ||
+          !Array.isArray(b.mappings) || b.mappings.length > 30)
+        fail(400, "Select a channel, message and up to 30 emoji mappings.");
+      const emojis = new Set(), roles = new Set();
+      const mappings = b.mappings.map((entry) => {
+        const emoji = typeof entry.emoji === "string" ? entry.emoji.trim() : "";
+        if (!emoji || emoji.length > 80 || !snowflake(entry.role_id) ||
+            emojis.has(emoji) || roles.has(entry.role_id))
+          fail(400, "Mappings require unique emojis and access roles.");
+        emojis.add(emoji);
+        roles.add(entry.role_id);
+        return { emoji, role_id: entry.role_id };
+      });
+      await db.query(
+        `INSERT INTO con.discord_reaction_roles(guild_id,channel_id,message_id,mappings)
+         VALUES($1,$2,$3,$4::jsonb) ON CONFLICT(guild_id) DO UPDATE SET
+         channel_id=$2,message_id=$3,mappings=$4::jsonb,updated_at=now()`,
+        [current.guild_id, b.channel_id, b.message_id, JSON.stringify(mappings)],
+      );
+      return json(res, 200, { ok: true });
+    }
     if (action === "status" && req.method === "GET")
       return json(res, 200, {
         ...safeSettings(await settings(db)),
