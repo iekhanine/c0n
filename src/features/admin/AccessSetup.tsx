@@ -103,16 +103,25 @@ export default function AccessSetup() {
           });
         }
         mapped.push({ emoji: item.emoji, role_id: role.id });
-        setProgress("Configuring " + category.name + "…");
-        const world = permissionsFor(category, info.id, false);
+        if (!info.bot_role_id) throw Error("Bot role ID is missing. Cannot safely update category permissions.");
+        // Preserve the bot's category access before applying any @everyone denial.
+        setProgress("Preserving bot access in " + category.name + "…");
+        const botAccess = permissionsFor(category, info.bot_role_id, true);
         await botCommand("channels.permissions", {
-          id: category.id, role_id: info.id, ...world,
-          reason: "C0N owner-approved category privacy gate",
+          id: category.id, role_id: info.bot_role_id, ...botAccess,
+          reason: "C0N preserve bot access before applying category privacy",
         });
+        setProgress("Allowing " + item.name + " in " + category.name + "…");
         const access = permissionsFor(category, role.id, true);
         await botCommand("channels.permissions", {
           id: category.id, role_id: role.id, ...access,
           reason: "C0N owner-approved category access role",
+        });
+        setProgress("Restricting @everyone in " + category.name + "…");
+        const world = permissionsFor(category, info.id, false);
+        await botCommand("channels.permissions", {
+          id: category.id, role_id: info.id, ...world,
+          reason: "C0N owner-approved category privacy gate",
         });
       }
       setProgress("Adding selection emojis to the roles message…");
@@ -127,7 +136,7 @@ export default function AccessSetup() {
       await refresh();
     } catch (e) {
       setProblem((e instanceof Error ? e.message : "Configuration failed.") +
-        " Some steps may have succeeded. Refresh and inspect Discord before retrying.");
+        " Stopped at: " + progress + ". Some earlier operations may have succeeded. Refresh the Discord state before retrying.");
     } finally { setWorking(false); }
   }
 
