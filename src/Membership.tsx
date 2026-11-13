@@ -38,7 +38,7 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
   },[]);
   async function redeem(e:FormEvent){
     e.preventDefault();setBusy(true);setError("");
-    try{await request("redeem","POST",{code:code.trim()});history.replaceState({}, "", "/membership");sessionStorage.removeItem("con-pending-invite");setNotice("Invitation accepted. Welcome to The Compound.");await refresh();}
+    try{await request("redeem","POST",{code:code.trim()});history.replaceState({}, "", "/membership");sessionStorage.removeItem("con-pending-invite");window.location.assign("/");}
     catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   async function issue(e:FormEvent){
