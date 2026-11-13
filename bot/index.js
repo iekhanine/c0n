@@ -148,6 +148,65 @@ async function main() {
     await guild.channels.fetch();
     welcome = await ensureWelcomePost(guild, client.user.id);
   }
+  async function ensureInitiatedCompoundAccess() {
+    await guild.channels.fetch();
+    await guild.roles.fetch();
+    const me = await guild.members.fetchMe();
+    const category = [...guild.channels.cache.values()].find(c =>
+      c.type === 4 && norm(c.name) === "thecompound");
+    const initiated = [...guild.roles.cache.values()].find(r =>
+      norm(r.name) === "initiated");
+    if (!category || !initiated) {
+      console.warn("C0N Initiated Compound access missing role or category");
+      return;
+    }
+    const current = category.permissionOverwrites.cache.get(initiated.id);
+    const allow = current?.allow.has(["ViewChannel","SendMessages"]) || false;
+    if (!allow) {
+      await category.permissionOverwrites.edit(initiated, {
+        ViewChannel: true, SendMessages: true,
+      }, { reason: "C0N owner-approved Initiated visibility and posting in The Compound" });
+    }
+    console.info("C0N Initiated Compound access", JSON.stringify({
+      category: category.name, role: initiated.name,
+      view: category.permissionOverwrites.cache.get(initiated.id)?.allow.has("ViewChannel"),
+      send: category.permissionOverwrites.cache.get(initiated.id)?.allow.has("SendMessages"),
+      botCanManage: category.permissionsFor(me)?.has("ManageRoles"),
+    }));
+    const overrides = [...guild.channels.cache.values()]
+      .filter(c => c.parentId === category.id && [0,5].includes(c.type))
+      .map(c => ({ channel: c.name, synced: c.permissionsLocked,
+        initiatedCanView: c.permissionOverwrites.cache.get(initiated.id)?.allow.has("ViewChannel") || false,
+        initiatedCanSend: c.permissionOverwrites.cache.get(initiated.id)?.allow.has("SendMessages") || false,
+        explicitDeny: Boolean(c.permissionOverwrites.cache.get(initiated.id)?.deny.has(["ViewChannel","SendMessages"])) }));
+    console.info("C0N Compound child permissions", JSON.stringify(overrides));
+  }
+  async function reconcileWelcomeReactions() {
+    if (!welcome?.channelId || !welcome?.messageId) {
+      console.warn("C0N welcome reconciliation skipped: post not accessible");
+      return;
+    }
+    const channel = await guild.channels.fetch(welcome.channelId);
+    const message = await channel.messages.fetch(welcome.messageId);
+    const reaction = message.reactions.cache.find(r => r.emoji.name === "👋");
+    if (!reaction) return;
+    let after;
+    let count = 0;
+    for (let page = 0; page < 20; page++) {
+      const users = await reaction.users.fetch({ limit: 100, ...(after ? { after } : {}) });
+      for (const user of users.values()) {
+        if (user.bot) continue;
+        await applyParticipationProgress(guild, {
+          user_id: user.id, participated: true, eligible_instigator: false,
+        });
+        count++;
+      }
+      if (users.size < 100) break;
+      after = users.last()?.id;
+      if (!after) break;
+    }
+    console.info("C0N welcome reactions reconciled", { count });
+  }
   async function repairBotCategoryAccess() {
     // Repair the two categories restricted by the earlier setup sequence.
     // Never change @everyone, member, staff, or category access role permissions.
@@ -400,7 +459,8 @@ async function main() {
         type: ActivityType.Watching,
       });
       state = "ready";
-      run(async () => { await repairBotCategoryAccess(); await auditCategoryPermissions(); });
+      run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
+      run(reconcileWelcomeReactions);
       run(checkProgress);
       console.log("C0N Discord worker connected.");
     }),
@@ -437,11 +497,20 @@ async function main() {
     participationPending.set(id, { ...event, onboarding: onboardingEligible(event, welcome) });
   };
   client.on(Events.MessageReactionAdd, (reaction, user) => {
-    if (reaction.message.guildId === guildId && !user.bot)
-      recordParticipation(participationEvent(
+    if (reaction.message.guildId === guildId && !user.bot) {
+      const event = participationEvent(
         "reaction", reaction.message.id, reaction.message.channelId,
         user.id, Date.now(), reaction.emoji.id || [...(reaction.emoji.name || "")].map(c => c.codePointAt(0).toString(16)).join("-"),
-      ));
+      );
+      recordParticipation(event);
+      if (onboardingEligible(event, welcome))
+        run(async () => {
+          await applyParticipationProgress(guild, {
+            user_id: user.id, participated: true, eligible_instigator: false,
+          });
+          console.info("C0N welcome reaction promoted", { userId: user.id });
+        });
+    }
     if (reactionConfig)
       run(() => handleRoleReaction(guild, reactionConfig, reaction, user, false));
   });
