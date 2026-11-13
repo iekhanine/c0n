@@ -7,10 +7,12 @@ import {
   Radio,
   Terminal,
   Users,
+  Type,
 } from "lucide-react";
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
+import DiscordFontTool from "./DiscordFontTool";
 import ContentAudit from "./ContentAudit";
 import { Editable, CopyRegion } from "../../SiteText";
 import Posts from "./Posts";
@@ -29,7 +31,8 @@ type Tab =
   | "database"
   | "discord"
   | "audit"
-  | "projectReports";
+  | "projectReports"
+  | "font";
 export default function Publishing({
   permissions,
   owner = false,
@@ -52,6 +55,7 @@ export default function Publishing({
         (permissions.includes("projects.publish") &&
           permissions.includes("website.publish")),
       discord: owner,
+      font: owner,
       audit: owner,
       update: permissions.includes("updates.view"),
       project: permissions.includes("projects.view"),
@@ -99,6 +103,7 @@ export default function Publishing({
     ["staff", "Staff approval", Users],
     ["database", "Database", Database],
     ["discord", "Discord bot", Radio],
+    ["font", "Discord text generator", Type],
     ["audit", "Content audit & restore", History],
   ];
   async function storage(update = false) {
@@ -188,6 +193,8 @@ export default function Publishing({
         <div className="con-tool-empty">
           This tool is not enabled for your account.
         </div>
+      ) : tab === "font" ? (
+        <DiscordFontTool />
       ) : tab === "audit" ? (
         <ContentAudit />
       ) : tab === "discord" ? (
