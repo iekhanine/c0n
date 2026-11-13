@@ -1,13 +1,6 @@
 import ProjectCardMenu from "./ProjectCardMenu";
 import { StreamPage } from "./Social";
-import {
-  useDiscordCommunity,
-  DiscordStatus,
-  DiscordMembers,
-  DiscordChannels,
-  DiscordActivity,
-  DiscordBuilders,
-} from "./DiscordCommunity";
+import DiscordSidebar from "./DiscordSidebar";
 import { VoteButton, type Project } from "./ProjectPages";
 import { Editable, Copy, EditButton, useSiteCopy } from "./SiteText";
 import { useEffect, useState } from "react";
@@ -15,11 +8,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   MessageCircle,
-  Users,
-  Zap,
-  Trophy,
   Search,
-  Gamepad2,
 } from "lucide-react";
 type Post = {
   id: string;
@@ -56,7 +45,6 @@ export default function CommunityFeed({
   page?: "explore" | "projects" | "members" | "community";
 }) {
   const text = useSiteCopy();
-  const discord = useDiscordCommunity();
   const [category, setCategory] = useState("All projects"),
     [query, setQuery] = useState(""),
     [sort, setSort] = useState("featured");
@@ -301,81 +289,7 @@ export default function CommunityFeed({
             </div>
           )}
         </div>
-        <aside className="showcase-rail" aria-label="Community highlights">
-          <section className="rail-card server-panel">
-            <div className="server-heading">
-              <Gamepad2 size={43} />
-              <div>
-                <h2>
-                  <Editable id="copy.10" />
-                </h2>
-                <DiscordStatus data={discord} />
-              </div>
-            </div>
-            <a
-              className="rail-button"
-              href="https://discord.gg/dSHMeZ4ETJ"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Copy id="discord.join" />
-              <ArrowUpRight size={17} />
-            </a>
-          </section>
-          <section className="rail-card">
-            <h2>
-              <Trophy size={23} />
-              <Editable id="copy.12" />
-            </h2>
-            {[...real]
-              .sort((a, b) => (b.votes || 0) - (a.votes || 0))
-              .slice(0, 3)
-              .map((p, i) => (
-                <a
-                  href={`/projects/${p.id}`}
-                  className="spotlight-row"
-                  key={p.id}
-                >
-                  <span>{i + 1}.</span>
-                  <strong>{p.title}</strong>
-                  <span className="sample-votes">↑ {p.votes || 0}</span>
-                </a>
-              ))}
-            {!real.length && (
-              <p>
-                <Editable id="projects.empty" />
-              </p>
-            )}
-          </section>
-          <section className="rail-card">
-            <h2>
-              <MessageCircle size={23} />
-              <Editable id="discord.channels.title" />
-            </h2>
-            <DiscordChannels data={discord} />
-          </section>
-          <section className="rail-card" id="members">
-            <h2>
-              <Zap size={25} />
-              <Editable id="discord.members.title" />
-            </h2>
-            <DiscordBuilders data={discord} />
-          </section>
-          <section className="rail-card">
-            <h2>
-              <Users size={23} />
-              <Editable id="copy.15" />
-            </h2>
-            <DiscordMembers data={discord} />
-          </section>
-          <section className="rail-card">
-            <h2>
-              <MessageCircle size={23} />
-              <Editable id="copy.17" />
-            </h2>
-            <DiscordActivity data={discord} />
-          </section>
-        </aside>
+        <DiscordSidebar />
         {page !== "explore" && (
           <div className="home-transmissions">
             <StreamPage compact />
