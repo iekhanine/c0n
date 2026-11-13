@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, ArrowDown, Plus, X, GripVertical, Gamepad2, ArrowUpRight, MessageCircle, Users, Zap, Activity } from "lucide-react";
+import { ArrowUp, ArrowDown, X, GripVertical, Gamepad2, ArrowUpRight, MessageCircle, Users, Zap, Activity } from "lucide-react";
 import {
   useDiscordCommunity, DiscordStatus, DiscordMembers,
   DiscordChannels, DiscordActivity, DiscordBuilders,
