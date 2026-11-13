@@ -104,8 +104,10 @@ export async function readImage(file: File) {
   });
 }
 export function Avatar({ name, url }: { name: string; url?: string }) {
-  return safeUrl(url) ? (
-    <img className="social-avatar" src={safeUrl(url)} alt="" loading="lazy" />
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  return safeUrl(url) && !failed ? (
+    <img className="social-avatar" src={safeUrl(url)} alt="" loading="lazy" onError={() => setFailed(true)}/>
   ) : (
     <span className="social-avatar social-initials">
       {name.slice(0, 2).toUpperCase()}
