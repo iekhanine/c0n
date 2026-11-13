@@ -14,7 +14,7 @@ export function toDiscordSmallCaps(value: string): string {
 export default function DiscordFontTool() {
   const [input, setInput] = useState("");
   const [copied, setCopied] = useState(false);
-  const [frame, setFrame] = useState(true);
+  const [frame, setFrame] = useState(false);
   const text = toDiscordSmallCaps(input);
   const output = frame && text.trim() ? "[ " + text + " ]" : text;
   async function copy() {
