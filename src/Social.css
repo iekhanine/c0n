@@ -774,3 +774,7 @@
   .con-header-inbox { width:34px; height:34px; }
   .social-replies .con-thread-children { margin-left:7px; padding-left:9px; border-left-width:1px; }
 }
+
+/* Home page submission is a local modal action, not navigation. */
+.social-stream .con-compact-submit button {display:inline-flex;align-items:center;background:#d1f77b;color:#17200f;border:0;border-radius:7px;padding:8px 13px;font-size:13px;font-weight:750;cursor:pointer;}
+.con-header-actions button.con-global-submit {border:0;cursor:pointer;font-family:inherit;}
