@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, LogOut, UserRound, Settings, Bell } from "luci
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
+import { MembershipPage } from "./Membership";
 import {
   CopyRegion,
   Editable,
@@ -30,6 +31,24 @@ export default function App() {
       document.body.classList.remove("showcase-page");
     };
   }, []);
+  useEffect(() => {
+    if (account?.user && window.location.pathname === "/" && sessionStorage.getItem("con-pending-invite"))
+      window.location.replace("/membership");
+  }, [account?.user?.id]);
+  const [membershipAccess, setMembershipAccess] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!account) return;
+    if (!account.user) { setMembershipAccess(false); return; }
+    let active=true;
+    void fetch("/api/membership?action=me",{cache:"no-store"})
+      .then(async response => {
+        if (!response.ok) throw Error("Membership verification unavailable");
+        const result = await response.json();
+        if(active) setMembershipAccess(result.member?.active===true);
+      })
+      .catch(()=>{if(active) setMembershipAccess(false);});
+    return ()=>{active=false;};
+  },[account?.user?.id]);
   const [seedError, setSeedError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -77,7 +96,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
+  const page = path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -94,6 +113,10 @@ export default function App() {
                 : path === "/"
                   ? "explore"
                   : "missing";
+  if (account === null || (account.user && membershipAccess === null))
+    return <div className="showcase con-locked-shell"><div className="con-lock-checking"><img src="/con-logo.png" alt="C0N"/><p>Checking access to The Compound…</p></div></div>;
+  if (membershipAccess !== true)
+    return <div className="showcase con-locked-shell"><MembershipPage /></div>;
   return (
     <SiteTextProvider owner={account?.owner === true}>
       <div className={`showcase page-${page}`}>
@@ -130,6 +153,7 @@ export default function App() {
               </CopyRegion>
             ))}
           </nav>
+          <a className="con-member-header-link" href="/merch">Merch</a>
           {account?.user && <div className="con-header-actions">
             {["explore","community","subcon"].includes(page) ?
               <button type="button" className="con-global-submit" onClick={() => window.dispatchEvent(new Event("con-open-submit"))}>+ POST</button> :
@@ -176,6 +200,8 @@ export default function App() {
                   <a href={`/members/${account.user.id}`}><UserRound size={16}/> View profile</a>
                   <a href={`/members/${account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
                   <a href="/inbox">Inbox · Replies</a>
+                  <a href="/membership">Membership & invitations</a>
+                  <a href="/merch">Member supply</a>
                   <a href="/my-projects">My projects</a>
                   <button type="button" disabled={signingOut} onClick={() => void signOut()}>
                     <LogOut size={16}/> {signingOut ? "Signing out…" : "Log out"}
@@ -194,7 +220,11 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "inbox" ? (
+          {page === "membership" ? (
+            <MembershipPage />
+          ) : page === "merch" ? (
+            <MembershipPage merch />
+          ) : page === "inbox" ? (
             <InboxPage />
           ) : page === "subcon" ? (
             <StreamPage communitySlug={decodeURIComponent(path.split("/")[2] || "")} />

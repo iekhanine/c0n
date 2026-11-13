@@ -16,6 +16,7 @@ import { assignNewMemberStatus, applyParticipationProgress, participationEvent }
 import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js";
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 import { updateStatsMessage } from "./server-stats.js";
+import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
   throw Error("CON_SITE_URL must be the C0N production origin.");
@@ -367,6 +368,18 @@ async function main() {
       controlBusy = false;
     }
   }
+  let memberRolesBusy=false;
+  async function syncMembershipRoles() {
+    if (state !== "ready" || !guild || memberRolesBusy) return;
+    memberRolesBusy=true;
+    try {
+      const result=await send({kind:"membership_roles",guild_id:guildId});
+      if (result.configured !== true) return;
+      const changes=await reconcileVerifiedMembers(guild,result.user_ids);
+      if (changes.assigned || changes.removed)
+        console.info("C0N membership roles reconciled",changes);
+    } finally { memberRolesBusy=false; }
+  }
   async function checkProgress() {
     if (!guild || state !== "ready") return;
     const result = await send({ kind: "participation_check", guild_id: guildId });
@@ -482,6 +495,7 @@ async function main() {
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
       run(reconcileWelcomeReactions);
       run(checkProgress);
+      run(syncMembershipRoles);
       run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId})));
       console.log("C0N Discord worker connected.");
     }),
@@ -499,6 +513,7 @@ async function main() {
     if (m.guild.id === guildId) {
       memberChanges.set(m.id, { id: m.id, member: memberRecord(m) });
       run(() => assignNewMemberStatus(m));
+      run(syncMembershipRoles);
       run(() => memberNotice(m, "join"));
     }
   });
@@ -609,6 +624,7 @@ async function main() {
   client.on(Events.ShardResume, () => {
     state = "ready";
     run(heartbeat);
+    run(syncMembershipRoles);
     run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId})));
   });
   client.on(Events.Error, (e) =>
@@ -618,6 +634,7 @@ async function main() {
     heartbeatTimer = setInterval(() => run(heartbeat), 60000),
     welcomeTimer = setInterval(() => { if (!welcome?.messageId) run(refreshWelcome); }, 300000),
     progressTimer = setInterval(() => run(checkProgress), 3600000),
+    membershipTimer = setInterval(() => run(syncMembershipRoles), 60000),
     controlTimer = setInterval(() => run(commands), 5000),
     statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId}))); }, 15 * 60 * 1000);
   const shutdown = async () => {
@@ -625,6 +642,7 @@ async function main() {
     clearInterval(controlTimer);
     clearInterval(statsTimer);
     clearInterval(progressTimer);
+    clearInterval(membershipTimer);
     clearInterval(welcomeTimer);
     clearInterval(flushTimer);
     clearInterval(heartbeatTimer);

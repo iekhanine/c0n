@@ -1,0 +1,84 @@
+.con-membership-page{width:min(1380px,calc(100% - 48px));margin:0 auto;padding:52px 0 90px;color:#eeeade}
+.con-membership-intro{margin-bottom:34px}.con-member-eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:#d1f77b}
+.con-membership-intro h1{font-size:clamp(30px,4vw,49px);margin:10px 0}.con-membership-intro p{color:#acb6a7;max-width:680px}
+.con-membership-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:25px;align-items:start}
+.con-membership-main{display:grid;gap:22px;min-width:0}
+.con-member-panel,.con-pass-section{border:1px solid #3d4738;border-radius:15px;padding:26px;background:linear-gradient(155deg,#20251f,#161a17)}
+.con-member-panel{display:grid;gap:13px}.con-member-panel>svg{color:#d1f77b}.con-member-panel h2,.con-member-panel h3,.con-pass-section h2{margin:0;color:#f4f5ed}.con-member-panel p{margin:0;color:#aab4a5}
+.con-member-section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}.con-member-section-head h2{font-size:23px;margin:5px 0 0}
+.con-member-status{display:inline-flex;align-items:center;gap:6px;color:#d1f77b;font-size:12px;font-weight:800;letter-spacing:1px}
+.con-digital-pass{max-width:750px;aspect-ratio:1.75;min-height:300px;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(22px,4vw,38px);border-radius:21px;border:1px solid #829949;background:radial-gradient(circle at 82% 15%,#4b603033,transparent 45%),repeating-radial-gradient(circle at 30% 40%,transparent 0 30px,#d2f77708 31px 32px),linear-gradient(135deg,#20281e,#090c09 80%);box-shadow:inset 0 0 24px #7e9c3112,0 18px 38px #0305036b}
+.con-pass-top{display:flex;align-items:center;gap:18px}.con-pass-top img{width:64px;height:64px;object-fit:contain}.con-pass-top b{font-size:clamp(16px,2vw,23px);letter-spacing:3px;display:block}.con-pass-top span{display:block;color:#d1f77b;font-size:10px;letter-spacing:4px}
+.con-pass-identity>span{display:inline-flex;align-items:center;gap:8px;border:1px solid #a5c568;color:#d1f77b;padding:5px 12px;border-radius:40px;font-size:12px;letter-spacing:1px;font-weight:800}.con-pass-identity h2{font-size:clamp(24px,4vw,40px);margin:12px 0 2px;color:#f4f3ec}.con-pass-identity p{margin:0;color:#c0cbb8;font-size:12px;letter-spacing:2px}.con-pass-identity strong{color:#d1f77b}
+.con-pass-bottom{display:flex;justify-content:space-between;gap:14px;border-top:1px solid #627052;padding-top:16px;font-size:11px;letter-spacing:2px;color:#e6eccf}.con-pass-lineage{font-size:10px;letter-spacing:1px;color:#9eaf90}
+.con-member-muted{font-size:13px;color:#a7b39f;margin:12px 0 0;max-width:740px}
+.con-member-form{display:grid;gap:13px}.con-member-form label{display:grid;gap:7px;color:#d6dfce;font-size:13px;font-weight:650}.con-member-form input{width:100%;background:#0c100d;border:1px solid #4a5741;border-radius:8px;padding:12px;color:#f2f5ec}
+.con-member-form button,.con-member-action{border:0;border-radius:8px;padding:12px 19px;color:#11160b!important;background:#d1f77b;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800;width:max-content}
+.con-member-form button:disabled{opacity:.5;cursor:wait}.con-invite-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.con-member-invite-list,.con-issued-list{display:grid;gap:9px;max-height:440px;overflow:auto}.con-issued-list h3{margin:0}
+.con-invite-item{display:flex;justify-content:space-between;align-items:center;gap:15px;border:1px solid #364234;background:#121712;border-radius:9px;padding:12px}.con-invite-item>div{display:grid;gap:5px;min-width:0}.con-invite-item strong,.con-invite-item code{overflow-wrap:anywhere;font-size:12px}.con-invite-item small{color:#a8b19e}.con-invite-item button{border:1px solid #647b53;background:#252d21;color:#ebf2e0;padding:8px 10px;border-radius:7px;display:flex;align-items:center;gap:6px}
+.con-membership-side{display:grid;gap:18px}.con-member-stat{display:grid;gap:0;border-top:1px solid #3a4536;padding-top:13px}.con-member-stat strong{font-size:25px;color:#d1f77b}.con-member-stat span{font-size:12px;color:#a8b19e}.con-merch-link span{font-size:13px;color:#d1f77b;font-weight:800}
+.con-member-error,.con-member-notice{padding:12px 16px;border-radius:8px;margin:0 0 18px}.con-member-error{background:#5a2424;color:#fff}.con-member-notice{background:#213b24;color:#dff7d5}
+@media(max-width:850px){.con-membership-layout{grid-template-columns:1fr}.con-membership-side{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.con-membership-page{width:calc(100% - 28px);padding-top:30px}.con-member-panel,.con-pass-section{padding:17px}.con-digital-pass{min-height:300px;aspect-ratio:auto;padding:19px}.con-pass-bottom{flex-direction:column;gap:4px}.con-membership-side,.con-invite-fields{grid-template-columns:1fr}.con-pass-top img{width:52px;height:52px}.con-pass-top b{font-size:14px;letter-spacing:2px}.con-pass-top span{letter-spacing:2px}}
+
+/* Invitation-only perimeter */
+.con-locked-shell{min-height:100vh;background:radial-gradient(circle at 50% 15%,#27391b 0%,#121612 35%,#090b09 85%);display:flex;align-items:center;justify-content:center;padding:24px}
+.con-locked-shell .con-membership-page{width:min(580px,100%);margin:0;padding:20px 0}
+.con-locked-shell .con-membership-intro{text-align:center}
+.con-locked-shell .con-membership-intro h1{font-size:clamp(30px,4vw,50px)}
+.con-locked-shell .con-membership-intro p{margin:0 auto}
+.con-locked-shell .con-invite-entrance{text-align:center;padding:clamp(24px,4vw,44px)}
+.con-invite-entrance>svg{width:34px;height:34px;justify-self:center}
+.con-invite-entrance h2{font-weight:850;letter-spacing:1.5px;font-size:27px}
+.con-invite-entrance .con-member-form{text-align:left;margin-top:12px}
+.con-invite-entrance .con-member-form button{width:100%}
+.con-member-signin{font-size:13px;color:#d1f77b!important;margin-top:7px}
+.con-lock-checking{text-align:center;color:#cbd6bc}.con-lock-checking img{width:88px;height:88px;object-fit:contain}
+
+/* C0N / The Compound secure vault entrance */
+.con-locked-shell{position:relative;display:block;min-height:100vh;min-height:100dvh;margin:0;padding:0;overflow-x:hidden;background:#070b08}
+.con-locked-shell .con-membership-page{width:100%;margin:0;padding:0}
+.vault-screen{position:relative;isolation:isolate;display:grid;place-items:center;width:100%;min-height:100vh;min-height:100dvh;overflow:hidden;color:#e9f1dc;background-image:url('/vault-door.svg');background-position:center;background-size:cover;background-repeat:no-repeat;background-color:#090d08}
+.vault-shade{position:absolute;z-index:-1;inset:0;background:radial-gradient(ellipse at center,rgba(0,0,0,.35) 0%,rgba(0,0,0,.47) 35%,rgba(0,0,0,.08) 75%),linear-gradient(90deg,rgba(0,0,0,.12),transparent 35%,transparent 65%,rgba(0,0,0,.15));pointer-events:none}
+.vault-ui{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:min(900px,calc(100% - 36px));padding:45px 0 30px;text-align:center}
+.vault-logo{width:clamp(72px,9vw,128px);height:clamp(72px,9vw,128px);object-fit:contain;filter:drop-shadow(0 1px 10px #000) drop-shadow(0 0 15px #6b8b3240);margin-bottom:clamp(28px,5vh,60px)}
+.vault-ui h1{color:#f0f6e8!important;font-family:Consolas,"Lucida Console",monospace!important;font-size:clamp(19px,3.2vw,42px);font-weight:700;letter-spacing:clamp(2px,.48vw,9px);line-height:1.3;text-shadow:0 3px 12px #000,0 0 22px #98b46f8c;white-space:nowrap;margin:0 0 clamp(30px,4vh,48px)}
+.vault-form{width:min(820px,100%);display:flex;flex-direction:column;align-items:center;gap:clamp(26px,4vh,42px)}
+.vault-terminal{display:flex;align-items:center;gap:clamp(10px,1.6vw,20px);width:100%;min-height:clamp(74px,9vw,106px);padding:10px clamp(12px,2.1vw,31px);background:rgba(2,8,3,.9);border:1px solid #9cdd60;border-radius:12px;box-shadow:0 0 1px 1px #d7fd9a26,0 0 31px #7edc4461,inset 0 0 24px #142c136e}
+.vault-prompt{font:700 clamp(20px,2.7vw,33px)/1 Consolas,monospace;color:#91ff55;flex:none}
+.vault-editor{position:relative;flex:1;min-width:0;height:55px;display:flex;align-items:center;overflow:hidden}
+.vault-display{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;pointer-events:none;text-align:left;font:600 clamp(15px,2.9vw,33px)/1.2 Consolas,"Courier New",monospace;letter-spacing:clamp(.4px,.1vw,2px);color:#83ff53;text-shadow:0 0 12px #4cff3980}
+.vault-placeholder{color:#4c7043}
+.vault-cursor{display:inline-block;color:#a2ff6a;animation:vault-blink .95s steps(1,end) infinite;vertical-align:baseline}
+.vault-editor input{position:absolute;inset:0;width:100%;height:100%;border:0!important;outline:0!important;background:transparent!important;opacity:0;color:transparent!important;cursor:text;caret-color:transparent;font-size:16px;padding:0;z-index:1}
+.vault-terminal:focus-within{border-color:#ccffa0;box-shadow:0 0 2px 1px #c6fa91,0 0 38px #7edc446d,inset 0 0 24px #142c136e}
+.vault-visibility{position:relative;z-index:2;display:grid;place-items:center;flex:none;width:52px;height:52px;padding:0;background:none;border:0;border-left:1px solid #677e5b;color:#e1ffc1;cursor:pointer}
+.vault-visibility:hover{color:#ffffff}
+.vault-continue{display:flex;align-items:center;justify-content:center;gap:20px;min-width:260px;padding:16px 26px;background:linear-gradient(110deg,#121b12,#1a2917);color:#e3fbca;border:1px solid #9cc26a;border-radius:5px;box-shadow:0 0 21px #4b732f45,inset 0 0 8px #87b45522;letter-spacing:4px;font:700 15px/1.4 Consolas,monospace;cursor:pointer}
+.vault-continue:not(:disabled):hover{background:#293f20;box-shadow:0 0 29px #73ab4a5d}
+.vault-continue:disabled{opacity:.48;cursor:not-allowed}
+.vault-discord-mark{font-size:24px;color:#b6dc8b}
+.vault-returning{position:absolute;top:18px;right:4px;display:grid;place-items:center;width:33px;height:33px;font-size:20px;color:#d2ebae!important;opacity:.65}
+.vault-returning:hover{opacity:1}
+.vault-error{margin:18px 0 0;color:#ffe2c6;font:14px/1.5 Consolas,monospace;text-shadow:0 2px 6px #000;background:#2b100dcc;border:1px solid #c56d54;padding:10px 14px;border-radius:6px}
+.vault-loading img{width:96px;height:96px;object-fit:contain;filter:drop-shadow(0 0 16px #7baf55)}
+@keyframes vault-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@media(max-width:700px){
+ .vault-screen{background-position:center center}
+ .vault-ui{width:calc(100% - 28px);padding:22px 0}
+ .vault-logo{margin-bottom:36px}
+ .vault-ui h1{font-size:clamp(15px,5vw,24px);letter-spacing:clamp(1px,.4vw,4px);margin-bottom:30px}
+ .vault-form{gap:28px}
+ .vault-terminal{min-height:80px;border-radius:7px;padding:10px 12px;gap:8px}
+ .vault-display{font-size:clamp(13px,3.65vw,23px);letter-spacing:0}
+ .vault-editor{height:55px}
+ .vault-visibility{width:44px;height:44px}
+ .vault-prompt{font-size:21px}
+ .vault-continue{min-width:210px;padding:13px 20px;font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){.vault-cursor{animation:none}}
+
+.con-test-invite{display:inline-flex;justify-content:center;align-items:center;width:max-content;max-width:100%;padding:10px 16px;border:1px solid #b9d980;border-radius:8px;background:#26321e;color:#dcfbb3;font-weight:700;cursor:pointer}
+.con-test-invite:hover{background:#34482a}
+.con-test-invite:disabled{opacity:.55;cursor:wait}
