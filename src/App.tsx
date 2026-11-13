@@ -36,6 +36,7 @@ export default function App() {
       window.location.replace("/membership");
   }, [account?.user?.id]);
   const [membershipAccess, setMembershipAccess] = useState<boolean | null>(null);
+  const [memberSlug,setMemberSlug] = useState<string | null>(null);
   useEffect(() => {
     if (!account) return;
     if (!account.user) { setMembershipAccess(false); return; }
@@ -44,7 +45,7 @@ export default function App() {
       .then(async response => {
         if (!response.ok) throw Error("Membership verification unavailable");
         const result = await response.json();
-        if(active) setMembershipAccess(result.member?.active===true);
+        if(active) {setMembershipAccess(result.member?.active===true);setMemberSlug(result.member?.public_slug||null);}
       })
       .catch(()=>{if(active) setMembershipAccess(false);});
     return ()=>{active=false;};
@@ -96,7 +97,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
+  const page = path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -194,8 +195,8 @@ export default function App() {
                 <div className="con-account-dropdown">
                   <strong>{account.user.name}</strong>
                   {account.authorized && <a href="/admin"><Settings size={16}/> Admin dashboard</a>}
-                  <a href={`/members/${account.user.id}`}><UserRound size={16}/> View profile</a>
-                  <a href={`/members/${account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
+                  <a href={`/c/${memberSlug || account.user.id}`}><UserRound size={16}/> View profile</a>
+                  <a href={`/c/${memberSlug || account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
                   <a href="/inbox">Inbox · Replies</a>
                   <a href="/membership">Membership & invitations</a>
                   <a href="/merch">Member supply</a>
