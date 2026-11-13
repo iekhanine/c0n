@@ -131,7 +131,9 @@ export default function App() {
             ))}
           </nav>
           {account?.user && <div className="con-header-actions">
-            <a className="con-global-submit" href="/community?submit=1">+ POST</a>
+            {["explore","community","subcon"].includes(page) ?
+              <button type="button" className="con-global-submit" onClick={() => window.dispatchEvent(new Event("con-open-submit"))}>+ POST</button> :
+              <a className="con-global-submit" href="/community?submit=1">+ POST</a>}
             <a className="con-header-inbox" href="/inbox" aria-label={`Inbox, ${unread} unread notifications`} title="Inbox">
               <Bell size={19}/>
               {unread > 0 && <span className="con-inbox-badge">{unread > 99 ? "99+" : unread}</span>}
