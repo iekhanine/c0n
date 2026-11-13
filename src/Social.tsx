@@ -232,7 +232,7 @@ export function PostCard({
           <span>
             <strong>{post.author_name}</strong>
             <small>
-              {post.kind === "update" ? "Transmission" : "Community post"}
+              {post.kind === "update" ? "C0N Blog" : "Member post"}
             </small>
           </span>
         </a>
@@ -584,7 +584,7 @@ export function PostPage({ id }: { id: string }) {
         reply_id: replyId,
       });
       if (replyId) await load();
-      else window.location.assign("/community");
+      else window.location.assign(data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed.");
     } finally {
@@ -593,8 +593,8 @@ export function PostPage({ id }: { id: string }) {
   }
   return (
     <section className="social-stream">
-      <a className="social-back" href="/community">
-        ← Community
+      <a className="social-back" href={data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community"}>
+        ← {data?.post.kind === "member" ? "Profile" : "Community"}
       </a>
       {error && (
         <p role="alert" className="social-error">
