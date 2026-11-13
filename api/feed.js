@@ -1,7 +1,9 @@
+import { requireMembership } from "../server/membership.js";
 import { publicProjects } from "../server/projects.js";
 import { database } from "../server/db.js";
 import { json } from "../server/auth.js";
 export default async function handler(req, res) {
+  if (!await requireMembership(req,res)) return;
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return json(res, 405, { error: "Method not allowed" });
