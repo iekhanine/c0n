@@ -1,4 +1,5 @@
 import { authorAvatars } from "./author-avatars.js";
+import { ensureMembershipSchema } from "./membership.js";
 import { randomUUID } from "node:crypto";
 import { database } from "./db.js";
 import { json, ORIGIN, readSession, accessFor } from "./auth.js";
@@ -41,6 +42,7 @@ export const socialSchema = [
 ]; 
 const ready = new WeakMap();
 export async function ensureSocial(db) {
+  await ensureMembershipSchema(db);
   if (!ready.has(db))
     ready.set(
       db,
@@ -157,7 +159,7 @@ async function registerProfile(db, u) {
     [u.id, u.name, u.username || u.name, discordAvatar(u)],
   );
 }
-const memberSelect = `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id`;
+const memberSelect = `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id`;
 async function decorate(db, posts, viewer) {
   if (!posts.length) return [];
   const ids = posts.map((p) => p.id);
@@ -315,7 +317,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       return json(res, 200, {
         profiles: (
           await db.query(
-            `SELECT p.user_id, COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,p.headline,p.bio,p.location,p.disciplines,p.available_for_work,p.portfolio,ms.public_slug FROM con.profiles p JOIN con.memberships ms ON ms.user_id=p.user_id AND ms.active=true ORDER BY p.updated_at DESC LIMIT 200`,
+            `SELECT p.user_id, COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,p.headline,p.bio,p.location,p.disciplines,p.available_for_work,p.portfolio,ms.public_slug FROM con.profiles p LEFT JOIN con.memberships ms ON ms.user_id=p.user_id WHERE (ms.active=true OR ms.user_id IS NULL) ORDER BY p.updated_at DESC LIMIT 200`,
           )
         ).rows,
       });
@@ -362,7 +364,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       const identity=(await db.query("SELECT codename,public_slug FROM con.memberships WHERE user_id=$1",[uid])).rows[0];
       const earned=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[uid])).rows[0]?.points||0;
       profile={...profile,public_slug:identity?.public_slug || "",codename:identity?.codename || "",points:earned,reputation:Math.floor(Math.max(0,earned)/5),
-        name:profile.public_display_name || identity?.codename || "Member",
+        name:profile.public_display_name || identity?.codename || profile.name || "Member",
         username:profile.show_discord_name ? profile.username : ""};
       const projects = profile.show_projects
         ? (
@@ -418,7 +420,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "top_member_posts" && req.method === "GET") {
       // Public, bounded and text-only. Likes determine ranking, newest breaks ties.
       const top = (await db.query(
-        `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,
+        `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,
           m.body,m.created_at AS published_at,
           (SELECT count(*)::int FROM con.post_likes l WHERE l.post_id=m.id) AS likes
           FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id
@@ -499,7 +501,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "post" && req.method === "GET") {
       const replies = (
         await db.query(
-          "SELECT r.*,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,ms.public_slug AS author_slug,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id LEFT JOIN con.memberships ms ON ms.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
+          "SELECT r.*,COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS author_name,ms.public_slug AS author_slug,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id LEFT JOIN con.memberships ms ON ms.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
           [postId],
         )
       ).rows;
@@ -609,7 +611,7 @@ export async function socialHandler(req, res, dbFactory = database) {
         "INSERT INTO con.post_replies(id,post_id,user_id,body,parent_id)VALUES($1,$2,$3,$4,$5)",
         [replyId,postId,user.id,body,parentId],
       );
-      const publicActor=(await db.query("SELECT COALESCE(NULLIF(p.public_display_name,''),m.codename,'Member') AS name FROM con.memberships m LEFT JOIN con.profiles p ON p.user_id=m.user_id WHERE m.user_id=$1",[user.id])).rows[0]?.name||"Member";
+      const publicActor=(await db.query("SELECT COALESCE(NULLIF(p.public_display_name,''),m.codename,p.name) AS name FROM con.memberships m LEFT JOIN con.profiles p ON p.user_id=m.user_id WHERE m.user_id=$1",[user.id])).rows[0]?.name||"Member";
       // Notify the person addressed by the reply, never the sender.
       // Post authors retain their per-post notification preference.
       if (parent && parent.user_id !== user.id) {
