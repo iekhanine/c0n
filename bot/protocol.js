@@ -10,7 +10,7 @@ export function publicChannels(guild) {
       if (blockedChannels.has(canonicalRoleName(c.name))) return false;
       return true;
     })
-    .map(c => ({ id: c.id, name: c.name }));
+    .map(c => ({ id: c.id, name: c.name, category: c.parent?.name || "" }));
 }
 export function memberRecord(member) {
   return {
