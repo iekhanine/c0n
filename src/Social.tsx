@@ -703,13 +703,16 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
         </form>
       </dialog>
     {error && <p role="alert" className="social-error">{error} <button onClick={()=>void load()}>Retry</button></p>}
+    {compact && <div className="con-home-feed-heading">
+      <div><span className="con-community-kicker">COMMUNITY DISCUSSIONS</span><h2>Latest posts</h2></div>
+      <a href="/community">Browse subcons →</a>
+    </div>}
     <div className="con-feed-list" aria-label="Recent posts">
-      {posts.slice(0,compact?4:undefined).map((p,i)=><FeedRow key={p.id} post={p} rank={i+1}/>)}
+      {posts.map((p,i)=><FeedRow key={p.id} post={p} rank={i+1}/>)}
     </div>
     {loading && <p role="status">Loading posts…</p>}
     {!loading && !posts.length && !error && <p>No posts here yet. Be the first to contribute.</p>}
-    {compact ? <a className="social-read" href="/community">All community posts →</a> :
-      next && <button disabled={loading} onClick={()=>void load(true)}>Load more</button>}
+    {next && <button disabled={loading} onClick={()=>void load(true)}>Load more posts</button>}
   </section>;
 }
 export function InboxPage() {
