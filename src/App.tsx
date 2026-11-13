@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, ChevronDown, LogOut, UserRound, Settings } from "lucide-react";
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
-import { ProfilePage, PostPage, StreamPage, MemberDirectory } from "./Social";
+import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage, OutboundPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
 import {
   CopyRegion,
@@ -56,7 +56,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
+  const page = path.startsWith("/out/") ? "outbound" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -145,6 +145,7 @@ export default function App() {
                   {account.authorized && <a href="/admin"><Settings size={16}/> Admin dashboard</a>}
                   <a href={`/members/${account.user.id}`}><UserRound size={16}/> View profile</a>
                   <a href={`/members/${account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
+                  <a href="/inbox">Inbox · Replies</a>
                   <a href="/my-projects">My projects</a>
                   <button type="button" disabled={signingOut} onClick={() => void signOut()}>
                     <LogOut size={16}/> {signingOut ? "Signing out…" : "Log out"}
@@ -163,7 +164,11 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "subcon" ? (
+          {page === "outbound" ? (
+            <OutboundPage id={path.split("/")[2]} />
+          ) : page === "inbox" ? (
+            <InboxPage />
+          ) : page === "subcon" ? (
             <StreamPage communitySlug={decodeURIComponent(path.split("/")[2] || "")} />
           ) : page === "profile" ? (
             <ProfilePage id={path.split("/")[2]} />
