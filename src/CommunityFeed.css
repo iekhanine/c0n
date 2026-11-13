@@ -2390,3 +2390,8 @@ img.member-initial.project-author-avatar {
   .page-explore .project-meta .member-profile-link {max-width:70px;}
   .page-explore .con-home-blog .con-feed-row {padding:8px 6px;gap:5px;}
 }
+
+/* Wide pinned cards occupy two of the three homepage grid tracks. */
+.page-explore .reference-main .showcase-grid > .project-card-pinned {grid-column:span 2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-width:0}
+@media(max-width:900px){.page-explore .reference-main .showcase-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.page-explore .reference-main .showcase-grid{grid-template-columns:1fr}.page-explore .reference-main .showcase-grid > .project-card-pinned{grid-column:1;grid-template-columns:1fr}}
