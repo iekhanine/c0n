@@ -12,6 +12,7 @@ export type Project = {
   author_name: string;
   avatar_url?: string;
   owner_id?: string;
+  owner_slug?: string;
   votes: number;
   comments: number;
   voted?: boolean;
@@ -178,7 +179,7 @@ export function ProjectPage({ id }: { id: string }) {
             {p.avatar_url && <img src={p.avatar_url} alt="" className="member-initial project-author-avatar" />}
             <span>Created by{" "}
               {p.owner_id ? (
-                <a href={`/members/${p.owner_id}`}>{p.author_name}</a>
+                <a href={`/c/${p.owner_slug || p.owner_id}`}>{p.author_name}</a>
               ) : p.author_name}
             </span>
           </p>
