@@ -2064,3 +2064,37 @@ body.showcase-page {
     font-size: 22px;
   }
 }
+
+/* Compact, owner-configurable Discord statistics rail */
+.con-discord-sidebar { align-content: start; }
+.con-discord-section { padding: 16px 17px; }
+.con-discord-section h2 {
+  display: flex; gap: 9px; align-items: center;
+  font-size: 15px; margin: 0 0 12px;
+}
+.con-discord-section .spotlight-row { padding: 7px 0; font-size: 12px; }
+.con-discord-section .server-activity { margin: 8px 0; }
+.con-discord-section .server-activity p { font-size: 12px; }
+.con-discord-section .fresh-members { margin-top: 4px; }
+.discord-overview-compact { display: grid; gap: 9px; }
+.discord-overview-count { display: flex; align-items: baseline; gap: 9px; }
+.discord-overview-count strong { font-size: 30px; line-height: 1; }
+.discord-overview-count span { opacity: .75; font-size: 12px; }
+.discord-overview-compact p { margin: 0; }
+.discord-overview-compact a {
+  display: inline-flex; align-items: center; gap: 5px;
+  width: fit-content; font-size: 12px; text-decoration: none;
+}
+.con-sidebar-editor { border: 1px solid #85965a; }
+.con-sidebar-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.con-sidebar-edit-head button { padding: 6px 9px; cursor: pointer; }
+.con-sidebar-editor p { font-size: 12px; line-height: 1.5; }
+.con-sidebar-edit-list { display: grid; gap: 5px; margin: 12px 0; }
+.con-sidebar-edit-row { display: flex; align-items: center; gap: 5px; border: 1px solid #556045; border-radius: 6px; padding: 5px 6px; cursor: grab; }
+.con-sidebar-edit-row span { flex: 1; min-width: 0; font-size: 12px; }
+.con-sidebar-edit-row button { flex: 0 0 auto; padding: 5px; display: grid; place-items: center; cursor: pointer; }
+.con-sidebar-editor label { display: grid; gap: 6px; font-size: 12px; }
+.con-sidebar-editor select { width: 100%; padding: 8px; background: #192019; color: #e4e9da; border: 1px solid #65705c; border-radius: 5px; }
+.con-sidebar-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.con-sidebar-edit-actions button { padding: 8px 10px; cursor: pointer; }
+@media (max-width: 760px) { .con-discord-sidebar { grid-template-columns: 1fr !important; } }
