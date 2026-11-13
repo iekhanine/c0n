@@ -40,6 +40,9 @@ test("only valid invitations grant membership and connect member lineage",async(
     const member=await call(guest,"me");
     assert.equal(member.member.invited_by.member_no,1);
     assert.equal(member.member.founding,true);
+    assert.ok(member.member.codename.includes(" "));
+    assert.match(member.member.public_slug,/^[a-z0-9]+-[a-z0-9]+$/);
+    assert.equal((await call(guest,"issue_test","POST",{count:1})).status,403);
     assert.equal((await call(guest,"issue","POST",{count:6})).status,403);
     const next=await call(guest,"issue","POST",{count:1});
     assert.equal(next.status,201);
@@ -49,5 +52,10 @@ test("only valid invitations grant membership and connect member lineage",async(
     assert.equal(history.invites.length,2);
     assert.equal(history.invites.some(x=>x.status==="redeemed"),true);
     assert.equal(JSON.stringify(history).includes(issued.issued[0].code),false);
+    const five=await call(guest,"issue","POST",{count:5});
+    assert.equal(five.status,201);
+    assert.equal((await call(guest,"issue","POST",{count:1})).status,403);
+    assert.equal((await call(other,"redeem","POST",{code:five.issued[0].code})).status,201);
+    assert.equal((await call(guest,"issue","POST",{count:1})).status,201);
   }finally{await pg.close();}
 });
