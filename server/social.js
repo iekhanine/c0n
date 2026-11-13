@@ -20,8 +20,14 @@ export const socialSchema = [
   "ALTER TABLE con.member_posts ADD COLUMN IF NOT EXISTS community_slug text REFERENCES con.communities(slug)",
   "CREATE INDEX IF NOT EXISTS con_member_posts_community ON con.member_posts(community_slug,created_at DESC) WHERE community_slug IS NOT NULL",
   "CREATE TABLE IF NOT EXISTS con.post_votes(post_id uuid NOT NULL,user_id text NOT NULL,value smallint NOT NULL CHECK (value IN (-1,1)),PRIMARY KEY(post_id,user_id))",
+  "ALTER TABLE con.member_posts ADD COLUMN IF NOT EXISTS link_url text NOT NULL DEFAULT ''",
+  "ALTER TABLE con.member_posts ADD COLUMN IF NOT EXISTS video_url text NOT NULL DEFAULT ''",
+  "ALTER TABLE con.member_posts ADD COLUMN IF NOT EXISTS notify_replies boolean NOT NULL DEFAULT true",
+  "CREATE TABLE IF NOT EXISTS con.reply_notifications(id uuid PRIMARY KEY,post_id uuid NOT NULL,user_id text NOT NULL,actor_id text NOT NULL,actor_name text NOT NULL,reply_id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),read_at timestamptz)",
+  "CREATE INDEX IF NOT EXISTS con_reply_notifications_inbox ON con.reply_notifications(user_id,created_at DESC)",
+
   "INSERT INTO con.communities(slug,name,description,creator_id) VALUES\n('community','Community','General discussion, ideas and announcements.','system'),\n('technology','Technology','Hardware, software and tech discussion.','system'),\n('programming','Programming','Code, debugging and projects in progress.','system'),\n('gaming','Gaming','Games, multiplayer and everything in between.','system'),\n('projects','Projects','Show what you are building.','system'),\n('help','Help','Questions, advice and technical support.','system'),\n('creative','Creative','Design, art, audio and content creation.','system'),\n('offtopic','Off Topic','Everything that does not belong elsewhere.','system')\nON CONFLICT (slug) DO NOTHING",
-  ...["profiles","member_posts","post_likes","post_replies","communities","post_votes"].map((t) => `ALTER TABLE con.${t} ENABLE ROW LEVEL SECURITY`),
+  ...["profiles","member_posts","post_likes","post_replies","communities","post_votes","reply_notifications"].map((t) => `ALTER TABLE con.${t} ENABLE ROW LEVEL SECURITY`),
   ...["profiles","member_posts","post_likes","post_replies","communities","post_votes"].map((t) => `REVOKE ALL ON con.${t} FROM PUBLIC`),
 ]; 
 const ready = new WeakMap();
@@ -114,10 +120,20 @@ export const canBlog = (grant) =>
 export function memberPostInput(b, blog = false) {
   if (!blog && b.title)
     throw new AppError(400, "Member posts do not use titles.");
+  if (b.notify_replies !== undefined && typeof b.notify_replies !== "boolean")
+    throw new AppError(400, "Invalid reply notification preference.");
+  const link_url = httpsUrl(b.link_url ?? "");
+  const video_url = httpsUrl(b.video_url ?? "");
+  const body = text(b.body ?? "", blog ? 10000 : 1200, !link_url);
+  if (video_url && !/^https:\/\/[^\s?#]+\.(mp4|webm)(?:[?#].*)?$/i.test(video_url))
+    throw new AppError(400, "Use a direct HTTPS MP4 or WebM video URL.");
   return {
     title: text(b.title ?? "", 200),
-    body: text(b.body, blog ? 10000 : 1200, true),
+    body,
     image_url: httpsUrl(b.image_url ?? ""),
+    link_url,
+    video_url,
+    notify_replies: b.notify_replies === undefined ? true : b.notify_replies,
   };
 }
 const discordAvatar = (u) =>
@@ -130,7 +146,7 @@ async function registerProfile(db, u) {
     [u.id, u.name, u.username || u.name, discordAvatar(u)],
   );
 }
-const memberSelect = `SELECT m.id,m.user_id AS author_id,p.name AS author_name,p.username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id`;
+const memberSelect = `SELECT m.id,m.user_id AS author_id,p.name AS author_name,p.username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id`;
 async function decorate(db, posts, viewer) {
   if (!posts.length) return [];
   const ids = posts.map((p) => p.id);
@@ -218,6 +234,23 @@ export async function socialHandler(req, res, dbFactory = database) {
         201,
         await uploadImage(db, { ...b, name: "Member image" }, { user }, false),
       );
+    if (action === "inbox" && req.method === "GET") {
+      if (!user) throw new AppError(401, "Sign in to see your inbox.");
+      const items = (await db.query(
+        "SELECT id,post_id,actor_id,actor_name,created_at,read_at FROM con.reply_notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100",
+        [user.id],
+      )).rows;
+      return json(res, 200, { notifications: items, unread: items.filter(n => !n.read_at).length });
+    }
+    if (action === "inbox" && req.method === "PUT") {
+      const notificationId = id(b.id);
+      const result = await db.query(
+        "UPDATE con.reply_notifications SET read_at=coalesce(read_at,now()) WHERE id=$1 AND user_id=$2 RETURNING id",
+        [notificationId,user.id],
+      );
+      if (!result.rowCount) throw new AppError(404, "Notification not found.");
+      return json(res, 200, { ok:true });
+    }
     if (action === "communities" && req.method === "GET") {
       const communities = (await db.query(
         "SELECT c.slug,c.name,c.description,c.creator_id,c.created_at,(SELECT count(*)::int FROM con.member_posts m WHERE m.community_slug=c.slug) AS post_count FROM con.communities c ORDER BY CASE WHEN c.slug='community' THEN 0 ELSE 1 END,c.slug",
@@ -419,8 +452,8 @@ export async function socialHandler(req, res, dbFactory = database) {
       if (recent.rowCount)
         throw new AppError(429, "Wait a few seconds before posting again.");
       await db.query(
-        "INSERT INTO con.member_posts(id,user_id,title,body,image_url,community_slug)VALUES($1,$2,$3,$4,$5,$6)",
-        [postId, user.id, v.title, v.body, v.image_url, community],
+        "INSERT INTO con.member_posts(id,user_id,title,body,image_url,community_slug,link_url,video_url,notify_replies)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        [postId, user.id, v.title, v.body, v.image_url, community, v.link_url, v.video_url, v.notify_replies],
       );
       return json(res, 201, { id: postId });
     }
@@ -453,8 +486,8 @@ export async function socialHandler(req, res, dbFactory = database) {
       if (typeof b.pinned !== "boolean" || !Number.isSafeInteger(b.version))
         throw new AppError(400, "Missing post version or pin option.");
       const result = await db.query(
-        "UPDATE con.member_posts SET title=$3,body=$4,image_url=$5,pinned=$6,version=version+1,updated_at=now() WHERE id=$1 AND user_id=$2 AND version=$7 RETURNING id",
-        [postId, user.id, v.title, v.body, v.image_url, b.pinned, b.version],
+        "UPDATE con.member_posts SET title=$3,body=$4,image_url=$5,pinned=$6,version=version+1,updated_at=now(),link_url=$8,video_url=$9,notify_replies=$10 WHERE id=$1 AND user_id=$2 AND version=$7 RETURNING id",
+        [postId, user.id, v.title, v.body, v.image_url, b.pinned, b.version, v.link_url, v.video_url, v.notify_replies],
       );
       if (!result.rowCount)
         throw new AppError(409, "Post changed. Reload before editing.");
@@ -469,6 +502,7 @@ export async function socialHandler(req, res, dbFactory = database) {
           !hasPermission(grant, "updates.delete"))
       )
         throw new AppError(403, "You cannot delete this post.");
+      await db.query("DELETE FROM con.reply_notifications WHERE post_id=$1", [postId]);
       await db.query("DELETE FROM con.post_votes WHERE post_id=$1", [postId]);
       await db.query("DELETE FROM con.member_posts WHERE id=$1", [postId]);
       await db.query("DELETE FROM con.post_likes WHERE post_id=$1", [postId]);
@@ -512,10 +546,17 @@ export async function socialHandler(req, res, dbFactory = database) {
       );
       if (recent.rowCount)
         throw new AppError(429, "Wait a few seconds before replying again.");
+      const replyId = randomUUID();
       await db.query(
         "INSERT INTO con.post_replies(id,post_id,user_id,body)VALUES($1,$2,$3,$4)",
-        [randomUUID(), postId, user.id, body],
+        [replyId, postId, user.id, body],
       );
+      if (post.kind === "member" && post.author_id !== user.id) {
+        await db.query(
+          "INSERT INTO con.reply_notifications(id,post_id,user_id,actor_id,actor_name,reply_id) SELECT $1,m.id,m.user_id,$2,$3,$4 FROM con.member_posts m WHERE m.id=$5 AND m.notify_replies=true",
+          [randomUUID(),user.id,user.name,replyId,postId],
+        );
+      }
       return json(res, 201, { ok: true });
     }
     if (action === "reply" && req.method === "DELETE") {
@@ -531,6 +572,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       );
       if (!result.rowCount)
         throw new AppError(403, "You cannot delete this reply.");
+      await db.query("DELETE FROM con.reply_notifications WHERE reply_id=$1 AND post_id=$2", [id(b.reply_id),postId]);
       return json(res, 200, { ok: true });
     }
     throw new AppError(405, "Unsupported operation.");
