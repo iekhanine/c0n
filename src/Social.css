@@ -699,3 +699,46 @@
   .con-feed-row { gap: 6px; }
   .con-feed-votes { width: 25px; flex-basis: 25px; }
 }
+
+/* Post submission modal: information architecture inspired by classic Reddit, C0N styling. */
+.con-submit-dialog { width:min(94vw,680px); max-height:90vh; padding:0; border:1px solid #65744e; border-radius:12px; background:#161c18; color:#f3f5ef; box-shadow:0 22px 90px #000b; }
+.con-submit-dialog::backdrop {background:rgba(0,0,0,.78);backdrop-filter:blur(5px)}
+.con-submit-form { margin:0; border:0; padding:26px; max-height:90vh; overflow-y:auto; }
+.con-submit-heading {display:flex;justify-content:space-between;align-items:start;gap:12px;}
+.con-submit-heading h2 {font-size:27px;margin:6px 0 0}
+.con-submit-heading button {border:0;background:transparent;color:#d5dfd0;font-size:22px;padding:0 6px;}
+.con-submit-tabs {display:flex;border-bottom:1px solid #47543d;gap:4px}
+.con-submit-tabs button {background:none;border:0;color:#aebaaa;padding:10px 22px;font-weight:700;border-bottom:3px solid transparent}
+.con-submit-tabs button.selected {color:#d1f77b;border-bottom-color:#d1f77b}
+.con-submit-form label {font-weight:600;font-size:14px}
+.con-submit-form label span {float:right;font-size:12px;font-weight:400}
+.con-media-group {display:grid;gap:9px;padding:14px;border:1px solid #394534;border-radius:8px;background:#1c241d}
+.con-media-group strong {font-size:14px}
+.con-media-group small {color:#aab8a7;font-weight:400}
+.con-media-group .social-upload {margin:0}
+.con-media-group .social-upload label {display:flex;gap:12px}
+.con-media-group .social-upload input {max-width:100%;font-size:12px}
+.con-upload-preview {display:flex;align-items:center;gap:10px}
+.con-upload-preview img {max-width:140px;max-height:100px;object-fit:contain}
+.con-reply-optin {display:flex!important;align-items:center;gap:11px!important;font-size:13px!important}
+.con-reply-optin input {width:18px;height:18px;flex:none}
+.con-submit-actions {display:flex;justify-content:flex-end;gap:12px;margin-top:6px}
+.con-submit-actions .social-primary {background:#d1f77b;color:#152011;font-weight:700}
+.con-inbox-page {max-width:880px;margin:24px auto 60px}
+.con-inbox-page header {border-bottom:1px solid #3a4535;padding-bottom:18px;margin-bottom:16px}
+.con-inbox-page h1 {font-size:36px;margin:6px 0}
+.con-inbox-page p {color:#b1bcb1}
+.con-inbox-list {display:grid;gap:6px}
+.con-inbox-list button {text-align:left;display:flex;flex-direction:column;gap:5px;border:1px solid #414a40;border-radius:7px;background:#192019;color:#d9e2d6;padding:16px;cursor:pointer}
+.con-inbox-list button.unread {border-left:4px solid #d1f77b;background:#25301e}
+.con-inbox-list time,.con-inbox-list span {font-size:12px;color:#9cac9b}
+.con-post-video {max-width:100%;max-height:550px;display:block;margin:12px auto}
+.page-outbound .showcase-main {max-width:none;padding:0}
+.con-outbound {min-height:calc(100vh - 85px)}
+.con-outbound-bar {display:flex;flex-wrap:wrap;position:sticky;top:0;z-index:25;align-items:center;gap:20px;background:#121a12;border-bottom:1px solid #677d51;padding:8px 22px;font-size:13px}
+.con-outbound-bar a {color:#dde7d0;text-decoration:none}
+.con-outbound-bar .con-outbound-home {color:#d1f77b}
+.con-outbound-fallback {font-size:12px;color:#bfc7bd;padding:8px 18px;background:#1b211c}
+.con-outbound-fallback a {color:#d1f77b}
+.con-outbound iframe {width:100%;height:calc(100vh - 180px);border:0;background:#fff}
+@media(max-width:600px){.con-submit-form{padding:16px}.con-outbound-bar{gap:10px;padding:8px}.con-submit-dialog{width:98vw}}
