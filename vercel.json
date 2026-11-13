@@ -61,5 +61,18 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "c0n.ivansays.com"
+        }
+      ],
+      "destination": "https://cultofnixon.com/:path*",
+      "permanent": true
+    }
   ]
 }
