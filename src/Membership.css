@@ -82,3 +82,7 @@
 .con-test-invite{display:inline-flex;justify-content:center;align-items:center;width:max-content;max-width:100%;padding:10px 16px;border:1px solid #b9d980;border-radius:8px;background:#26321e;color:#dcfbb3;font-weight:700;cursor:pointer}
 .con-test-invite:hover{background:#34482a}
 .con-test-invite:disabled{opacity:.55;cursor:wait}
+
+/* Owner's live vault art replacement, no Git deployment required. */
+.con-vault-upload{display:grid;gap:10px}.con-vault-upload input[type=file]{max-width:100%;padding:10px;background:#101610;border:1px dashed #6f8a50;border-radius:8px;color:#e9f0dc}.con-vault-upload button{width:max-content;background:#d1f77b;border:0;border-radius:7px;color:#14220e;font-weight:800;padding:10px 16px}.con-vault-upload p{color:#cce8a7}
+.vault-screen{background-image:url('/api/vault-background');background-size:cover;background-position:center;background-repeat:no-repeat;min-height:100vh;min-height:100dvh}
