@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, LogOut, UserRound, Settings, Bell } from "luci
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
+import { MembershipPage } from "./Membership";
 import {
   CopyRegion,
   Editable,
@@ -77,7 +78,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
+  const page = path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -130,6 +131,7 @@ export default function App() {
               </CopyRegion>
             ))}
           </nav>
+          <a className="con-member-header-link" href="/merch">Merch</a>
           {account?.user && <div className="con-header-actions">
             {["explore","community","subcon"].includes(page) ?
               <button type="button" className="con-global-submit" onClick={() => window.dispatchEvent(new Event("con-open-submit"))}>+ POST</button> :
@@ -176,6 +178,8 @@ export default function App() {
                   <a href={`/members/${account.user.id}`}><UserRound size={16}/> View profile</a>
                   <a href={`/members/${account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
                   <a href="/inbox">Inbox · Replies</a>
+                  <a href="/membership">Membership & invitations</a>
+                  <a href="/merch">Member supply</a>
                   <a href="/my-projects">My projects</a>
                   <button type="button" disabled={signingOut} onClick={() => void signOut()}>
                     <LogOut size={16}/> {signingOut ? "Signing out…" : "Log out"}
@@ -194,7 +198,11 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "inbox" ? (
+          {page === "membership" ? (
+            <MembershipPage />
+          ) : page === "merch" ? (
+            <MembershipPage merch />
+          ) : page === "inbox" ? (
             <InboxPage />
           ) : page === "subcon" ? (
             <StreamPage communitySlug={decodeURIComponent(path.split("/")[2] || "")} />
