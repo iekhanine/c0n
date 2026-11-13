@@ -2207,3 +2207,30 @@ img.member-initial.project-author-avatar {
   margin-inline: auto;
 }
 .con-home-blog .social-page-heading h2 { margin:0 0 20px; font-size:24px; }
+
+/* Channel activity conveys only channel + last timestamp, no filler status label. */
+.con-discord-section .server-activity {
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.con-discord-section .server-activity time {
+  display:block;
+  margin-left:auto;
+  text-align:right;
+  white-space:nowrap;
+  color:#a6ad9b;
+  font-size:11px;
+  line-height:1.45;
+}
+/* Editorial cards follow the project grid in the left column. */
+.page-explore .reference-main .con-home-blog {
+  margin-top:28px;
+  padding-top:20px;
+}
+.page-explore .reference-main .con-home-blog .social-compact {
+  max-width:none;
+}
+@media(max-width:600px){
+  .con-discord-section .server-activity time{font-size:10px;white-space:normal;}
+}
