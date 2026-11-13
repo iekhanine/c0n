@@ -2135,3 +2135,35 @@ body.showcase-page {
   .con-account-trigger {max-width:140px;}
   .con-account-dropdown {right:0;}
 }
+
+/* Compact filter above both columns; keep first project aligned with sidebar. */
+.con-page-intro-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.con-page-intro-heading h1 { min-width:0; }
+.con-filter-menu { position:relative; flex:0 0 auto; z-index:15; }
+.con-filter-trigger {
+  display:inline-flex; align-items:center; gap:8px; padding:8px 11px;
+  border:1px solid #526148; background:#1c241a; color:#d6e1c6;
+  border-radius:7px; font:600 12px system-ui; cursor:pointer;
+}
+.con-filter-trigger[aria-expanded="true"] { border-color:#a1bf69; }
+.con-filter-backdrop { position:fixed; inset:0; z-index:1; background:transparent; border:0; cursor:default; }
+.con-filter-options {
+  position:absolute; z-index:2; right:0; top:calc(100% + 7px);
+  min-width:174px; padding:7px; display:grid; gap:3px;
+  border:1px solid #58674e; border-radius:8px; background:#172016;
+  box-shadow:0 14px 32px #0009;
+}
+.con-filter-options > button {
+  text-align:left; color:#e1e7d6; background:transparent; border:0;
+  border-radius:5px; padding:10px; cursor:pointer; font:500 13px system-ui;
+}
+.con-filter-options > button:hover,.con-filter-options > button[aria-pressed="true"] {
+  background:#33432b; color:#d1f77b;
+}
+.con-filter-sort {border-top:1px solid #41513a; padding:10px 4px 4px; font:12px system-ui; display:grid; gap:8px;}
+.con-filter-sort select {background:#101810; color:#e5eadb; border:1px solid #53614a; padding:7px; border-radius:5px;}
+@media(max-width:600px) {
+  .con-page-intro-heading {gap:10px;}
+  .con-filter-trigger {padding:8px;}
+  .con-filter-trigger span {max-width:95px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+}
