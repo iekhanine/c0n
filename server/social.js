@@ -7,23 +7,23 @@ import { AppError, id, httpsUrl } from "./content.js";
 import { uploadImage } from "./images.js";
 import { hasPermission } from "../shared/permissions.js";
 export const socialSchema = [
-  `CREATE TABLE IF NOT EXISTS con.profiles(user_id text PRIMARY KEY, name text NOT NULL, username text NOT NULL, avatar_url text NOT NULL DEFAULT '', cover_url text NOT NULL DEFAULT '', headline text NOT NULL DEFAULT '', bio text NOT NULL DEFAULT '', location text NOT NULL DEFAULT '', links jsonb NOT NULL DEFAULT '[]', show_projects boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`,
-  `CREATE TABLE IF NOT EXISTS con.member_posts(id uuid PRIMARY KEY, user_id text NOT NULL REFERENCES con.profiles(user_id), title text NOT NULL DEFAULT '', body text NOT NULL, image_url text NOT NULL DEFAULT '', pinned boolean NOT NULL DEFAULT false, version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`,
-  `ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS disciplines jsonb NOT NULL DEFAULT '[]'::jsonb`,
-  `ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS portfolio jsonb NOT NULL DEFAULT '[]'::jsonb`,
-  `ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS available_for_work boolean NOT NULL DEFAULT false`,
-  `CREATE INDEX IF NOT EXISTS con_member_posts_user ON con.member_posts(user_id,created_at DESC)`,
-  `CREATE TABLE IF NOT EXISTS con.post_likes(post_id uuid NOT NULL, user_id text NOT NULL, PRIMARY KEY(post_id,user_id))`,
-  `CREATE TABLE IF NOT EXISTS con.post_replies(id uuid PRIMARY KEY, post_id uuid NOT NULL,user_id text NOT NULL REFERENCES con.profiles(user_id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`,
-  `CREATE INDEX IF NOT EXISTS con_post_replies_post ON con.post_replies(post_id,created_at)`,
-  `CREATE TABLE IF NOT EXISTS con.communities(slug text PRIMARY KEY CHECK (slug ~ '^[a-z][a-z0-9_]{2,23}
-  ...["profiles", "member_posts", "post_likes", "post_replies", "communities", "post_votes"].map(
-    (t) => `ALTER TABLE con.${t} ENABLE ROW LEVEL SECURITY`,
-  ),
-  ...["profiles", "member_posts", "post_likes", "post_replies"].map(
-    (t) => `REVOKE ALL ON con.${t} FROM PUBLIC`,
-  ),
-];
+  "CREATE TABLE IF NOT EXISTS con.profiles(user_id text PRIMARY KEY, name text NOT NULL, username text NOT NULL, avatar_url text NOT NULL DEFAULT '', cover_url text NOT NULL DEFAULT '', headline text NOT NULL DEFAULT '', bio text NOT NULL DEFAULT '', location text NOT NULL DEFAULT '', links jsonb NOT NULL DEFAULT '[]', show_projects boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())",
+  "CREATE TABLE IF NOT EXISTS con.member_posts(id uuid PRIMARY KEY, user_id text NOT NULL REFERENCES con.profiles(user_id), title text NOT NULL DEFAULT '', body text NOT NULL, image_url text NOT NULL DEFAULT '', pinned boolean NOT NULL DEFAULT false, version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS disciplines jsonb NOT NULL DEFAULT '[]'::jsonb",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS portfolio jsonb NOT NULL DEFAULT '[]'::jsonb",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS available_for_work boolean NOT NULL DEFAULT false",
+  "CREATE INDEX IF NOT EXISTS con_member_posts_user ON con.member_posts(user_id,created_at DESC)",
+  "CREATE TABLE IF NOT EXISTS con.post_likes(post_id uuid NOT NULL, user_id text NOT NULL, PRIMARY KEY(post_id,user_id))",
+  "CREATE TABLE IF NOT EXISTS con.post_replies(id uuid PRIMARY KEY, post_id uuid NOT NULL,user_id text NOT NULL REFERENCES con.profiles(user_id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
+  "CREATE INDEX IF NOT EXISTS con_post_replies_post ON con.post_replies(post_id,created_at)",
+  "CREATE TABLE IF NOT EXISTS con.communities(slug text PRIMARY KEY CHECK (slug ~ '^[a-z][a-z0-9_]{2,23}$'), name text NOT NULL CHECK (length(name) BETWEEN 3 AND 80), description text NOT NULL DEFAULT '', creator_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
+  "ALTER TABLE con.member_posts ADD COLUMN IF NOT EXISTS community_slug text REFERENCES con.communities(slug)",
+  "CREATE INDEX IF NOT EXISTS con_member_posts_community ON con.member_posts(community_slug,created_at DESC) WHERE community_slug IS NOT NULL",
+  "CREATE TABLE IF NOT EXISTS con.post_votes(post_id uuid NOT NULL,user_id text NOT NULL,value smallint NOT NULL CHECK (value IN (-1,1)),PRIMARY KEY(post_id,user_id))",
+  "INSERT INTO con.communities(slug,name,description,creator_id) VALUES\n('community','Community','General discussion, ideas and announcements.','system'),\n('technology','Technology','Hardware, software and tech discussion.','system'),\n('programming','Programming','Code, debugging and projects in progress.','system'),\n('gaming','Gaming','Games, multiplayer and everything in between.','system'),\n('projects','Projects','Show what you are building.','system'),\n('help','Help','Questions, advice and technical support.','system'),\n('creative','Creative','Design, art, audio and content creation.','system'),\n('offtopic','Off Topic','Everything that does not belong elsewhere.','system')\nON CONFLICT (slug) DO NOTHING",
+  ...["profiles","member_posts","post_likes","post_replies","communities","post_votes"].map((t) => `ALTER TABLE con.${t} ENABLE ROW LEVEL SECURITY`),
+  ...["profiles","member_posts","post_likes","post_replies","communities","post_votes"].map((t) => `REVOKE ALL ON con.${t} FROM PUBLIC`),
+]; 
 const ready = new WeakMap();
 export async function ensureSocial(db) {
   if (!ready.has(db))
