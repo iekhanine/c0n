@@ -2184,3 +2184,13 @@ body.showcase-page {
   border:1px solid #4a5c3d; border-radius:8px; background:#111710;
 }
 .project-preview-upload-preview button {cursor:pointer;}
+
+/* Real Discord author photos preserve the same footprint as initials. */
+img.member-initial.project-author-avatar {
+  display:block; flex:0 0 auto; object-fit:cover;
+  border-radius:50%; overflow:hidden;
+}
+.project-detail-author {display:flex; align-items:center; gap:10px;}
+.project-detail-author .project-author-avatar {
+  width:32px; height:32px; min-width:32px;
+}
