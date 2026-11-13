@@ -257,7 +257,7 @@ test("front-page ranking, pins, removal and private report review enforce author
         .statusCode,
       409,
     );
-    assert.equal((await publicProjects(db, "", true)).length, 5);
+    assert.equal((await publicProjects(db, "", true)).length, 15);
     const security = await db.query(
       "SELECT relrowsecurity FROM pg_class WHERE oid='con.project_reports'::regclass",
     );
