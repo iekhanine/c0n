@@ -81,6 +81,8 @@ type Reply = {
   avatar_url: string;
   body: string;
   created_at: string;
+  parent_id?: string | null;
+  deleted_at?: string | null;
 };
 export const safeUrl = (value?: string) => {
   try {
@@ -706,7 +708,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
 }
 export function InboxPage() {
   const user = useUser();
-  type Notice = {id:string;post_id:string;actor_name:string;created_at:string;read_at:string|null};
+  type Notice = {id:string;post_id:string;reply_id:string;actor_name:string;created_at:string;read_at:string|null};
   const [items,setItems] = useState<Notice[]>([]);
   const [loading,setLoading] = useState(true);
   const [error,setError] = useState("");
@@ -724,7 +726,7 @@ export function InboxPage() {
         setItems(prev=>prev.map(x=>x.id===item.id?{...x,read_at:new Date().toISOString()}:x));
       } catch(e) { setError(e instanceof Error?e.message:"Couldn't mark as read."); }
     }
-    window.location.assign("/posts/"+item.post_id+"#replies");
+    window.location.assign("/posts/"+item.post_id+"#reply-"+item.reply_id);
   }
   return <section className="con-inbox-page">
     <header><span className="con-community-kicker">YOUR ACTIVITY</span><h1>Inbox</h1><p>Replies to posts you've asked to follow.</p></header>
@@ -762,6 +764,66 @@ export function OutboundPage({ id }: { id: string }) {
       <iframe title={"External content: "+post?.title} src={url} referrerPolicy="no-referrer" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" />
     </>}
   </section>;
+}
+type ThreadReply = Reply & { children: ThreadReply[] };
+function replyTree(replies: Reply[]): ThreadReply[] {
+  const nodes = new Map(replies.map(r => [r.id, { ...r, children: [] as ThreadReply[] }]));
+  const roots: ThreadReply[] = [];
+  for (const reply of replies) {
+    const node = nodes.get(reply.id)!;
+    const parent = reply.parent_id ? nodes.get(reply.parent_id) : null;
+    if (parent && parent.id !== reply.id) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
+}
+function ThreadComment({
+  comment, depth, userId, canModerate, busy, onReply, onDelete,
+}: {
+  comment: ThreadReply; depth: number; userId?: string; canModerate: boolean;
+  busy: boolean; onReply: (parentId:string, body:string)=>Promise<boolean>;
+  onDelete: (id:string)=>void;
+}) {
+  const [expanded,setExpanded] = useState(false);
+  const [draft,setDraft] = useState("");
+  const [posting,setPosting] = useState(false);
+  const [error,setError] = useState("");
+  return <div className={"con-thread-node" + (depth ? " con-thread-child" : "")} id={"reply-"+comment.id}>
+    <article className="con-thread-comment">
+      <div className="con-thread-meta">
+        <Avatar name={comment.author_name} url={comment.avatar_url}/>
+        {comment.deleted_at ? <span className="con-thread-deleted">[deleted]</span> :
+          <a href={"/members/"+comment.user_id}>{comment.author_name}</a>}
+        <time dateTime={comment.created_at}>{new Date(comment.created_at).toLocaleString()}</time>
+      </div>
+      <p className="social-body">{comment.deleted_at ? "[deleted]" : comment.body}</p>
+      <div className="con-thread-actions">
+        {!comment.deleted_at && (userId ?
+          <button type="button" onClick={()=>setExpanded(v=>!v)}>{expanded ? "Cancel reply" : "Reply"}</button> :
+          <a href="/api/auth/discord/login">Sign in to reply</a>)}
+        {!comment.deleted_at && (comment.user_id===userId || canModerate) &&
+          <button type="button" disabled={busy} onClick={()=>onDelete(comment.id)}>Delete</button>}
+        <a href={"#reply-"+comment.id}>Permalink</a>
+      </div>
+      {expanded && userId && <form className="con-thread-reply-form" onSubmit={async e=>{
+        e.preventDefault();setPosting(true);setError("");
+        const ok=await onReply(comment.id,draft);
+        if(ok){setExpanded(false);setDraft("");}
+        else setError("Could not post reply. Check the message above or try again.");
+        setPosting(false);
+      }}>
+        <label>Reply to {comment.author_name}
+          <textarea required maxLength={2000} rows={3} value={draft} onChange={e=>setDraft(e.target.value)}/>
+        </label>
+        <button type="submit" className="social-primary" disabled={posting||busy||!draft.trim()}>{posting?"Posting…":"Reply"}</button>
+        {error && <small role="alert">{error}</small>}
+      </form>}
+    </article>
+    {comment.children.length>0 && <div className="con-thread-children">
+      {comment.children.map(child=><ThreadComment key={child.id} comment={child} depth={depth+1}
+        userId={userId} canModerate={canModerate} busy={busy} onReply={onReply} onDelete={onDelete}/>)}
+    </div>}
+  </div>;
 }
 export function PostPage({ id }: { id: string }) {
   const user = useUser(),
@@ -842,22 +904,21 @@ export function PostPage({ id }: { id: string }) {
           </div>
           <section className="social-replies" id="replies">
             <h2>Replies · {data.replies.length}</h2>
-            {data.replies.map((r) => (
-              <article key={r.id}>
-                <a className="social-author" href={"/members/" + r.user_id}>
-                  <Avatar name={r.author_name} url={r.avatar_url} />
-                  <strong>{r.author_name}</strong>
-                </a>
-                <time dateTime={r.created_at}>
-                  {new Date(r.created_at).toLocaleString()}
-                </time>
-                <p className="social-body">{r.body}</p>
-                {(r.user_id === user?.id || data.can_moderate) && (
-                  <button disabled={busy} onClick={() => void remove(r.id)}>
-                    Delete reply
-                  </button>
-                )}
-              </article>
+            {replyTree(data.replies).map((r) => (
+              <ThreadComment key={r.id} comment={r} depth={0} userId={user?.id}
+                canModerate={data.can_moderate} busy={busy}
+                onReply={async (parentId,body) => {
+                  setBusy(true);
+                  try {
+                    await socialApi("reply","POST",{id,body,parent_id:parentId});
+                    await load();
+                    return true;
+                  } catch(e) {
+                    setError(e instanceof Error ? e.message : "Reply failed.");
+                    return false;
+                  } finally {setBusy(false);}
+                }}
+                onDelete={(replyId)=>void remove(replyId)} />
             ))}
             {user ? (
               <form
