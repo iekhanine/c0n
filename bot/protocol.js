@@ -1,12 +1,16 @@
+import { canonicalRoleName } from "./participation.js";
+const blockedCategories = new Set(["administration","theunspoken","starthere","live"]);
+const blockedChannels = new Set(["roles","rulesofengagement","firstcontact","staff","modlogs","systemstatus","botspam"]);
 export function publicChannels(guild) {
   return [...guild.channels.cache.values()]
-    .filter(
-      (c) =>
-        [0, 5].includes(c.type) &&
-        c.viewable &&
-        c.permissionsFor(guild.roles.everyone)?.has("ViewChannel"),
-    )
-    .map((c) => ({ id: c.id, name: c.name }));
+    .filter(c => {
+      if (![0, 5].includes(c.type) || !c.viewable) return false;
+      const parent = c.parentId ? guild.channels.cache.get(c.parentId) : null;
+      if (parent && blockedCategories.has(canonicalRoleName(parent.name))) return false;
+      if (blockedChannels.has(canonicalRoleName(c.name))) return false;
+      return true;
+    })
+    .map(c => ({ id: c.id, name: c.name }));
 }
 export function memberRecord(member) {
   return {
