@@ -226,7 +226,7 @@ export default function DiscordConnection() {
             <dt>CON_SYNC_KEY</dt>
             <dd>Generate it below, then copy it into Railway.</dd>
             <dt>CON_SITE_URL</dt>
-            <dd>https://c0n.ivansays.com</dd>
+            <dd>https://cultofnixon.com</dd>
           </dl>
           <button
             disabled={busy || !status?.guild_id}
