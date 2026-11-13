@@ -499,7 +499,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "post" && req.method === "GET") {
       const replies = (
         await db.query(
-          "SELECT r.*,p.name AS author_name,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
+          "SELECT r.*,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id LEFT JOIN con.memberships ms ON ms.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
           [postId],
         )
       ).rows;
@@ -609,17 +609,18 @@ export async function socialHandler(req, res, dbFactory = database) {
         "INSERT INTO con.post_replies(id,post_id,user_id,body,parent_id)VALUES($1,$2,$3,$4,$5)",
         [replyId,postId,user.id,body,parentId],
       );
+      const publicActor=(await db.query("SELECT COALESCE(NULLIF(p.public_display_name,''),m.codename,'Member') AS name FROM con.memberships m LEFT JOIN con.profiles p ON p.user_id=m.user_id WHERE m.user_id=$1",[user.id])).rows[0]?.name||"Member";
       // Notify the person addressed by the reply, never the sender.
       // Post authors retain their per-post notification preference.
       if (parent && parent.user_id !== user.id) {
         await db.query(
           "INSERT INTO con.reply_notifications(id,post_id,user_id,actor_id,actor_name,reply_id) SELECT $1,$2,$3,$4,$5,$6 WHERE NOT EXISTS (SELECT 1 FROM con.member_posts m WHERE m.id=$2 AND m.user_id=$3 AND m.notify_replies=false)",
-          [randomUUID(),postId,parent.user_id,user.id,user.name,replyId],
+          [randomUUID(),postId,parent.user_id,user.id,publicActor,replyId],
         );
       } else if (!parent && post.kind === "member" && post.author_id !== user.id) {
         await db.query(
           "INSERT INTO con.reply_notifications(id,post_id,user_id,actor_id,actor_name,reply_id) SELECT $1,m.id,m.user_id,$2,$3,$4 FROM con.member_posts m WHERE m.id=$5 AND m.notify_replies=true",
-          [randomUUID(),user.id,user.name,replyId,postId],
+          [randomUUID(),user.id,publicActor,replyId,postId],
         );
       }
       return json(res, 201, { id:replyId });
