@@ -118,21 +118,6 @@ export default function CommunityFeed({
       </section>
       <div className="reference-layout">
         <div className="reference-main">
-          <section className="showcase-intro">
-            <span className="eyebrow">
-              <Editable id="copy.1" />
-              <i />
-            </span>
-            <p className="intro-overline">
-              <Editable id="copy.2" />
-            </p>
-            <h1>
-              <Editable id="copy.3" />
-            </h1>
-            <p>
-              <Editable id="copy.4" />
-            </p>
-          </section>
           <div className="showcase-toolbar" id="projects">
             <div className="showcase-filters">
               {["All projects", "Apps", "Websites", "Tools", "Experiments"].map(
