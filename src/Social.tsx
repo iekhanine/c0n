@@ -994,7 +994,6 @@ export function MemberDirectory() {
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [query, setQuery] = useState("");
-  const user = useUser();
   useEffect(() => {
     void socialApi<{ profiles: Profile[] }>("directory")
       .then((d) => setProfiles(d.profiles))
