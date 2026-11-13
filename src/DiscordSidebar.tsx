@@ -5,17 +5,19 @@ import {
   DiscordChannels, DiscordActivity, DiscordBuilders,
 } from "./DiscordCommunity";
 import { useSiteContent } from "./SiteText";
+import { MemberPostHighlights } from "./MemberPostHighlights";
 
 const LAYOUT_KEY = "layout.discord.sidebar";
-type Section = "overview" | "channels" | "activity" | "members" | "builders";
+type Section = "overview" | "channels" | "activity" | "members" | "builders" | "posts";
 const options: { id: Section; label: string }[] = [
   { id: "overview", label: "Server overview" },
   { id: "channels", label: "Most active channels" },
   { id: "activity", label: "Recent activity" },
   { id: "members", label: "Fresh faces" },
   { id: "builders", label: "Active members" },
+  { id: "posts", label: "Top 5 member posts" },
 ];
-const fallback: Section[] = ["overview", "channels", "activity", "members"];
+const fallback: Section[] = ["overview", "posts", "channels", "activity", "members"];
 function parseLayout(value?: string): Section[] {
   try {
     const saved = JSON.parse(value || "");
@@ -69,6 +71,7 @@ export default function DiscordSidebar() {
     activity: { label: "Recent server activity", icon: <Activity size={17}/>, content: <DiscordActivity data={discord}/> },
     members: { label: "Fresh faces", icon: <Users size={17}/>, content: <DiscordMembers data={discord}/> },
     builders: { label: "Active members", icon: <Zap size={17}/>, content: <DiscordBuilders data={discord}/> },
+    posts: { label: "Top member posts", icon: <MessageCircle size={17}/>, content: <MemberPostHighlights/> },
   };
   return <aside className="showcase-rail con-discord-sidebar" aria-label="Discord community overview">
     {owner && editing && <section className="rail-card con-sidebar-editor">
