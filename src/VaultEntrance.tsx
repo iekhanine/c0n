@@ -38,7 +38,6 @@ export default function VaultEntrance({ code, setCode, onContinue, busy = false,
             <div className="vault-editor">
               <span className="vault-display" aria-hidden="true">
                 {displayed.map((char, index) => {
-                  const inputIndex = index - (index > 6 ? 1 : 0) - (index > 13 ? 1 : 0);
                   return char === null
                     ? <span className="vault-cursor" key={index}>_</span>
                     : <span key={index}>{char}</span>;
