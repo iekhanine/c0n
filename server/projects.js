@@ -1,3 +1,4 @@
+import { authorAvatars } from "./author-avatars.js";
 import {
   ensureProjectModeration,
   reportProject,
@@ -82,6 +83,8 @@ export async function publicProjects(db, userId = "", showcase = false) {
     comments: p.comments,
     voted: p.voted,
   }));
+  const avatars = await authorAvatars(db, projects.map(p => p.owner_id));
+  for (const project of projects) project.avatar_url = avatars.get(project.owner_id) || "";
   if (!showcase) return projects;
   const pinned = projects.filter((p) => p.homepage_pinned).slice(0, 5);
   const normal = projects
@@ -286,10 +289,12 @@ export async function projectsHandler(
             )
           ).rows
         : [];
+      const authorPictures = await authorAvatars(db, [p.owner_id]);
       return json(res, 200, {
         project: {
           id,
           ...(p.published || p.draft),
+          avatar_url: authorPictures.get(p.owner_id) || "",
           author_name: p.owner_name,
           owner_id: p.owner_id,
           published_at: p.published_at,
