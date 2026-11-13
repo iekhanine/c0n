@@ -16,6 +16,9 @@ export const socialSchema = [
   "CREATE TABLE IF NOT EXISTS con.post_likes(post_id uuid NOT NULL, user_id text NOT NULL, PRIMARY KEY(post_id,user_id))",
   "CREATE TABLE IF NOT EXISTS con.post_replies(id uuid PRIMARY KEY, post_id uuid NOT NULL,user_id text NOT NULL REFERENCES con.profiles(user_id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
   "CREATE INDEX IF NOT EXISTS con_post_replies_post ON con.post_replies(post_id,created_at)",
+  "ALTER TABLE con.post_replies ADD COLUMN IF NOT EXISTS parent_id uuid REFERENCES con.post_replies(id)",
+  "ALTER TABLE con.post_replies ADD COLUMN IF NOT EXISTS deleted_at timestamptz",
+  "CREATE INDEX IF NOT EXISTS con_post_replies_parent ON con.post_replies(parent_id,created_at)",
   "CREATE TABLE IF NOT EXISTS con.communities(slug text PRIMARY KEY CHECK (slug ~ '^[a-z][a-z0-9_]{2,23}$'), name text NOT NULL CHECK (length(name) BETWEEN 3 AND 80), description text NOT NULL DEFAULT '', creator_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
   "ALTER TABLE con.member_posts ADD COLUMN IF NOT EXISTS community_slug text REFERENCES con.communities(slug)",
   "CREATE INDEX IF NOT EXISTS con_member_posts_community ON con.member_posts(community_slug,created_at DESC) WHERE community_slug IS NOT NULL",
@@ -234,10 +237,18 @@ export async function socialHandler(req, res, dbFactory = database) {
         201,
         await uploadImage(db, { ...b, name: "Member image" }, { user }, false),
       );
+    if (action === "inbox_count" && req.method === "GET") {
+      if (!user) throw new AppError(401, "Sign in to see your inbox.");
+      const result = await db.query(
+        "SELECT count(*)::int AS unread FROM con.reply_notifications WHERE user_id=$1 AND read_at IS NULL",
+        [user.id],
+      );
+      return json(res, 200, { unread: result.rows[0].unread });
+    }
     if (action === "inbox" && req.method === "GET") {
       if (!user) throw new AppError(401, "Sign in to see your inbox.");
       const items = (await db.query(
-        "SELECT id,post_id,actor_id,actor_name,created_at,read_at FROM con.reply_notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100",
+        "SELECT id,post_id,reply_id,actor_id,actor_name,created_at,read_at FROM con.reply_notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100",
         [user.id],
       )).rows;
       return json(res, 200, { notifications: items, unread: items.filter(n => !n.read_at).length });
@@ -540,6 +551,16 @@ export async function socialHandler(req, res, dbFactory = database) {
     }
     if (action === "reply" && req.method === "POST") {
       const body = text(b.body, 2000, true);
+      const parentId = b.parent_id == null ? null : id(b.parent_id);
+      let parent = null;
+      if (parentId) {
+        parent = (await db.query(
+          "SELECT id,post_id,user_id,deleted_at FROM con.post_replies WHERE id=$1 AND post_id=$2",
+          [parentId,postId],
+        )).rows[0];
+        if (!parent || parent.deleted_at)
+          throw new AppError(400, "That comment is unavailable or belongs to another post.");
+      }
       const recent = await db.query(
         "SELECT 1 FROM con.post_replies WHERE user_id=$1 AND created_at>now()-interval '10 seconds' LIMIT 1",
         [user.id],
@@ -548,31 +569,34 @@ export async function socialHandler(req, res, dbFactory = database) {
         throw new AppError(429, "Wait a few seconds before replying again.");
       const replyId = randomUUID();
       await db.query(
-        "INSERT INTO con.post_replies(id,post_id,user_id,body)VALUES($1,$2,$3,$4)",
-        [replyId, postId, user.id, body],
+        "INSERT INTO con.post_replies(id,post_id,user_id,body,parent_id)VALUES($1,$2,$3,$4,$5)",
+        [replyId,postId,user.id,body,parentId],
       );
-      if (post.kind === "member" && post.author_id !== user.id) {
+      // Notify the person addressed by the reply, never the sender.
+      // Post authors retain their per-post notification preference.
+      if (parent && parent.user_id !== user.id) {
+        await db.query(
+          "INSERT INTO con.reply_notifications(id,post_id,user_id,actor_id,actor_name,reply_id) SELECT $1,$2,$3,$4,$5,$6 WHERE NOT EXISTS (SELECT 1 FROM con.member_posts m WHERE m.id=$2 AND m.user_id=$3 AND m.notify_replies=false)",
+          [randomUUID(),postId,parent.user_id,user.id,user.name,replyId],
+        );
+      } else if (!parent && post.kind === "member" && post.author_id !== user.id) {
         await db.query(
           "INSERT INTO con.reply_notifications(id,post_id,user_id,actor_id,actor_name,reply_id) SELECT $1,m.id,m.user_id,$2,$3,$4 FROM con.member_posts m WHERE m.id=$5 AND m.notify_replies=true",
           [randomUUID(),user.id,user.name,replyId,postId],
         );
       }
-      return json(res, 201, { ok: true });
+      return json(res, 201, { id:replyId });
     }
     if (action === "reply" && req.method === "DELETE") {
       const grant = await accessFor(session);
+      const replyId = id(b.reply_id);
       const result = await db.query(
-        "DELETE FROM con.post_replies WHERE id=$1 AND post_id=$2 AND (user_id=$3 OR $4) RETURNING id",
-        [
-          id(b.reply_id),
-          postId,
-          user.id,
-          Boolean(grant.owner || hasPermission(grant, "updates.delete")),
-        ],
+        "UPDATE con.post_replies SET body='[deleted]',deleted_at=now() WHERE id=$1 AND post_id=$2 AND deleted_at IS NULL AND (user_id=$3 OR $4) RETURNING id",
+        [replyId,postId,user.id,Boolean(grant.owner || hasPermission(grant,"updates.delete"))],
       );
       if (!result.rowCount)
         throw new AppError(403, "You cannot delete this reply.");
-      await db.query("DELETE FROM con.reply_notifications WHERE reply_id=$1 AND post_id=$2", [id(b.reply_id),postId]);
+      await db.query("DELETE FROM con.reply_notifications WHERE reply_id=$1 AND post_id=$2", [replyId,postId]);
       return json(res, 200, { ok: true });
     }
     throw new AppError(405, "Unsupported operation.");
