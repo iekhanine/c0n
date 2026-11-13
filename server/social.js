@@ -499,7 +499,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "post" && req.method === "GET") {
       const replies = (
         await db.query(
-          "SELECT r.*,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id LEFT JOIN con.memberships ms ON ms.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
+          "SELECT r.*,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,ms.public_slug AS author_slug,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id LEFT JOIN con.memberships ms ON ms.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
           [postId],
         )
       ).rows;
