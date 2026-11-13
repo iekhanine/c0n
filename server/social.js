@@ -1,3 +1,4 @@
+import { authorAvatars } from "./author-avatars.js";
 import { randomUUID } from "node:crypto";
 import { database } from "./db.js";
 import { json, ORIGIN, readSession, accessFor } from "./auth.js";
@@ -108,8 +109,10 @@ async function decorate(db, posts, viewer) {
       [ids],
     )
   ).rows;
+  const avatars = await authorAvatars(db, posts.map(p => p.author_id));
   return posts.map((p) => ({
     ...p,
+    avatar_url: avatars.get(p.author_id) || p.avatar_url || "",
     likes: likes.find((l) => l.post_id === p.id)?.n || 0,
     liked: likes.find((l) => l.post_id === p.id)?.liked || false,
     replies: replies.find((r) => r.post_id === p.id)?.n || 0,
