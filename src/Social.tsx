@@ -1009,11 +1009,6 @@ export function MemberDirectory() {
         <p>
           Builders, designers, marketers, managers, and everyone in between.
         </p>
-        {user ? (
-          <a href={"/members/" + user.id}>Create or edit my profile →</a>
-        ) : (
-          <a href="/api/auth/discord/login">Sign in to create your profile →</a>
-        )}
       </div>
       <label>
         Find a member
