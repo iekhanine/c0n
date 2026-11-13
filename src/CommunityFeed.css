@@ -2098,3 +2098,40 @@ body.showcase-page {
 .con-sidebar-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .con-sidebar-edit-actions button { padding: 8px 10px; cursor: pointer; }
 @media (max-width: 760px) { .con-discord-sidebar { grid-template-columns: 1fr !important; } }
+
+/* Owner-safe account identity: status is functional, never editable marketing copy. */
+.con-account-menu { position: relative; z-index: 40; flex: 0 0 auto; }
+.con-account-trigger {
+  display:flex; gap:9px; align-items:center; max-width:210px;
+  border:1px solid rgba(154,178,115,.35); border-radius:9px;
+  background:#151913; color:#e9efdd; padding:6px 10px 6px 6px;
+  font-size:13px; font-weight:650; cursor:pointer;
+}
+.con-account-trigger > span:not(.con-account-avatar) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.con-account-avatar {
+  width:32px; height:32px; min-width:32px; border-radius:50%;
+  object-fit:cover; display:grid; place-items:center;
+  background:#3b4b2a; color:#f4f7eb; font-size:12px;
+}
+.con-account-scrim {position:fixed; inset:0; border:0; background:transparent; z-index:1; cursor:default;}
+.con-account-dropdown {
+  position:absolute; top:calc(100% + 8px); right:0; z-index:2;
+  display:grid; gap:3px; min-width:202px; max-width:min(90vw,260px);
+  padding:9px; background:#151914; border:1px solid #515e46;
+  border-radius:10px; box-shadow:0 12px 32px #000b;
+}
+.con-account-dropdown > strong {
+  padding:8px 9px; font-size:12px; color:#bccbab;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.con-account-dropdown a,.con-account-dropdown button {
+  display:flex; gap:10px; align-items:center; width:100%; box-sizing:border-box;
+  text-decoration:none; color:#e9efdd; background:transparent; border:0;
+  padding:10px 9px; border-radius:6px; font:inherit; font-size:13px;
+  text-align:left; cursor:pointer;
+}
+.con-account-dropdown a:hover,.con-account-dropdown button:hover { background:#293425; }
+@media(max-width:760px) {
+  .con-account-trigger {max-width:140px;}
+  .con-account-dropdown {right:0;}
+}
