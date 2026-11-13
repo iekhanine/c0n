@@ -278,7 +278,7 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     const submission = await call(bob, "post", "POST", {
       title: "My lab build", body: "Servers and cables", community_slug: "homelab",
     });
-    assert.equal(submission.statusCode, 201);
+    assert.equal(submission.statusCode, 201, JSON.stringify(submission.body));
     const communityPost = submission.body.id;
     const subnet = (await call(null, "feed&community=homelab")).body.posts;
     assert.equal(subnet.length, 1);
