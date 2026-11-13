@@ -33,6 +33,8 @@ export type SocialPost = {
   version: number;
   link_url?: string;
   community_slug?: string;
+  video_url?: string;
+  notify_replies?: boolean;
   score?: number;
   vote?: number;
 };
@@ -273,6 +275,7 @@ export function PostCard({
           />
         </a>
       )}
+      {safeUrl(post.video_url) && <video className="con-post-video" controls preload="metadata" src={safeUrl(post.video_url)} /> }
       {safeUrl(post.link_url) && (
         <a
           className="social-external"
@@ -536,7 +539,7 @@ function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
     <span className="con-feed-rank" aria-hidden="true">{rank}.</span>
     <VoteControl post={post} />
     <div className="con-feed-entry">
-      <h2><a href={`/posts/${post.id}`}>{title}</a></h2>
+      <h2><a href={safeUrl(post.link_url) ? `/out/${post.id}` : `/posts/${post.id}`}>{title}</a></h2>
       <div className="con-feed-byline">
         <time dateTime={post.published_at} title={Number.isNaN(posted.valueOf()) ? undefined : posted.toLocaleString()}>
           {Number.isNaN(posted.valueOf()) ? "Posted" : posted.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
@@ -563,6 +566,18 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
   const [description,setDescription] = useState("");
   const [title,setTitle] = useState("");
   const [body,setBody] = useState("");
+  const [link,setLink] = useState("");
+  const [image,setImage] = useState("");
+  const [video,setVideo] = useState("");
+  const [postType,setPostType] = useState<"text"|"link">("text");
+  const [notifyReplies,setNotifyReplies] = useState(true);
+  const [uploading,setUploading] = useState(false);
+  const postDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = postDialog.current;
+    if (showPost && dialog && !dialog.open) dialog.showModal();
+    if (!showPost && dialog?.open) dialog.close();
+  },[showPost]);
   const [target,setTarget] = useState(communitySlug || "community");
   const [saving,setSaving] = useState(false);
   const [notice,setNotice] = useState("");
@@ -599,7 +614,10 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
   async function submitPost(e: FormEvent) {
     e.preventDefault(); setSaving(true); setNotice("");
     try {
-      const result = await socialApi<{id:string}>("post","POST",{ title,body,community_slug:target });
+      const result = await socialApi<{id:string}>("post","POST",{
+        title,body:postType==="text"?body:"",link_url:postType==="link"?link:"",
+        image_url:image,video_url:video,community_slug:target,notify_replies:notifyReplies,
+      });
       window.location.assign("/posts/"+result.id);
     } catch(e) { setNotice(e instanceof Error ? e.message : "Couldn't publish."); setSaving(false); }
   }
@@ -613,7 +631,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
         </div>
         <div className="con-community-actions">
           {user ? <>
-            <button onClick={() => {setShowPost(!showPost);setShowCreate(false);}}>+ New post</button>
+            <button onClick={() => {setShowPost(true);setShowCreate(false);}}>+ New post</button>
             <button onClick={() => {setShowCreate(!showCreate);setShowPost(false);}}>+ Create subcon</button>
           </> : <a className="con-community-signin" href="/api/auth/discord/login">Sign in to post</a>}
         </div>
@@ -627,18 +645,49 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
         <label>Description<textarea maxLength={2000} rows={3} value={description} onChange={e=>setDescription(e.target.value)}/></label>
         <button type="submit" disabled={saving}>Create community</button>
       </form>}
-      {showPost && <form className="con-community-form" onSubmit={e=>void submitPost(e)}>
-        <h2>Submit a post</h2>
-        <label>Post to
-          <select value={target} onChange={e=>setTarget(e.target.value)}>
-            {communities.map(c=><option key={c.slug} value={c.slug}>c/{c.slug}</option>)}
-          </select>
-        </label>
-        <label>Title<input required maxLength={200} value={title} onChange={e=>setTitle(e.target.value)}/></label>
-        <label>Post<textarea required maxLength={10000} rows={6} value={body} onChange={e=>setBody(e.target.value)}/></label>
-        <button type="submit" disabled={saving||!title.trim()||!body.trim()}>Publish</button>
-      </form>}
-      {notice && <p role="alert" className="social-error">{notice}</p>}
+      <dialog ref={postDialog} className="con-submit-dialog" aria-labelledby="con-submit-title"
+        onClose={() => setShowPost(false)}>
+        <form className="con-community-form con-submit-form" onSubmit={e=>void submitPost(e)}>
+          <div className="con-submit-heading">
+            <div><span className="con-community-kicker">CREATE A POST</span><h2 id="con-submit-title">Submit to C0N</h2></div>
+            <button type="button" aria-label="Close submission" onClick={() => setShowPost(false)}>✕</button>
+          </div>
+          <div className="con-submit-tabs" role="group" aria-label="Post type">
+            <button type="button" className={postType==="link"?"selected":""} aria-pressed={postType==="link"} onClick={()=>setPostType("link")}>Link</button>
+            <button type="button" className={postType==="text"?"selected":""} aria-pressed={postType==="text"} onClick={()=>setPostType("text")}>Text</button>
+          </div>
+          <label>Title <span>{title.length}/200</span>
+            <input required maxLength={200} autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="Give your post a descriptive title"/>
+          </label>
+          {postType==="link" ?
+            <label>URL<input required type="url" pattern="https://.*" value={link} onChange={e=>setLink(e.target.value)} placeholder="https://example.com/article"/></label> :
+            <label>Your post<textarea required maxLength={10000} rows={7} value={body} onChange={e=>setBody(e.target.value)} placeholder="What would you like to share?"/></label>}
+          <div className="con-media-group">
+            <strong>Image or video <small>(optional)</small></strong>
+            <ImageUpload label="Upload an image (up to 2 MB)" onUpload={setImage} onBusyChange={setUploading}/>
+            {image && <div className="con-upload-preview"><img alt="Uploaded preview" src={safeUrl(image)}/><button type="button" onClick={()=>setImage("")}>Remove</button></div>}
+            <label>Video URL (direct MP4 or WebM)
+              <input type="url" pattern="https://.*" value={video} placeholder="https://example.com/video.mp4" onChange={e=>setVideo(e.target.value)}/>
+            </label>
+          </div>
+          <label>Choose where to post
+            <select required value={target} onChange={e=>setTarget(e.target.value)}>
+              {communities.map(c=><option key={c.slug} value={c.slug}>c/{c.slug} · {c.name}</option>)}
+            </select>
+          </label>
+          <label className="con-reply-optin"><input type="checkbox" checked={notifyReplies} onChange={e=>setNotifyReplies(e.target.checked)}/>
+            Notify me in my C0N inbox when someone replies
+          </label>
+          {notice && <p role="alert" className="social-error">{notice}</p>}
+          <div className="con-submit-actions">
+            <button type="button" onClick={()=>setShowPost(false)}>Cancel</button>
+            <button type="submit" className="social-primary" disabled={saving||uploading||!title.trim()||(postType==="text"?!body.trim():!link.trim())}>
+              {saving?"Publishing…":"Submit post"}
+            </button>
+          </div>
+        </form>
+      </dialog>
+      {notice && !showPost && <p role="alert" className="social-error">{notice}</p>}
       <nav className="con-community-nav" aria-label="Browse subcons">
         <a className={!communitySlug?"selected":""} href="/community">All posts</a>
         {communities.map(c=><a className={communitySlug===c.slug?"selected":""} key={c.slug} href={"/c/"+c.slug}>c/{c.slug}</a>)}
