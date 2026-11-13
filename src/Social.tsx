@@ -521,11 +521,6 @@ export function StreamPage({ compact = false }: { compact?: boolean }) {
   }, []);
   return (
     <section className={"social-stream " + (compact ? "social-compact" : "")}>
-      {compact && (
-        <div className="social-page-heading">
-          <h2>Latest from the blog</h2>
-        </div>
-      )}
       {error && (
         <p role="alert" className="social-error">
           {error}
