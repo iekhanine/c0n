@@ -30,7 +30,7 @@ export function statsEmbed(data, site, now = Date.now()) {
     .setTitle(MARKER)
     .addFields(fields)
     .setColor(0x96b56b)
-    .setFooter({ text: "All channels · Observed human messages · Past 7 days" })
+    .setFooter({ text: "All channels · Past 7 days" })
     .setTimestamp(new Date(now))
     .setURL(site);
 }
