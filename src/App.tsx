@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Search, ChevronDown, LogOut, UserRound, Settings } from "lucide-react";
+import { ArrowRight, ChevronDown, LogOut, UserRound, Settings } from "lucide-react";
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory } from "./Social";
 import CommunityFeed from "./CommunityFeed";
@@ -109,13 +109,6 @@ export default function App() {
               </CopyRegion>
             ))}
           </nav>
-          <a
-            href="/projects?search=1"
-            aria-label="Search projects"
-            className="header-search"
-          >
-            <Search size={23} />
-          </a>
           <a
             className="discord-invite"
             href="https://discord.gg/dSHMeZ4ETJ"
