@@ -1106,7 +1106,9 @@ export function MemberDirectory() {
   const [profiles, setProfiles] = useState<Profile[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
-    [query, setQuery] = useState("");
+    [query, setQuery] = useState(""),
+    [discipline, setDiscipline] = useState("All disciplines"),
+    [availableOnly, setAvailableOnly] = useState(false);
   useEffect(() => {
     void socialApi<{ profiles: Profile[] }>("directory")
       .then((d) => setProfiles(d.profiles))
@@ -1116,29 +1118,37 @@ export function MemberDirectory() {
   return (
     <section className="social-directory">
       <div className="social-page-heading">
-        <span className="eyebrow">THE PEOPLE BEHIND THE PROJECTS</span>
+        <span className="eyebrow">DISCOVER THE PEOPLE BEHIND THE WORK</span>
         <h1>Members</h1>
         <p>
-          Builders, designers, marketers, managers, and everyone in between.
+          Discover developers, artists, photographers, craftspeople, game creators, and collaborators through their work.
         </p>
       </div>
-      <label>
-        Find a member
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search names and headlines"
-        />
-      </label>
+      <div className="member-discovery-filters">
+        <label>Find a creator
+          <input value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Search names, disciplines, skills and portfolio work…"/>
+        </label>
+        <label>Discipline
+          <select value={discipline} onChange={e => setDiscipline(e.target.value)}>
+            <option>All disciplines</option>
+            {creativeDisciplines.map(d => <option key={d}>{d}</option>)}
+          </select>
+        </label>
+        <label className="member-availability-filter">
+          <input type="checkbox" checked={availableOnly} onChange={e => setAvailableOnly(e.target.checked)}/>
+          Available for work
+        </label>
+      </div>
       {error && <p role="alert">{error}</p>}
       {loading && <p role="status">Loading members…</p>}
       <div className="social-member-grid">
         {profiles
-          .filter((p) =>
-            (p.name + " " + p.username + " " + p.headline)
-              .toLowerCase()
-              .includes(query.toLowerCase()),
-          )
+          .filter(p => (discipline === "All disciplines" || (p.disciplines || []).includes(discipline)) &&
+            (!availableOnly || p.available_for_work) &&
+            [p.name, p.username, p.headline, p.bio, p.location, ...(p.disciplines || []),
+              ...(p.portfolio || []).flatMap(item => [item.title, item.description, item.kind])]
+              .join(" ").toLowerCase().includes(query.trim().toLowerCase()))
           .map((p) => (
             <a
               className="social-member"
