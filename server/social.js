@@ -9,6 +9,9 @@ import { hasPermission } from "../shared/permissions.js";
 export const socialSchema = [
   `CREATE TABLE IF NOT EXISTS con.profiles(user_id text PRIMARY KEY, name text NOT NULL, username text NOT NULL, avatar_url text NOT NULL DEFAULT '', cover_url text NOT NULL DEFAULT '', headline text NOT NULL DEFAULT '', bio text NOT NULL DEFAULT '', location text NOT NULL DEFAULT '', links jsonb NOT NULL DEFAULT '[]', show_projects boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`,
   `CREATE TABLE IF NOT EXISTS con.member_posts(id uuid PRIMARY KEY, user_id text NOT NULL REFERENCES con.profiles(user_id), title text NOT NULL DEFAULT '', body text NOT NULL, image_url text NOT NULL DEFAULT '', pinned boolean NOT NULL DEFAULT false, version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())`,
+  `ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS disciplines jsonb NOT NULL DEFAULT '[]'::jsonb`,
+  `ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS portfolio jsonb NOT NULL DEFAULT '[]'::jsonb`,
+  `ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS available_for_work boolean NOT NULL DEFAULT false`,
   `CREATE INDEX IF NOT EXISTS con_member_posts_user ON con.member_posts(user_id,created_at DESC)`,
   `CREATE TABLE IF NOT EXISTS con.post_likes(post_id uuid NOT NULL, user_id text NOT NULL, PRIMARY KEY(post_id,user_id))`,
   `CREATE TABLE IF NOT EXISTS con.post_replies(id uuid PRIMARY KEY, post_id uuid NOT NULL,user_id text NOT NULL REFERENCES con.profiles(user_id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`,
@@ -48,6 +51,27 @@ const userId = (value) => {
     throw new AppError(400, "Invalid member ID.");
   return value;
 };
+export const disciplines = [
+  "Developer", "Designer", "Artist", "Photographer", "Videographer",
+  "Musician", "Writer", "Maker & Craftsperson", "Business & Marketing",
+  "Project Manager", "Game Creator", "Other",
+];
+const portfolioKinds = new Set(["image", "website", "video", "game", "craft", "project", "other"]);
+function profilePortfolio(items) {
+  if (!Array.isArray(items) || items.length > 24)
+    throw new AppError(400, "Add up to 24 portfolio pieces.");
+  return items.map(item => {
+    if (!item || typeof item !== "object" || !portfolioKinds.has(item.kind))
+      throw new AppError(400, "Choose a valid type of work.");
+    return {
+      kind: item.kind,
+      title: text(item.title, 120, true),
+      description: text(item.description ?? "", 600),
+      image_url: httpsUrl(item.image_url ?? ""),
+      link_url: httpsUrl(item.link_url ?? ""),
+    };
+  });
+}
 export function profileInput(b) {
   if (
     !Array.isArray(b.links) ||
@@ -55,6 +79,10 @@ export function profileInput(b) {
     typeof b.show_projects !== "boolean"
   )
     throw new AppError(400, "Use up to eight social links.");
+  if (!Array.isArray(b.disciplines ?? []) || (b.disciplines ?? []).length > 6 ||
+      (b.disciplines ?? []).some(d => !disciplines.includes(d)) ||
+      ![true, false].includes(b.available_for_work ?? false))
+    throw new AppError(400, "Choose up to six creative disciplines.");
   return {
     name: text(b.name, 80, true),
     headline: text(b.headline, 160),
@@ -63,6 +91,9 @@ export function profileInput(b) {
     avatar_url: httpsUrl(b.avatar_url),
     cover_url: httpsUrl(b.cover_url),
     show_projects: b.show_projects,
+    disciplines: [...new Set(b.disciplines ?? [])],
+    portfolio: profilePortfolio(b.portfolio ?? []),
+    available_for_work: b.available_for_work ?? false,
     links: b.links.map((l) => ({
       label: text(l.label, 40, true),
       url: httpsUrl(text(l.url, 2000, true)),
@@ -177,7 +208,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       return json(res, 200, {
         profiles: (
           await db.query(
-            "SELECT user_id,name,username,avatar_url,headline FROM con.profiles ORDER BY updated_at DESC LIMIT 200",
+            "SELECT user_id,name,username,avatar_url,headline,bio,location,disciplines,available_for_work,portfolio FROM con.profiles ORDER BY updated_at DESC LIMIT 200",
           )
         ).rows,
       });
@@ -214,6 +245,7 @@ export async function socialHandler(req, res, dbFactory = database) {
           location: "",
           links: [],
           show_projects: true,
+          disciplines: [], portfolio: [], available_for_work: false,
         };
       }
       const projects = profile.show_projects
@@ -267,7 +299,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "profile" && req.method === "PUT") {
       const v = profileInput(b);
       await db.query(
-        "UPDATE con.profiles SET name=$2,headline=$3,bio=$4,location=$5,avatar_url=$6,cover_url=$7,links=$8::jsonb,show_projects=$9,updated_at=now() WHERE user_id=$1",
+        "UPDATE con.profiles SET name=$2,headline=$3,bio=$4,location=$5,avatar_url=$6,cover_url=$7,links=$8::jsonb,show_projects=$9,disciplines=$10::jsonb,portfolio=$11::jsonb,available_for_work=$12,updated_at=now() WHERE user_id=$1",
         [
           user.id,
           v.name,
@@ -278,6 +310,9 @@ export async function socialHandler(req, res, dbFactory = database) {
           v.cover_url,
           JSON.stringify(v.links),
           v.show_projects,
+          JSON.stringify(v.disciplines),
+          JSON.stringify(v.portfolio),
+          v.available_for_work,
         ],
       );
       return json(res, 200, { ok: true });
