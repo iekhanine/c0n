@@ -36,11 +36,13 @@ const schema = [
   "REVOKE ALL ON con.memberships, con.membership_invites FROM PUBLIC, anon, authenticated",
   "REVOKE ALL ON SEQUENCE con.membership_batch_sequence FROM PUBLIC, anon, authenticated"
 ];
-let setupPromise;
+const setupPromises=new WeakMap();
 async function setup(db) {
-  if (!setupPromise) setupPromise = (async () => { for (const q of schema) await db.query(q); })().catch(e => { setupPromise = null; throw e; });
-  await setupPromise;
+  if(!setupPromises.has(db))
+    setupPromises.set(db,(async()=>{for(const q of schema)await db.query(q);})().catch(e=>{setupPromises.delete(db);throw e;}));
+  await setupPromises.get(db);
 }
+export async function ensureMembershipSchema(db){await setup(db);}
 async function ensureFounder(db, user) {
   if (!ownerIds().includes(user.id)) return;
   // Founding number 000001 is reserved for the first owner to initialize membership.
