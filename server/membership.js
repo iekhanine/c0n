@@ -39,8 +39,8 @@ async function setup(db) {
 async function ensureFounder(db, user) {
   if (!ownerIds().includes(user.id)) return;
   // Founding number 000001 is reserved for the first owner to initialize membership.
-  await db.query("INSERT INTO con.memberships(user_id,member_no,display_name,invite_allowance) VALUES($1,1,$2,10000) ON CONFLICT(user_id) DO UPDATE SET display_name=$2", [user.id, user.name]);
-  await db.query("SELECT setval(pg_get_serial_sequence('con.memberships','member_no'), GREATEST((SELECT max(member_no) FROM con.memberships),1),true)");
+  const created = await db.query("INSERT INTO con.memberships(user_id,member_no,display_name,invite_allowance) VALUES($1,1,$2,10000) ON CONFLICT(user_id) DO NOTHING RETURNING member_no", [user.id, user.name]);
+  if (created.rowCount) await db.query("SELECT setval(pg_get_serial_sequence('con.memberships','member_no'), GREATEST((SELECT max(member_no) FROM con.memberships),1),true)");
 }
 async function body(req) {
   let raw = ""; for await (const c of req) { raw += c; if (raw.length > 10000) fail(413,"Request too large"); }
