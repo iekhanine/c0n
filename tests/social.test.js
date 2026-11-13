@@ -246,6 +246,15 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
       (await call(null, "post&id=" + transmission)).body.post.body,
       "Published copy",
     );
+    const profilePosts = (await call(null, "profile&id=" + alice)).body.posts;
+    assert.equal(profilePosts.length, 1);
+    assert.ok(profilePosts.every(p => p.kind === "member"));
+    assert.equal(profilePosts[0].id, postId);
+    const highlights = await call(null, "top_member_posts");
+    assert.equal(highlights.statusCode, 200);
+    assert.equal(highlights.body.posts.length, 1);
+    assert.equal(highlights.body.posts[0].id, postId);
+    assert.equal(highlights.body.posts[0].likes, 1);
     const feed = (await call(null, "feed")).body.posts;
     assert.equal(feed.length, 1);
     assert.ok(feed.every((p) => p.kind === "update"));
