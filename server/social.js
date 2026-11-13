@@ -439,7 +439,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       if (slug) {
         communitySlug(slug);
         const exists = await db.query("SELECT 1 FROM con.communities WHERE slug=$1", [slug]);
-        if (!exists.rowCount) throw new AppError(404, "Community not found.");
+        if (!exists.rows.length) throw new AppError(404, "Community not found.");
       }
       const updates = slug && slug !== "community" ? [] : (
         await db.query(
@@ -471,7 +471,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       const community = b.community_slug ? communitySlug(b.community_slug) : null;
       if (community) {
         const exists = await db.query("SELECT 1 FROM con.communities WHERE slug=$1", [community]);
-        if (!exists.rowCount) throw new AppError(404, "Community not found.");
+        if (!exists.rows.length) throw new AppError(404, "Community not found.");
         if (!text(b.title, 200, true)) throw new AppError(400, "Community posts need a title.");
       }
       const v = memberPostInput(
