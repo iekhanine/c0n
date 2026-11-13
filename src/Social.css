@@ -669,3 +669,33 @@
   .con-feed-entry h2 { font-size: 15px; }
   .con-feed-comments { margin-left: 0; }
 }
+
+/* Subcons: the original dense Reddit-style overview, adapted to C0N's dark theme. */
+.con-community-page { width: 100%; max-width: 1080px; }
+.con-community-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin: 12px 0 24px; }
+.con-community-heading h1 { margin: 4px 0 7px; font-size: clamp(26px,4vw,38px); }
+.con-community-heading p { margin: 0; font-size: 14px; color: #aeb9ad; }
+.con-community-kicker { font: 700 11px ui-monospace,monospace; color: #d1f77b; letter-spacing: 2px; }
+.con-community-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.con-community-actions button,.con-community-signin { border-radius: 6px; background: #34432c; border: 1px solid #657a46; padding: 9px 13px; color: #eaf0da; text-decoration: none; font-weight: 650; font-size: 13px; white-space: nowrap; }
+.con-community-nav { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 0 14px; margin-bottom: 14px; border-bottom: 1px solid #383f36; }
+.con-community-nav a { color: #aeb9ae; padding: 5px 9px; border-radius: 5px; font-size: 13px; text-decoration: none; }
+.con-community-nav a:hover,.con-community-nav a.selected { color: #e9f6ce; background: #35402d; }
+.con-community-form { border: 1px solid #3c4834; background: #192019; border-radius: 8px; padding: 20px; margin: 0 0 18px; display: grid; gap: 13px; }
+.con-community-form h2 { margin: 0; font-size: 20px; }
+.con-community-form label { display: grid; gap: 6px; font-size: 13px; color: #c9d0c2; }
+.con-community-form label span { color: #b8c79d; font-family: monospace; }
+.con-community-form input,.con-community-form select,.con-community-form textarea { background: #101510; border: 1px solid #4c5947; color: #f4f7ed; padding: 10px 12px; border-radius: 5px; width: 100%; box-sizing: border-box; font: inherit; }
+.con-community-form button[type="submit"] { justify-self: start; }
+.con-feed-votes { width: 33px; flex: 0 0 33px; display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.1; position: relative; }
+.social-stream .con-feed-votes button { padding: 0; border: 0; background: transparent; color: #82908a; font-size: 15px; line-height: 1; border-radius: 0; }
+.social-stream .con-feed-votes button.active { color: #d1f77b; }
+.social-stream .con-feed-votes button.down { color: #df9578; }
+.con-feed-votes strong { font-size: 12px; color: #dbe3db; }
+.con-vote-error { position: absolute; z-index: 2; top: 42px; left: 0; width: 170px; padding: 6px; color: #ffb5a9; background: #3a1e1b; font-size: 11px; }
+@media (max-width: 650px) {
+  .con-community-heading { align-items: flex-start; flex-direction: column; }
+  .con-community-actions { width: 100%; }
+  .con-feed-row { gap: 6px; }
+  .con-feed-votes { width: 25px; flex-basis: 25px; }
+}
