@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, ChevronDown, LogOut, UserRound, Settings, Bell } from "lucide-react";
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
-import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage, OutboundPage } from "./Social";
+import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
 import {
   CopyRegion,
@@ -77,7 +77,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path.startsWith("/out/") ? "outbound" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
+  const page = path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -194,9 +194,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "outbound" ? (
-            <OutboundPage id={path.split("/")[2]} />
-          ) : page === "inbox" ? (
+          {page === "inbox" ? (
             <InboxPage />
           ) : page === "subcon" ? (
             <StreamPage communitySlug={decodeURIComponent(path.split("/")[2] || "")} />
