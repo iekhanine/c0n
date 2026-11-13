@@ -32,6 +32,9 @@ export type SocialPost = {
   can_edit: boolean;
   version: number;
   link_url?: string;
+  community_slug?: string;
+  score?: number;
+  vote?: number;
 };
 type PortfolioPiece = {
   kind: "image" | "website" | "video" | "game" | "craft" | "project" | "other";
@@ -496,78 +499,160 @@ function ComposerOverlay({
     </dialog>
   );
 }
-// Keep the overview deliberately dense, like old Reddit. Full content lives on the post page.
-function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
-  const title = post.title?.trim() || post.body.trim().split("\n").find(Boolean)?.slice(0, 110) || "Untitled post";
-  const posted = new Date(post.published_at);
-  return (
-    <article className="con-feed-row">
-      <span className="con-feed-rank" aria-hidden="true">{rank}.</span>
-      <div className="con-feed-entry">
-        <h2><a href={`/posts/${post.id}`}>{title}</a></h2>
-        <div className="con-feed-byline">
-          <time dateTime={post.published_at} title={Number.isNaN(posted.valueOf()) ? undefined : posted.toLocaleString()}>
-            {Number.isNaN(posted.valueOf()) ? "Posted" : posted.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-          </time>
-          <span>by <a href={`/members/${post.author_id}`}>{post.author_name}</a></span>
-          <span>to <a href="/community" className="con-feed-community">c/community</a></span>
-          <a className="con-feed-comments" href={`/posts/${post.id}#replies`}>{post.replies || 0} comments</a>
-        </div>
-      </div>
-    </article>
-  );
+// Community navigation and ranked, compact post rows.
+type Community = { slug: string; name: string; description: string; creator_id: string; post_count?: number };
+function VoteControl({ post }: { post: SocialPost }) {
+  const [vote, setVote] = useState(post.vote || 0);
+  const [score, setScore] = useState(post.score || 0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { setVote(post.vote || 0); setScore(post.score || 0); }, [post.id, post.vote, post.score]);
+  async function set(direction: number) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      const next = vote === direction ? 0 : direction;
+      const result = await socialApi<{ score: number; vote: number }>("vote", "PUT", { id: post.id, value: next });
+      setVote(result.vote); setScore(result.score);
+    } catch (e) {
+      if (e instanceof Error && /Sign in/.test(e.message)) {
+        window.location.assign("/api/auth/discord/login");
+        return;
+      }
+      setError(e instanceof Error ? e.message : "Vote failed.");
+    } finally { setBusy(false); }
+  }
+  return <div className="con-feed-votes" aria-label={`Score ${score}`}>
+    <button type="button" disabled={busy} className={vote === 1 ? "active" : ""} aria-label={`Upvote ${post.title || "post"}`} aria-pressed={vote===1} onClick={() => void set(1)}>▲</button>
+    <strong>{score}</strong>
+    <button type="button" disabled={busy} className={vote === -1 ? "active down" : ""} aria-label={`Downvote ${post.title || "post"}`} aria-pressed={vote===-1} onClick={() => void set(-1)}>▼</button>
+    {error && <span className="con-vote-error" role="alert">{error}</span>}
+  </div>;
 }
-export function StreamPage({ compact = false }: { compact?: boolean }) {
-  const [posts, setPosts] = useState<SocialPost[]>([]),
-    [error, setError] = useState(""),
-    [next, setNext] = useState<string | null>(null),
-    [loading, setLoading] = useState(true);
+function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
+  const title = post.title?.trim() || post.body.trim().split("\n").find(Boolean)?.slice(0,110) || "Untitled post";
+  const posted = new Date(post.published_at);
+  return <article className="con-feed-row">
+    <span className="con-feed-rank" aria-hidden="true">{rank}.</span>
+    <VoteControl post={post} />
+    <div className="con-feed-entry">
+      <h2><a href={`/posts/${post.id}`}>{title}</a></h2>
+      <div className="con-feed-byline">
+        <time dateTime={post.published_at} title={Number.isNaN(posted.valueOf()) ? undefined : posted.toLocaleString()}>
+          {Number.isNaN(posted.valueOf()) ? "Posted" : posted.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
+        </time>
+        <span>by <a href={`/members/${post.author_id}`}>{post.author_name}</a></span>
+        <span>to <a href={`/c/${post.community_slug || "community"}`} className="con-feed-community">c/{post.community_slug || "community"}</a></span>
+        <a className="con-feed-comments" href={`/posts/${post.id}#replies`}>{post.replies || 0} comments</a>
+      </div>
+    </div>
+  </article>;
+}
+export function StreamPage({ compact = false, communitySlug }: { compact?: boolean; communitySlug?: string }) {
+  const user = useUser();
+  const [posts,setPosts] = useState<SocialPost[]>([]);
+  const [communities,setCommunities] = useState<Community[]>([]);
+  const [community,setCommunity] = useState<Community | null>(null);
+  const [error,setError] = useState("");
+  const [next,setNext] = useState<string | null>(null);
+  const [loading,setLoading] = useState(true);
+  const [showCreate,setShowCreate] = useState(false);
+  const [showPost,setShowPost] = useState(false);
+  const [slug,setSlug] = useState("");
+  const [name,setName] = useState("");
+  const [description,setDescription] = useState("");
+  const [title,setTitle] = useState("");
+  const [body,setBody] = useState("");
+  const [target,setTarget] = useState(communitySlug || "community");
+  const [saving,setSaving] = useState(false);
+  const [notice,setNotice] = useState("");
+  useEffect(() => { setTarget(communitySlug || "community"); },[communitySlug]);
   async function load(more = false) {
     setLoading(true);
     try {
-      const d = await socialApi<{ posts: SocialPost[]; next: string | null }>(
-        "feed" + (more && next ? "&before=" + encodeURIComponent(next) : ""),
-      );
-      setPosts((prev) => (more ? [...prev, ...d.posts] : d.posts));
-      setNext(d.next);
-      setError("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load posts.");
-    } finally {
-      setLoading(false);
-    }
+      const query = communitySlug ? "&community="+encodeURIComponent(communitySlug) : "";
+      const cursor = more && next ? "&before="+encodeURIComponent(next) : "";
+      const d = await socialApi<{ posts: SocialPost[]; next: string | null }>("feed"+query+cursor);
+      setPosts(prev => more ? [...prev,...d.posts] : d.posts);
+      setNext(d.next); setError("");
+    } catch(e) { setError(e instanceof Error ? e.message : "Could not load posts."); }
+    finally { setLoading(false); }
   }
   useEffect(() => {
     void load();
-  }, []);
-  return (
-    <section className={"social-stream " + (compact ? "social-compact" : "")}>
-      {error && (
-        <p role="alert" className="social-error">
-          {error}
-          <button onClick={() => void load()}>Retry</button>
-        </p>
-      )}
-      <div className="con-feed-list" aria-label="Recent posts">
-        {posts.slice(0, compact ? 4 : undefined).map((p, index) => (
-          <FeedRow key={p.id} post={p} rank={index + 1} />
-        ))}
+    void socialApi<{ communities: Community[] }>("communities")
+      .then(d => setCommunities(d.communities))
+      .catch(() => {});
+    if (communitySlug) {
+      void socialApi<{ community: Community }>("community&slug="+encodeURIComponent(communitySlug))
+        .then(d => setCommunity(d.community))
+        .catch(() => setCommunity(null));
+    } else setCommunity(null);
+  },[communitySlug]);
+  async function createCommunity(e: FormEvent) {
+    e.preventDefault(); setSaving(true); setNotice("");
+    try {
+      const result = await socialApi<{community: Community}>("community","POST",{ slug:slug.toLowerCase(),name,description });
+      window.location.assign("/c/"+result.community.slug);
+    } catch(e) { setNotice(e instanceof Error ? e.message : "Couldn't create community."); setSaving(false); }
+  }
+  async function submitPost(e: FormEvent) {
+    e.preventDefault(); setSaving(true); setNotice("");
+    try {
+      const result = await socialApi<{id:string}>("post","POST",{ title,body,community_slug:target });
+      window.location.assign("/posts/"+result.id);
+    } catch(e) { setNotice(e instanceof Error ? e.message : "Couldn't publish."); setSaving(false); }
+  }
+  return <section className={"social-stream con-community-page "+(compact?"social-compact":"")}>
+    {!compact && <>
+      <div className="con-community-heading">
+        <div>
+          <span className="con-community-kicker">{communitySlug ? "SUBCON" : "THE COMPOUND"}</span>
+          <h1>{communitySlug ? "c/"+communitySlug : "Communities"}</h1>
+          <p>{communitySlug ? community?.description || "Posts and conversations from this community." : "Everything happening across the C0N network."}</p>
+        </div>
+        <div className="con-community-actions">
+          {user ? <>
+            <button onClick={() => {setShowPost(!showPost);setShowCreate(false);}}>+ New post</button>
+            <button onClick={() => {setShowCreate(!showCreate);setShowPost(false);}}>+ Create subcon</button>
+          </> : <a className="con-community-signin" href="/api/auth/discord/login">Sign in to post</a>}
+        </div>
       </div>
-      {loading && <p role="status">Loading posts…</p>}
-      {!loading && !posts.length && !error && <p>No transmissions yet.</p>}
-      {compact ? (
-        <a className="social-read" href="/community">
-          All transmissions →
-        </a>
-      ) : (
-        next && (
-          <button disabled={loading} onClick={() => void load(true)}>
-            Load more
-          </button>
-        )
-      )}
-    </section>
-  );
+      {showCreate && <form className="con-community-form" onSubmit={e=>void createCommunity(e)}>
+        <h2>Create a subcon</h2>
+        <label>Community URL <span>/c/{slug.toLowerCase() || "communityname"}</span>
+          <input required minLength={3} maxLength={24} pattern="[a-z][a-z0-9_]{2,23}" value={slug} placeholder="communityname" onChange={e=>setSlug(e.target.value.toLowerCase())}/>
+        </label>
+        <label>Display name<input required minLength={3} maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
+        <label>Description<textarea maxLength={2000} rows={3} value={description} onChange={e=>setDescription(e.target.value)}/></label>
+        <button type="submit" disabled={saving}>Create community</button>
+      </form>}
+      {showPost && <form className="con-community-form" onSubmit={e=>void submitPost(e)}>
+        <h2>Submit a post</h2>
+        <label>Post to
+          <select value={target} onChange={e=>setTarget(e.target.value)}>
+            {communities.map(c=><option key={c.slug} value={c.slug}>c/{c.slug}</option>)}
+          </select>
+        </label>
+        <label>Title<input required maxLength={200} value={title} onChange={e=>setTitle(e.target.value)}/></label>
+        <label>Post<textarea required maxLength={10000} rows={6} value={body} onChange={e=>setBody(e.target.value)}/></label>
+        <button type="submit" disabled={saving||!title.trim()||!body.trim()}>Publish</button>
+      </form>}
+      {notice && <p role="alert" className="social-error">{notice}</p>}
+      <nav className="con-community-nav" aria-label="Browse subcons">
+        <a className={!communitySlug?"selected":""} href="/community">All posts</a>
+        {communities.map(c=><a className={communitySlug===c.slug?"selected":""} key={c.slug} href={"/c/"+c.slug}>c/{c.slug}</a>)}
+      </nav>
+    </>}
+    {error && <p role="alert" className="social-error">{error} <button onClick={()=>void load()}>Retry</button></p>}
+    <div className="con-feed-list" aria-label="Recent posts">
+      {posts.slice(0,compact?4:undefined).map((p,i)=><FeedRow key={p.id} post={p} rank={i+1}/>)}
+    </div>
+    {loading && <p role="status">Loading posts…</p>}
+    {!loading && !posts.length && !error && <p>No posts here yet. Be the first to contribute.</p>}
+    {compact ? <a className="social-read" href="/community">All community posts →</a> :
+      next && <button disabled={loading} onClick={()=>void load(true)}>Load more</button>}
+  </section>;
 }
 export function PostPage({ id }: { id: string }) {
   const user = useUser(),
