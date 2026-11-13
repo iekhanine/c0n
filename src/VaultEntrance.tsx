@@ -18,9 +18,14 @@ export default function VaultEntrance({ code, setCode, onContinue, busy = false,
   const displayed = [..."XXXXXX-XXXXXX-XXXXXX"].map((character, index) => {
     if (character === "-") return "-";
     const inputIndex = index - (index > 6 ? 1 : 0) - (index > 13 ? 1 : 0);
-    const typed = entered[inputIndex];
-    return typed ? (visible ? typed : "•") : "X";
-  }).join("");
+    if (inputIndex < entered.length)
+      return visible ? entered[inputIndex] : "•";
+    // The underscore replaces the NEXT X, then advances with each keystroke.
+    if (inputIndex === entered.length && entered.length < 18)
+      return null;
+    return "X";
+  });
+
   return (
     <main className="vault-screen">
       <div className="vault-shade" aria-hidden="true" />
@@ -32,8 +37,13 @@ export default function VaultEntrance({ code, setCode, onContinue, busy = false,
             <span className="vault-prompt" aria-hidden="true">&gt;</span>
             <div className="vault-editor">
               <span className="vault-display" aria-hidden="true">
-                <span className="vault-cursor">_</span>
-                <span>{displayed}</span>
+                {displayed.map((char, index) => {
+                  const inputIndex = index - (index > 6 ? 1 : 0) - (index > 13 ? 1 : 0);
+                  return char === null
+                    ? <span className="vault-cursor" key={index}>_</span>
+                    : <span key={index}>{char}</span>;
+                })}
+                {entered.length === 18 && <span className="vault-cursor">_</span>}
               </span>
               <input
                 aria-label="Invitation access code"
