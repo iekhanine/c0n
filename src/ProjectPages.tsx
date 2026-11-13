@@ -285,26 +285,27 @@ const empty: Draft = {
 };
 export function MemberProjects() {
   const [mine, setMine] = useState<Owned[]>([]),
-    [queue, setQueue] = useState<Owned[]>([]),
-    [review, setReview] = useState(false),
     [owner, setOwner] = useState(false),
     [member, setMember] = useState<boolean | null>(null),
     [selected, setSelected] = useState<Owned | null>(null),
     [draft, setDraft] = useState<Draft>(empty),
+    [categories, setCategories] = useState<string[]>(["Apps","Websites","Tools","Experiments"]),
+    [customCategory, setCustomCategory] = useState(""),
+    [categoryOpen, setCategoryOpen] = useState(false),
+    [projectFilter, setProjectFilter] = useState("All"),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [uploadingImage, setUploadingImage] = useState(false),
-    [loading, setLoading] = useState(true),
-    [note, setNote] = useState("");
+    [loading, setLoading] = useState(true);
   async function load() {
     setError("");
     try {
       const d = await projectApi("mine");
       setMine(d.projects);
-      setReview(d.canReview);
+      const list=await projectApi("categories");
+      setCategories(list.categories.filter((c:{active:boolean})=>c.active).map((c:{name:string})=>c.name));
       setOwner(d.owner);
-      if (d.canReview) setQueue((await projectApi("review")).projects);
       const edit = new URLSearchParams(location.search).get("edit");
       if (edit) {
         const p = d.projects.find((p: Owned) => p.id === edit);
@@ -346,6 +347,8 @@ export function MemberProjects() {
       });
       setSelected(null);
       setDraft(empty);
+      setCustomCategory("");
+      setCategoryOpen(false);
       setMessage(
         submit
           ? "Submitted for review. Your project goes live after approval."
@@ -357,6 +360,17 @@ export function MemberProjects() {
     } finally {
       setBusy(false);
     }
+  }
+  async function addCustomCategory(){
+    setError("");
+    try{
+      const response=await projectApi("categories","POST",{name:customCategory});
+      setCategories(previous=>[...new Set([...previous,response.name])].sort());
+      setDraft(previous=>({...previous,category:response.name}));
+      setCustomCategory("");
+      setCategoryOpen(false);
+      setMessage("Category added across the site.");
+    } catch(e){setError(e instanceof Error?e.message:"Could not create category.");}
   }
   async function uploadPreview(file: File) {
     setUploadingImage(true);
@@ -372,29 +386,6 @@ export function MemberProjects() {
       setError(e instanceof Error ? e.message : "Image upload failed.");
     } finally {
       setUploadingImage(false);
-    }
-  }
-  async function decide(p: Owned, decision: string) {
-    setBusy(true);
-    setError("");
-    try {
-      await projectApi("review", "PUT", {
-        id: p.id,
-        version: p.version,
-        decision,
-        note,
-      });
-      setNote("");
-      await load();
-      setMessage(
-        decision === "approve"
-          ? "Project approved and published."
-          : "Review saved.",
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Review failed.");
-    } finally {
-      setBusy(false);
     }
   }
   async function setup() {
@@ -586,80 +577,6 @@ export function MemberProjects() {
           </div>
         </form>
       </div>
-      {review && (
-        <section className="project-review-queue">
-          <h2>Project approval queue</h2>
-          <p>
-            Approve to publish. Rejecting an edit keeps the previously approved
-            page live.
-          </p>
-          <label>
-            Review note
-            <textarea
-              value={note}
-              maxLength={2000}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </label>
-          {queue.length === 0 && <p>No submissions waiting for review.</p>}
-          {queue.map((p) => (
-            <article key={p.id}>
-              <h3>{p.draft.title}</h3>
-              <p>
-                Submitted by {p.owner_name} · {p.draft.category}
-              </p>
-              <p className="review-body">{p.draft.body}</p>
-              {safe(p.draft.image_url) && (
-                <img src={safe(p.draft.image_url)} alt={p.draft.title} />
-              )}
-              <p>
-                {safe(p.draft.link_url) && (
-                  <a
-                    target="_blank"
-                    rel="noreferrer"
-                    href={safe(p.draft.link_url)}
-                  >
-                    Review project link ↗
-                  </a>
-                )}
-              </p>
-              {safe(p.draft.git_url) && (
-                <p>
-                  <a
-                    href={safe(p.draft.git_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Review Git repository ↗
-                  </a>
-                </p>
-              )}
-              <div className="workspace-actions">
-                <button
-                  disabled={busy}
-                  onClick={() => void decide(p, "approve")}
-                >
-                  Approve & publish
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => void decide(p, "reject")}
-                >
-                  Reject submission
-                </button>
-                {p.published && (
-                  <button
-                    disabled={busy}
-                    onClick={() => void decide(p, "unpublish")}
-                  >
-                    Remove live version
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
     </section>
   );
 }
