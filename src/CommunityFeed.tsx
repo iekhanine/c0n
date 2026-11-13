@@ -58,6 +58,7 @@ export default function CommunityFeed({
   const [category, setCategory] = useState("All projects"),
     [sort, setSort] = useState("featured");
   const [canManage, setCanManage] = useState(false);
+  const [categories, setCategories] = useState<string[]>(["Apps","Websites","Tools","Experiments"]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [community, setCommunity] = useState<Post[]>([]);
@@ -76,6 +77,11 @@ export default function CommunityFeed({
         const d = await r.json();
         if (!r.ok) throw Error(d.error);
         setCommunity(d.projects);
+        const categoryResponse = await fetch("/api/projects?action=categories", {signal:c.signal,cache:"no-store"});
+        if (categoryResponse.ok) {
+          const categoryData=await categoryResponse.json();
+          setCategories(categoryData.categories.filter((item:{active:boolean})=>item.active).map((item:{name:string})=>item.name));
+        }
         setCanManage(d.canManage === true);
         setProjectError("");
       } catch {
@@ -130,7 +136,7 @@ export default function CommunityFeed({
               <button type="button" className="con-filter-backdrop"
                 aria-label="Close project filters" onClick={() => setFilterOpen(false)}/>
               <div id="con-project-filter-options" className="con-filter-options" role="group" aria-label="Project categories">
-                {["All projects", "Apps", "Websites", "Tools", "Experiments"].map(c => (
+                {["All projects", ...new Set([...categories, ...community.map(p=>p.category).filter((c):c is string=>Boolean(c))])].map(c => (
                   <button type="button" key={c} aria-pressed={category === c}
                     onClick={() => { setCategory(c); setFilterOpen(false); }}>
                     <Copy id={"category." + c} />
