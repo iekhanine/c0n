@@ -6,6 +6,7 @@ import {
   GatewayIntentBits,
   ActivityType,
   MessageFlags,
+  PermissionFlagsBits,
   Partials,
 } from "discord.js";
 import { canonicalJson, signBridge } from "../shared/discord-signing.js";
@@ -91,6 +92,57 @@ async function main() {
           code: e.code || e.status || "operation",
         });
       });
+  const norm = value => [...String(value || "").toLowerCase()]
+    .map(char => Object.fromEntries([...("ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ")].map((x,i)=>[x,"abcdefghijklmnopqrstuvwxyz"[i]]))[char] || char)
+    .join("").replace(/[^a-z0-9]/g, "");
+  async function operationalChannel(name) {
+    await guild.channels.fetch();
+    const target = [...guild.channels.cache.values()]
+      .find(c => [0,5].includes(c.type) && norm(c.name) === name
+        && norm(c.parent?.name) === "administration");
+    if (!target || !target.isTextBased() || !target.send) return null;
+    const me = await guild.members.fetchMe();
+    if (!target.permissionsFor(me)?.has(["ViewChannel","SendMessages"])) return null;
+    return target;
+  }
+  async function memberNotice(member, action) {
+    if (member.user?.bot) return;
+    const target = await operationalChannel("joinsandleaves");
+    if (!target) { console.warn("C0N join/leave notice skipped: admin channel unavailable."); return; }
+    const name = (member.user?.username || member.displayName || "Unknown member").replace(/[`*_~|<>@]/g,"").slice(0,70);
+    const verb = action === "join" ? "joined" : "left";
+    const icon = action === "join" ? "🟢" : "🔴";
+    await target.send({
+      content: `${icon} **Member ${verb}** · ${name} (ID: \`${member.id}\`)${action === "join" ? ` · Members: ${member.guild.memberCount}` : ""}`,
+      allowedMentions: { parse: [] },
+    });
+  }
+  async function operationalStatus() {
+    let website = false, database = false, websiteLatency = null, databaseLatency = null;
+    const started = Date.now();
+    try {
+      const response = await fetch(SITE + "/", {
+        method: "GET", signal: AbortSignal.timeout(8000), redirect: "error",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      website = response.ok;
+      websiteLatency = Date.now() - started;
+    } catch {}
+    const dbStarted = Date.now();
+    try {
+      const check = await send({ kind: "health_check", guild_id: guildId });
+      database = check.database_connected === true;
+      databaseLatency = Date.now() - dbStarted;
+    } catch {}
+    const botReady = state === "ready" && client.isReady();
+    return [
+      "**C0N / SYSTEM STATUS**",
+      `${website ? "🟢" : "🔴"} Website: ${website ? "Online" : "Unavailable"}${websiteLatency === null ? "" : ` (${websiteLatency} ms)`}`,
+      `${database ? "🟢" : "🔴"} Database: ${database ? "Connected" : "Unavailable"}${databaseLatency === null ? "" : ` (${databaseLatency} ms)`}`,
+      `${botReady ? "🟢" : "🔴"} Discord bot: ${botReady ? "Online" : "Not ready"}`,
+      `Checked: <t:${Math.floor(Date.now()/1000)}:F>`,
+    ].join("\n");
+  }
   async function refreshWelcome() {
     if (!guild || !client.user) return;
     await guild.channels.fetch();
@@ -334,6 +386,16 @@ async function main() {
           },
         ],
       });
+      await guild.commands.create({
+        name: "cultofnixon",
+        description: "C0N server operations",
+        default_member_permissions: PermissionFlagsBits.ManageGuild.toString(),
+        options: [{
+          name: "status",
+          description: "Check website, database and Discord bot health",
+          type: 1,
+        }],
+      });
       client.user.setActivity("c0n.ivansays.com", {
         type: ActivityType.Watching,
       });
@@ -356,6 +418,7 @@ async function main() {
     if (m.guild.id === guildId) {
       memberChanges.set(m.id, { id: m.id, member: memberRecord(m) });
       run(() => assignNewMemberStatus(m));
+      run(() => memberNotice(m, "join"));
     }
   });
   client.on(Events.GuildMemberUpdate, (_, m) => {
@@ -365,6 +428,7 @@ async function main() {
   client.on(Events.GuildMemberRemove, (m) => {
     if (m.guild.id === guildId)
       memberChanges.set(m.id, { id: m.id, removed: true });
+    if (m.guild.id === guildId) run(() => memberNotice(m, "leave"));
   });
   const recordParticipation = (event) => {
     const id = `${event.type}:${event.event_id}:${event.user_id}`;
@@ -395,6 +459,22 @@ async function main() {
     }
   });
   client.on(Events.InteractionCreate, (i) => {
+    if (i.isChatInputCommand() && i.commandName === "cultofnixon" && i.guildId === guildId) {
+      run(async () => {
+        if (i.options.getSubcommand(false) !== "status") return;
+        const channel = await operationalChannel("systemstatus");
+        if (!channel || i.channelId !== channel.id) {
+          return i.reply({ content: "Use this command in #system-status.", flags: MessageFlags.Ephemeral });
+        }
+        if (!i.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+          return i.reply({ content: "Staff only.", flags: MessageFlags.Ephemeral });
+        }
+        await i.deferReply({ flags: MessageFlags.Ephemeral });
+        await i.editReply(await operationalStatus());
+      });
+      return;
+    }
+
     if (
       !i.isChatInputCommand() ||
       i.commandName !== "con" ||
