@@ -2,12 +2,14 @@ import ProjectCardMenu from "./ProjectCardMenu";
 import { StreamPage } from "./Social";
 import DiscordSidebar from "./DiscordSidebar";
 import { VoteButton, type Project } from "./ProjectPages";
-import { Editable, Copy, EditButton, useSiteCopy } from "./SiteText";
+import { Editable, Copy, useSiteCopy } from "./SiteText";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
   MessageCircle,
+  SlidersHorizontal,
+  ChevronDown,
 } from "lucide-react";
 type Post = {
   id: string;
@@ -47,6 +49,7 @@ export default function CommunityFeed({
   const [category, setCategory] = useState("All projects"),
     [sort, setSort] = useState("featured");
   const [canManage, setCanManage] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [community, setCommunity] = useState<Post[]>([]);
   const [projectError, setProjectError] = useState("");
@@ -84,8 +87,7 @@ export default function CommunityFeed({
   const ranked = [...real]
     .filter(
       (p) =>
-        (category === "All projects" || p.category === category) &&
-        true,
+        category === "All projects" || p.category === category,
     )
     .sort(
       (a, b) =>
@@ -105,45 +107,41 @@ export default function CommunityFeed({
   return (
     <>
       <section className="page-introduction">
-        <h1>
-          <Editable id={page + ".title"} />
-        </h1>
-        <p>
-          <Editable id={page + ".description"} />
-        </p>
+        <div className="con-page-intro-heading">
+          <h1><Editable id={page + ".title"} /></h1>
+          <div className="con-filter-menu">
+            <button type="button" className="con-filter-trigger"
+              aria-expanded={filterOpen} aria-controls="con-project-filter-options"
+              onClick={() => setFilterOpen(v => !v)}>
+              <SlidersHorizontal size={16} />
+              <span>{category === "All projects" ? "Filter" : category}</span>
+              <ChevronDown size={14} />
+            </button>
+            {filterOpen && <>
+              <button type="button" className="con-filter-backdrop"
+                aria-label="Close project filters" onClick={() => setFilterOpen(false)}/>
+              <div id="con-project-filter-options" className="con-filter-options" role="group" aria-label="Project categories">
+                {["All projects", "Apps", "Websites", "Tools", "Experiments"].map(c => (
+                  <button type="button" key={c} aria-pressed={category === c}
+                    onClick={() => { setCategory(c); setFilterOpen(false); }}>
+                    <Copy id={"category." + c} />
+                  </button>
+                ))}
+                {page !== "explore" && <label className="con-filter-sort">
+                  Sort by
+                  <select aria-label="Sort projects" value={sort} onChange={e => setSort(e.target.value)}>
+                    <option value="featured">{text("copy.5")}</option>
+                    <option value="newest">{text("copy.6")}</option>
+                  </select>
+                </label>}
+              </div>
+            </>}
+          </div>
+        </div>
+        <p><Editable id={page + ".description"} /></p>
       </section>
       <div className="reference-layout">
         <div className="reference-main">
-          <div className="showcase-toolbar" id="projects">
-            <div className="showcase-filters">
-              {["All projects", "Apps", "Websites", "Tools", "Experiments"].map(
-                (c) => (
-                  <span key={c}>
-                    <button
-                      aria-pressed={category === c}
-                      onClick={() => setCategory(c)}
-                    >
-                      <Copy id={"category." + c} />
-                    </button>
-                    <EditButton id={"category." + c} />
-                  </span>
-                ),
-              )}
-            </div>
-            {page !== "explore" && (
-              <>
-                <select
-                  aria-label="Sort projects"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value)}
-                >
-                  <option value="featured">{text("copy.5")}</option>
-                  <option value="newest">{text("copy.6")}</option>
-                </select>
-                <EditButton id={sort === "featured" ? "copy.5" : "copy.6"} />
-              </>
-            )}
-          </div>
           {projectError && (
             <p role="status" className="muted">
               {projectError}
