@@ -2297,3 +2297,11 @@ img.member-initial.project-author-avatar {
 .con-discord-section .server-activity .project-tag{font-size:12px;line-height:1.4;padding:5px 9px;max-width:none;}
 .con-discord-section .server-activity time{font-size:12px;line-height:1.4;}
 @media(max-width:600px){.con-discord-section .server-activity time{font-size:12px;}}
+
+/* Full-width creator inventory eliminates nested scrolling and gives work room to breathe. */
+.member-workspace .workspace-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;}
+.member-workspace .workspace-inventory-list{max-height:none;overflow:visible;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:12px;}
+.member-workspace .workspace-inventory{padding:24px;}
+.member-workspace .owned-project-card{min-height:92px;}
+.member-workspace .workspace-editor{width:100%;max-width:1050px;margin:0 auto;}
+@media(max-width:680px){.member-workspace .workspace-inventory-list{grid-template-columns:1fr;}}
