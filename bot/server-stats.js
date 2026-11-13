@@ -15,23 +15,19 @@ const request = async url => {
   return response.json();
 };
 export function statsEmbed(data, site, now = Date.now()) {
-  const weekly = Array.isArray(data.channels)
-    ? data.channels.reduce((sum, c) => sum + Number(c.messages || 0), 0) : null;
-  const active = Array.isArray(data.channels)
-    ? data.channels.filter(c => Number(c.messages) > 0).length : null;
   const fields = [
     { name: "👥 Members", value: fmt(data.memberCount), inline: true },
-    { name: "💬 Messages · 7 days", value: weekly === null ? "Unavailable" : fmt(weekly), inline: true },
-    { name: "📡 Active channels · 7 days", value: active === null ? "Unavailable" : fmt(active), inline: true },
+    { name: "💬 Messages · 7 days", value: data.weeklyMessages === null ? "Unavailable" : fmt(data.weeklyMessages), inline: true },
+    { name: "📡 Active channels · 7 days", value: data.weeklyActiveChannels === null ? "Unavailable" : fmt(data.weeklyActiveChannels), inline: true },
+    { name: "🗂️ Server channels", value: fmt(data.totalChannels), inline: true },
   ];
   if (data.projectCount !== null && data.projectCount !== undefined)
     fields.push({ name: "🛠️ Published creations", value: fmt(data.projectCount) + (data.projectCapped ? "+" : ""), inline: true });
   return new EmbedBuilder()
     .setTitle(MARKER)
-    .setDescription("The Compound, by the numbers. Updates automatically without new messages.")
     .addFields(fields)
     .setColor(0x96b56b)
-    .setFooter({ text: "Channel activity counts include only selected channels · Past 7 days" })
+    .setFooter({ text: "All channels · Observed human messages · Past 7 days" })
     .setTimestamp(new Date(now))
     .setURL(site);
 }
@@ -67,20 +63,22 @@ export async function ensureStatsChannel(guild, botId) {
   });
   return channel;
 }
-export async function updateStatsMessage(guild, botId, site) {
+export async function updateStatsMessage(guild, botId, site, loadStats) {
   const channel = await ensureStatsChannel(guild, botId);
   if (!channel?.messages) return false;
   const me = await guild.members.fetchMe();
   if (!channel.permissionsFor(me)?.has([P.ViewChannel, P.SendMessages, P.EmbedLinks, P.ReadMessageHistory]))
     throw Error("C0N bot lacks permission to publish server statistics.");
-  const [publicData, projects] = await Promise.all([
-    request(site + "/api/discord-bot?action=public").catch(() => null),
+  const [activity, projects] = await Promise.all([
+    loadStats().catch(() => null),
     request(site + "/api/projects").catch(() => null),
   ]);
   // No fabricated counts: if the API is down, say unavailable.
   const embed = statsEmbed({
     memberCount: guild.memberCount,
-    channels: publicData?.connected ? publicData.channels : null,
+    weeklyMessages: Number.isInteger(activity?.weekly_messages) ? activity.weekly_messages : null,
+    weeklyActiveChannels: Number.isInteger(activity?.weekly_active_channels) ? activity.weekly_active_channels : null,
+    totalChannels: guild.channels.cache.filter(c => [0, 2, 5, 13, 15, 16].includes(c.type)).size,
     projectCount: Array.isArray(projects?.projects) ? projects.projects.length : null,
     projectCapped: Array.isArray(projects?.projects) && projects.projects.length >= 200,
   }, site);
