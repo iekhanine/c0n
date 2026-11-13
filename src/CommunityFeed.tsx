@@ -253,12 +253,14 @@ export default function CommunityFeed({
               <Editable id="copy.9" />
             </p>
           )}
+          {page === "explore" && (
+            <section className="con-home-blog" aria-label="Community blog posts">
+              <StreamPage compact />
+            </section>
+          )}
         </div>
         <DiscordSidebar />
       </div>
-      {page === "explore" && <section className="con-home-blog" aria-label="Latest community blog posts">
-        <StreamPage compact />
-      </section>}
     </>
   );
 }
