@@ -85,6 +85,7 @@ type Reply = {
   id: string;
   user_id: string;
   author_name: string;
+  author_slug?: string;
   avatar_url: string;
   body: string;
   created_at: string;
@@ -785,7 +786,7 @@ function ThreadComment({
       <div className="con-thread-meta">
         <Avatar name={comment.author_name} url={comment.avatar_url}/>
         {comment.deleted_at ? <span className="con-thread-deleted">[deleted]</span> :
-          <a href={"/members/"+comment.user_id}>{comment.author_name}</a>}
+          <a href={"/c/"+(comment.author_slug || comment.user_id)}>{comment.author_name}</a>}
         <time dateTime={comment.created_at}>{new Date(comment.created_at).toLocaleString()}</time>
       </div>
       <p className="social-body">{comment.deleted_at ? "[deleted]" : comment.body}</p>
@@ -856,7 +857,7 @@ export function PostPage({ id }: { id: string }) {
         reply_id: replyId,
       });
       if (replyId) await load();
-      else window.location.assign(data?.post.community_slug ? "/c/" + data.post.community_slug : data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community");
+      else window.location.assign(data?.post.community_slug ? "/c/" + data.post.community_slug : data?.post.kind === "member" ? "/c/" + (data.post.author_slug || data.post.author_id) : "/community");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed.");
     } finally {
@@ -1259,7 +1260,7 @@ export function ProfilePage({ id }: { id: string }) {
           profile={p}
           onCancel={() => { setEditing(false); if (editRequested) window.location.assign("/c/" + (p.public_slug || id)); }}
           onSave={() => {
-            if (editRequested) window.history.replaceState(null, "", "/members/" + id);
+            if (editRequested) window.history.replaceState(null, "", "/c/" + (p.public_slug || id));
             setEditing(false);
             void load();
           }}
