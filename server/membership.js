@@ -42,6 +42,31 @@ async function ensureFounder(db, user) {
   const created = await db.query("INSERT INTO con.memberships(user_id,member_no,display_name,invite_allowance) VALUES($1,1,$2,10000) ON CONFLICT(user_id) DO NOTHING RETURNING member_no", [user.id, user.name]);
   if (created.rowCount) await db.query("SELECT setval(pg_get_serial_sequence('con.memberships','member_no'), GREATEST((SELECT max(member_no) FROM con.memberships),1),true)");
 }
+export async function hasActiveMembership(user, db = database()) {
+  if (!user) return false;
+  await setup(db);
+  await ensureFounder(db, user);
+  const {rows} = await db.query("SELECT active FROM con.memberships WHERE user_id=$1",[user.id]);
+  return rows[0]?.active === true;
+}
+export async function requireMembership(req, res) {
+  const session = await readSession(req);
+  if (!session?.user) {
+    json(res,401,{error:"An invitation and Discord sign-in are required."});
+    return false;
+  }
+  try {
+    if (!await hasActiveMembership(session.user)) {
+      json(res,403,{error:"C0N membership required. Redeem an invitation first."});
+      return false;
+    }
+    return true;
+  } catch(e) {
+    console.error("Membership gate unavailable",e.code||"");
+    json(res,503,{error:"Membership verification unavailable."});
+    return false;
+  }
+}
 async function body(req) {
   if (req.body && typeof req.body === "object") return req.body;
   let raw = ""; for await (const c of req) { raw += c; if (raw.length > 10000) fail(413,"Request too large"); }
