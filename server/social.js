@@ -488,6 +488,11 @@ export async function socialHandler(req, res, dbFactory = database) {
       );
       return json(res, 201, { id: postId });
     }
+    if (action === "points" && req.method === "GET") {
+      if(!user) throw new AppError(401,"Sign in to view points.");
+      const balance=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[user.id])).rows[0].points;
+      return json(res,200,{points:balance,reputation:Math.floor(Math.max(0,balance)/5)});
+    }
     const postId = id(url.searchParams.get("id") || b.id);
     const post = await getPost(db, postId, user?.id);
     if (action === "post" && req.method === "GET") {
@@ -541,11 +546,6 @@ export async function socialHandler(req, res, dbFactory = database) {
       await db.query("UPDATE con.post_replies SET parent_id=NULL WHERE post_id=$1 AND parent_id IS NOT NULL", [postId]);
       await db.query("DELETE FROM con.post_replies WHERE post_id=$1", [postId]);
       return json(res, 200, { ok: true });
-    }
-    if (action === "points" && req.method === "GET") {
-      if(!user) throw new AppError(401,"Sign in to view points.");
-      const balance=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[user.id])).rows[0].points;
-      return json(res,200,{points:balance,reputation:Math.floor(Math.max(0,balance)/5)});
     }
     if (action === "vote" && req.method === "PUT") {
       if (![-1,0,1].includes(b.value) || typeof b.value !== "number")
