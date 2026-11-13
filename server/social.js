@@ -263,29 +263,9 @@ export async function socialHandler(req, res, dbFactory = database) {
           [uid],
         )
       ).rows;
-      const transmissions = (
-        await db.query(
-          "SELECT id,author_id,published_snapshot,published_at FROM con.posts WHERE author_id=$1 AND kind='update' AND published_at IS NOT NULL AND published_snapshot IS NOT NULL ORDER BY published_at DESC LIMIT 100",
-          [uid],
-        )
-      ).rows.map((r) => ({
-        ...r.published_snapshot,
-        id: r.id,
-        author_id: r.author_id,
-        published_at: r.published_at,
-        kind: "update",
-      }));
-      const posts = await decorate(
-        db,
-        [...memberPosts, ...transmissions]
-          .sort(
-            (a, b) =>
-              Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
-              new Date(b.published_at) - new Date(a.published_at),
-          )
-          .slice(0, 100),
-        user?.id,
-      );
+      // Profile timelines contain only the member's short social posts.
+      // Admin/mod transmissions are editorial content, shown on the home/community feeds.
+      const posts = await decorate(db, memberPosts, user?.id);
       return json(res, 200, {
         profile,
         projects,
@@ -316,6 +296,20 @@ export async function socialHandler(req, res, dbFactory = database) {
         ],
       );
       return json(res, 200, { ok: true });
+    }
+    if (action === "top_member_posts" && req.method === "GET") {
+      // Public, bounded and text-only. Likes determine ranking, newest breaks ties.
+      const top = (await db.query(
+        `SELECT m.id,m.user_id AS author_id,p.name AS author_name,p.username,
+          m.body,m.created_at AS published_at,
+          (SELECT count(*)::int FROM con.post_likes l WHERE l.post_id=m.id) AS likes
+          FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id
+          ORDER BY likes DESC,m.created_at DESC LIMIT 5`,
+      )).rows;
+      const avatars = await authorAvatars(db, top.map(p => p.author_id));
+      return json(res, 200, { posts: top.map(p => ({
+        ...p, avatar_url: avatars.get(p.author_id) || "",
+      })) });
     }
     if (action === "feed" && req.method === "GET") {
       const before = url.searchParams.get("before");
