@@ -40,10 +40,6 @@
     {
       "source": "/inbox",
       "destination": "/index.html"
-    },
-    {
-      "source": "/out/:id",
-      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -75,6 +71,11 @@
     }
   ],
   "redirects": [
+    {
+      "source": "/out/:id",
+      "destination": "/posts/:id",
+      "permanent": false
+    },
     {
       "source": "/",
       "has": [
