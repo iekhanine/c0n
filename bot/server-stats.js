@@ -15,14 +15,17 @@ const request = async url => {
   return response.json();
 };
 export function statsEmbed(data, site, now = Date.now()) {
+  // Discord fixes embed width and font sizes. Full-width fields with bold
+  // values create a roomier dashboard without fake spacing characters.
+  const value = n => n === null || n === undefined ? "**Unavailable**" : `**${fmt(n)}**`;
   const fields = [
-    { name: "👥 Members", value: fmt(data.memberCount), inline: true },
-    { name: "💬 Messages · 7 days", value: data.weeklyMessages === null ? "Unavailable" : fmt(data.weeklyMessages), inline: true },
-    { name: "📡 Active channels · 7 days", value: data.weeklyActiveChannels === null ? "Unavailable" : fmt(data.weeklyActiveChannels), inline: true },
-    { name: "🗂️ Server channels", value: fmt(data.totalChannels), inline: true },
+    { name: "👥  SERVER MEMBERS", value: value(data.memberCount), inline: false },
+    { name: "💬  MESSAGES IN THE LAST 7 DAYS", value: value(data.weeklyMessages), inline: false },
+    { name: "📡  ACTIVE CHANNELS IN THE LAST 7 DAYS", value: value(data.weeklyActiveChannels), inline: false },
+    { name: "🗂️  TOTAL SERVER CHANNELS", value: value(data.totalChannels), inline: false },
   ];
   if (data.projectCount !== null && data.projectCount !== undefined)
-    fields.push({ name: "🛠️ Published creations", value: fmt(data.projectCount) + (data.projectCapped ? "+" : ""), inline: true });
+    fields.push({ name: "🛠️  PUBLISHED CREATIONS", value: `**${fmt(data.projectCount)}${data.projectCapped ? "+" : ""}**`, inline: false });
   return new EmbedBuilder()
     .setTitle(MARKER)
     .addFields(fields)
