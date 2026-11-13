@@ -1,3 +1,4 @@
+import { categories, addCategory, normalizeCategory } from "./project-categories.js";
 import { authorAvatars } from "./author-avatars.js";
 import {
   ensureProjectModeration,
@@ -30,7 +31,7 @@ export function projectInput(b) {
     ["link_url", 2000, false],
     ["image_url", 2000, false],
     ["git_url", 2000, false],
-    ["category", 30, true],
+    ["category", 39, true],
   ]) {
     if (
       typeof b[k] !== "string" ||
@@ -40,8 +41,7 @@ export function projectInput(b) {
       fail(400, "Enter a title, description and category within the limits.");
     result[k] = b[k].trim();
   }
-  if (!["Apps", "Websites", "Tools", "Experiments"].includes(result.category))
-    fail(400, "Choose a valid project category.");
+  result.category = normalizeCategory(result.category);
   for (const k of ["link_url", "image_url", "git_url"])
     if (result[k]) {
       let u;
@@ -122,6 +122,24 @@ export async function projectsHandler(
     }
     const b =
       typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    if (action === "categories") {
+      if (req.method === "GET") return json(res, 200, { categories: await categories(db) });
+      if (!user) fail(401, "Sign in to add a category.");
+      if (req.method === "POST") {
+        const name = await addCategory(db, b.name, user.id);
+        return json(res, 201, { name });
+      }
+      if (req.method === "PUT") {
+        const grant = await accessLookup(session);
+        if (!canReview(grant)) fail(403, "Only publishing administrators can manage categories.");
+        const name = normalizeCategory(b.name);
+        if (typeof b.active !== "boolean") fail(400, "Choose a category status.");
+        await categories(db);
+        const row = (await db.query("UPDATE con.project_categories SET active=$2 WHERE name=$1 RETURNING name", [name,b.active])).rows[0];
+        if (!row) fail(404, "Category not found.");
+        return json(res, 200, { ok:true });
+      }
+    }
     if (action === "seed" && req.method === "POST") {
       const grant = await accessLookup(session);
       if (!grant.owner)
@@ -222,6 +240,7 @@ export async function projectsHandler(
     }
     if (action === "save" && ["POST", "PUT"].includes(req.method)) {
       const draft = projectInput(b);
+      draft.category = await addCategory(db, draft.category, user.id);
       if (typeof b.submit !== "boolean") fail(400, "Choose draft or submit.");
       if (req.method === "POST") {
         const count = await db.query(
