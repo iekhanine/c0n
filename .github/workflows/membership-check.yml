@@ -17,4 +17,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: node --test tests/membership.test.js tests/membership-roles.test.js tests/codenames.test.js tests/social-reputation.test.js
+      - run: node --test tests/*.test.js
