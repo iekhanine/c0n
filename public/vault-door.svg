@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+<defs>
+<radialGradient id="room"><stop stop-color="#303a2b"/><stop offset=".54" stop-color="#141a14"/><stop offset="1" stop-color="#050807"/></radialGradient>
+<radialGradient id="steel" cx=".48" cy=".38" r=".68"><stop stop-color="#41433e"/><stop offset=".29" stop-color="#171d18"/><stop offset=".65" stop-color="#0a0d0b"/><stop offset=".86" stop-color="#32362f"/><stop offset="1" stop-color="#090b09"/></radialGradient>
+<linearGradient id="rim"><stop stop-color="#080a08"/><stop offset=".18" stop-color="#667060"/><stop offset=".24" stop-color="#161c16"/><stop offset=".63" stop-color="#353930"/><stop offset=".83" stop-color="#080a08"/><stop offset="1" stop-color="#495042"/></linearGradient>
+<linearGradient id="floor" x2="0" y2="1"><stop stop-color="#0a0d09"/><stop offset="1" stop-color="#020403"/></linearGradient>
+<radialGradient id="green"><stop stop-color="#d7f7a0" stop-opacity=".6"/><stop offset=".2" stop-color="#8bb952" stop-opacity=".17"/><stop offset="1" stop-color="#506b28" stop-opacity="0"/></radialGradient>
+<filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".45" numOctaves="3" seed="9" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".13"/></feComponentTransfer></filter>
+<filter id="glow"><feGaussianBlur stdDeviation="14"/></filter>
+<pattern id="plates" width="120" height="170" patternUnits="userSpaceOnUse"><path d="M0 0V170M0 0H120" stroke="#899480" stroke-opacity=".12" stroke-width="2"/><path d="M4 4V166" stroke="#000" opacity=".75"/></pattern>
+<g id="bolt"><circle r="12" fill="#090b09" stroke="#4d5449" stroke-width="4"/><circle r="5" fill="#20271f" stroke="#050805" stroke-width="2"/><path d="M-4-4 4 4" stroke="#647059" stroke-opacity=".5" stroke-width="2"/></g>
+</defs>
+<rect width="1920" height="1080" fill="url(#room)"/>
+<rect width="1920" height="1080" fill="url(#plates)"/>
+<path d="M0 0H220L320 1080H0Z" fill="#0c100e"/><path d="M1920 0H1700L1630 1080H1920Z" fill="#0b100b"/>
+<g stroke="#778b70" stroke-opacity=".25" fill="none" stroke-width="6"><path d="M60 0V920M91 0V920M1780 0V820M1810 0V840"/><path d="M0 945H1920"/></g>
+<circle cx="970" cy="525" r="758" fill="#000" opacity=".65" filter="url(#glow)"/>
+<circle cx="970" cy="525" r="741" fill="url(#rim)" stroke="#5a6256" stroke-width="17"/>
+<circle cx="970" cy="525" r="703" fill="url(#steel)" stroke="#0b0e0c" stroke-width="36"/>
+<circle cx="970" cy="525" r="650" fill="none" stroke="#5a6254" stroke-opacity=".38" stroke-width="8"/>
+<circle cx="970" cy="525" r="614" fill="none" stroke="#080b08" stroke-width="12"/>
+<circle cx="970" cy="525" r="582" fill="none" stroke="#626a5b" stroke-opacity=".2" stroke-width="4"/>
+<g transform="translate(970 525)">
+<g stroke="#3e4939" stroke-width="30" stroke-linecap="round">
+<path d="M0-355V-173M0 355V173M-355 0H-173M355 0H173M-251-251l122 122M251 251 129 129M251-251 129-129M-251 251l122-122"/>
+</g>
+<g fill="none" stroke="#080b09"><circle r="258" stroke-width="75"/><circle r="213" stroke="#50594a" stroke-width="7"/><circle r="175" stroke="#0c0f0c" stroke-width="39"/><circle r="99" stroke="#454d40" stroke-width="8"/></g>
+<circle r="74" fill="#111610" stroke="#525c4e" stroke-width="21"/><circle r="37" fill="#040604" stroke="#424c3e" stroke-width="8"/>
+</g>
+<g fill="#050806" stroke="#4f5949" stroke-width="4">
+<rect x="234" y="175" width="170" height="725" rx="26"/><rect x="244" y="190" width="37" height="685" rx="12" fill="#283123"/>
+<path d="M200 225H550L610 290V730L540 784H200Z" fill="#161c17" stroke="#505a4a" stroke-width="9"/>
+<path d="M215 246H545L575 290V720L540 750H215" fill="none" stroke="#7b9070" stroke-opacity=".3"/>
+</g>
+<g><use href="#bolt" transform="translate(1688 525)"/><use href="#bolt" transform="translate(1664 711)"/><use href="#bolt" transform="translate(1592 884)"/><use href="#bolt" transform="translate(1478 1033)"/><use href="#bolt" transform="translate(1329 1147)"/><use href="#bolt" transform="translate(1156 1219)"/><use href="#bolt" transform="translate(970 1243)"/><use href="#bolt" transform="translate(784 1219)"/><use href="#bolt" transform="translate(611 1147)"/><use href="#bolt" transform="translate(462 1033)"/><use href="#bolt" transform="translate(348 884)"/><use href="#bolt" transform="translate(276 711)"/><use href="#bolt" transform="translate(252 525)"/><use href="#bolt" transform="translate(276 339)"/><use href="#bolt" transform="translate(348 166)"/><use href="#bolt" transform="translate(462 17)"/><use href="#bolt" transform="translate(611 -97)"/><use href="#bolt" transform="translate(784 -169)"/><use href="#bolt" transform="translate(970 -193)"/><use href="#bolt" transform="translate(1156 -169)"/><use href="#bolt" transform="translate(1329 -97)"/><use href="#bolt" transform="translate(1478 17)"/><use href="#bolt" transform="translate(1592 166)"/><use href="#bolt" transform="translate(1664 339)"/></g>
+<g><use href="#bolt" transform="translate(1241 525) scale(.7)"/><use href="#bolt" transform="translate(1205 661) scale(.7)"/><use href="#bolt" transform="translate(1106 760) scale(.7)"/><use href="#bolt" transform="translate(970 796) scale(.7)"/><use href="#bolt" transform="translate(835 760) scale(.7)"/><use href="#bolt" transform="translate(735 661) scale(.7)"/><use href="#bolt" transform="translate(699 525) scale(.7)"/><use href="#bolt" transform="translate(735 390) scale(.7)"/><use href="#bolt" transform="translate(834 290) scale(.7)"/><use href="#bolt" transform="translate(970 254) scale(.7)"/><use href="#bolt" transform="translate(1106 290) scale(.7)"/><use href="#bolt" transform="translate(1205 389) scale(.7)"/></g>
+<rect x="72" y="115" width="80" height="223" rx="28" fill="#070a07" stroke="#485b37" stroke-width="8"/><rect x="84" y="132" width="56" height="184" rx="20" fill="#a9ed69" opacity=".36" filter="url(#glow)"/><rect x="95" y="137" width="34" height="174" rx="13" fill="#abc77e" opacity=".75"/><path d="M88 161H135M88 199H135M88 236H135M88 273H135" stroke="#1e2b1a" stroke-width="10"/>
+<ellipse cx="126" cy="280" rx="235" ry="465" fill="url(#green)" opacity=".6"/>
+<ellipse cx="1800" cy="210" rx="300" ry="400" fill="url(#green)" opacity=".17"/>
+<path d="M0 1020H1920V1080H0Z" fill="url(#floor)"/>
+<rect width="1920" height="1080" filter="url(#grain)" opacity=".35"/>
+<rect width="1920" height="1080" fill="#000" opacity=".26"/>
+</svg>
