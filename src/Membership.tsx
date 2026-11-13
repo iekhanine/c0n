@@ -12,6 +12,7 @@ async function request<T>(action:string,method="GET",data?:unknown):Promise<T>{
 const pad=(n:number)=>String(n).padStart(6,"0");
 export function MembershipPage({merch=false}:{merch?:boolean}){
   const [signedIn,setSignedIn]=useState<boolean|null>(null);
+  const [isOwner,setIsOwner]=useState(false);
   const [member,setMember]=useState<Member|null>(null);
   const [counts,setCounts]=useState<{issued:number;redeemed:number;unused:number}|null>(null);
   const [invites,setInvites]=useState<Invite[]>([]);
@@ -27,6 +28,7 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
   async function refresh(){
     const account=await fetch("/api/auth/session",{cache:"no-store"}).then(x=>x.json());
     setSignedIn(!!account.user);
+    setIsOwner(account.owner === true);
     if(!account.user)return;
     const result=await request<{member:Member|null;counts?:{issued:number;redeemed:number;unused:number}}>("me");
     setMember(result.member);setCounts(result.counts||null);
@@ -46,6 +48,17 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
     e.preventDefault();setBusy(true);setError("");setIssued([]);
     try{const result=await request<{issued:Issued[]}>("issue","POST",{count,city,state,zip});setIssued(result.issued);setNotice("Invitations created. Copy or share the links before leaving this page.");await refresh();}
     catch(e){setError((e as Error).message);}finally{setBusy(false);}
+  }
+  async function createTestInvitation(){
+    setBusy(true);setError("");setIssued([]);
+    try {
+      // This is a REAL single-use invitation, never a public bypass.
+      const result=await request<{issued:Issued[]}>("issue","POST",{count:1,city:"Test",state:"QA",zip:""});
+      setIssued(result.issued);
+      setNotice("Test invitation created. Copy it now, then redeem it with a DIFFERENT Discord account in a private window.");
+      await refresh();
+    } catch(e) {setError((e as Error).message);}
+    finally {setBusy(false);}
   }
   async function revoke(serial:string){
     if(!window.confirm("Revoke this unused invitation?"))return;
@@ -83,6 +96,7 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
           <p className="con-member-muted">This is your digital C0N card. Apple Wallet and Samsung Wallet passes will be added after issuer enrollment. A membership number alone is not proof of identity.</p>
         </section>
         {member.active&&<section className="con-member-panel"><div className="con-member-section-head"><div><span className="con-member-eyebrow">DISTRIBUTION</span><h2>Issue digital invitations</h2></div><Gift/></div><p>Each one-use link connects a new member to your account. Your allowance is {member.invite_allowance} issued invitations.</p>
+          {isOwner && <button type="button" className="con-test-invite" disabled={busy} onClick={()=>void createTestInvitation()}>Generate one-use test code</button>}
           <form className="con-member-form" onSubmit={issue}>
             <div className="con-invite-fields"><label>Number of invitations<input type="number" min={1} max={10} value={count} onChange={e=>setCount(Number(e.target.value))}/></label><label>City (optional)<input value={city} maxLength={64} onChange={e=>setCity(e.target.value)} placeholder="Racine"/></label><label>State (optional)<input value={state} maxLength={24} onChange={e=>setState(e.target.value)} placeholder="WI"/></label><label>ZIP (optional)<input value={zip} maxLength={12} onChange={e=>setZip(e.target.value)} placeholder="53403"/></label></div>
             <button disabled={busy}>Generate invitations</button>
