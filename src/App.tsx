@@ -115,7 +115,7 @@ export default function App() {
                   : "missing";
   if (account === null || (account.user && membershipAccess === null))
     return <div className="showcase con-locked-shell"><div className="con-lock-checking"><img src="/con-logo.png" alt="C0N"/><p>Checking access to The Compound…</p></div></div>;
-  if (membershipAccess !== true && page !== "membership")
+  if (membershipAccess !== true)
     return <div className="showcase con-locked-shell"><MembershipPage /></div>;
   return (
     <SiteTextProvider owner={account?.owner === true}>
