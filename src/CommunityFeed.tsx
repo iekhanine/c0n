@@ -117,7 +117,7 @@ export default function CommunityFeed({
     );
   const projects =
     page === "explore"
-      ? ranked.filter((p) => !p.homepage_hidden).slice(0, 15)
+      ? ranked.filter((p) => !p.homepage_hidden).slice(0, 6)
       : ranked;
   return (
     <>
@@ -162,6 +162,10 @@ export default function CommunityFeed({
               {projectError}
             </p>
           )}
+          {page === "explore" && <div className="con-featured-heading">
+            <div><span className="con-featured-eyebrow">FROM THE COMMUNITY</span><h2>Featured projects</h2></div>
+            <a href="/projects">View all projects →</a>
+          </div>}
           <section className="showcase-grid" aria-label="Community projects">
             {projects.map((p) => (
               <article
