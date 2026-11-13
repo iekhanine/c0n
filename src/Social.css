@@ -805,3 +805,5 @@ html { scrollbar-gutter:stable; }
   .con-submit-dialog {width:calc(100vw - 16px);max-height:92dvh;}
   .con-submit-dialog .con-submit-form {max-height:92dvh;padding:14px 16px;}
 }
+
+.con-reputation-row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.con-reputation-row span{font-size:12px;color:#d4f1b0;background:#23351e;border:1px solid #536d40;border-radius:99px;padding:5px 10px}.social-discord-privacy{display:flex!important;align-items:center;gap:9px;margin:12px 0}.social-discord-privacy input{width:auto!important}.social-identity-note{color:#a9b9a2;font-size:12px}

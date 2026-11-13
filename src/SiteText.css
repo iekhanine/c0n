@@ -167,3 +167,7 @@
 :is(h1, h2, h3, h4, p, a, button, span, footer):has(> .site-copy-hidden) {
   display: none !important;
 }
+
+/* Founder-only click-to-edit affordance for site-authored copy. */
+body.con-inline-editing [data-con-editor-key]:hover{outline:1px dashed #b6e47c;outline-offset:3px;cursor:text!important;background-color:rgba(100,156,54,.09)}
+body.con-inline-editing [data-con-editor-key]:focus-visible{outline:2px solid #b6e47c}

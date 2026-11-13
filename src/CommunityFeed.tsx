@@ -24,6 +24,7 @@ type Post = {
   avatar_url?: string;
   published_at: string;
   owner_id: string;
+  owner_slug?: string;
   homepage_pinned?: boolean;
   homepage_hidden?: boolean;
   category?: string;
@@ -117,7 +118,7 @@ export default function CommunityFeed({
     );
   const projects =
     page === "explore"
-      ? ranked.filter((p) => !p.homepage_hidden).slice(0, 6)
+      ? ranked.filter((p) => !p.homepage_hidden).slice(0, 15)
       : ranked;
   return (
     <>
@@ -217,7 +218,7 @@ export default function CommunityFeed({
                     <ProjectAuthorAvatar name={p.author_name} url={p.avatar_url} />
                     <a
                       className="member-profile-link"
-                      href={`/members/${p.owner_id}`}
+                      href={`/c/${p.owner_slug || p.owner_id}`}
                     >
                       <strong>@{p.author_name}</strong>
                     </a>

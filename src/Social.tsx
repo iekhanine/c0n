@@ -18,6 +18,7 @@ export type SocialPost = {
   id: string;
   author_id: string;
   author_name: string;
+  author_slug?: string;
   avatar_url?: string;
   title: string;
   body: string;
@@ -63,6 +64,12 @@ type Profile = {
   user_id: string;
   name: string;
   username: string;
+  codename?: string;
+  public_slug?: string;
+  points?: number;
+  reputation?: number;
+  public_display_name?: string;
+  show_discord_name?: boolean;
   avatar_url: string;
   cover_url: string;
   headline: string;
@@ -78,6 +85,7 @@ type Reply = {
   id: string;
   user_id: string;
   author_name: string;
+  author_slug?: string;
   avatar_url: string;
   body: string;
   created_at: string;
@@ -234,7 +242,7 @@ export function PostCard({
         </div>
       )}
       <header>
-        <a className="social-author" href={"/members/" + post.author_id}>
+        <a className="social-author" href={"/c/" + (post.author_slug || post.author_id)}>
           <Avatar name={post.author_name} url={post.avatar_url} />
           <span>
             <strong>{post.author_name}</strong>
@@ -546,7 +554,7 @@ function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
         <time dateTime={post.published_at} title={Number.isNaN(posted.valueOf()) ? undefined : posted.toLocaleString()}>
           {Number.isNaN(posted.valueOf()) ? "Posted" : posted.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
         </time>
-        <span>by <a href={`/members/${post.author_id}`}>{post.author_name}</a></span>
+        <span>by <a href={`/c/${post.author_slug || post.author_id}`}>{post.author_name}</a></span>
         <span>to <a href={`/c/${post.community_slug || "community"}`} className="con-feed-community">c/{post.community_slug || "community"}</a></span>
         <a className="con-feed-comments" href={`/posts/${post.id}#replies`}>{post.replies || 0} comments</a>
       </div>
@@ -571,7 +579,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
   const [link,setLink] = useState("");
   const [image,setImage] = useState("");
   const [video,setVideo] = useState("");
-  const [postType,setPostType] = useState<"text"|"link">("text");
+  const [postType,setPostType] = useState<"text"|"link">("link");
   const [notifyReplies,setNotifyReplies] = useState(true);
   const [uploading,setUploading] = useState(false);
   const postDialog = useRef<HTMLDialogElement>(null);
@@ -778,7 +786,7 @@ function ThreadComment({
       <div className="con-thread-meta">
         <Avatar name={comment.author_name} url={comment.avatar_url}/>
         {comment.deleted_at ? <span className="con-thread-deleted">[deleted]</span> :
-          <a href={"/members/"+comment.user_id}>{comment.author_name}</a>}
+          <a href={"/c/"+(comment.author_slug || comment.user_id)}>{comment.author_name}</a>}
         <time dateTime={comment.created_at}>{new Date(comment.created_at).toLocaleString()}</time>
       </div>
       <p className="social-body">{comment.deleted_at ? "[deleted]" : comment.body}</p>
@@ -849,7 +857,7 @@ export function PostPage({ id }: { id: string }) {
         reply_id: replyId,
       });
       if (replyId) await load();
-      else window.location.assign(data?.post.community_slug ? "/c/" + data.post.community_slug : data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community");
+      else window.location.assign(data?.post.community_slug ? "/c/" + data.post.community_slug : data?.post.kind === "member" ? "/c/" + (data.post.author_slug || data.post.author_id) : "/community");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed.");
     } finally {
@@ -989,7 +997,7 @@ function ProfileEditor({
       <fieldset disabled={busy || uploading}>
         {(
           [
-            ["name", "Display name", 80],
+            ["public_display_name", "Display name (optional; codename is the default)", 80],
             ["headline", "Headline / what you do", 160],
             ["location", "Location (optional)", 100],
           ] as const
@@ -997,13 +1005,19 @@ function ProfileEditor({
           <label key={k}>
             {label}
             <input
-              required={k === "name"}
+              required={false}
               maxLength={max}
-              value={draft[k]}
+              value={draft[k] ?? ""}
               onChange={(e) => change(k, e.target.value)}
             />
           </label>
         ))}
+        <label className="social-discord-privacy">
+          <input type="checkbox" checked={draft.show_discord_name === true}
+            onChange={e=>change("show_discord_name",e.target.checked)}/>
+          Show my Discord username publicly on my profile
+        </label>
+        <p className="social-identity-note">Your assigned codename stays unique. Your chosen display name is optional.</p>
         <div className="portfolio-editor-section">
           <h3>What do you create?</h3>
           <p>Choose up to six disciplines. These make you discoverable in the member directory, whether you're a coder, a concert photographer, a bladesmith or something else entirely.</p>
@@ -1215,6 +1229,8 @@ export function ProfilePage({ id }: { id: string }) {
     try {
       const result = await socialApi<{profile: Profile; posts: SocialPost[]; projects: {id: string; published: {title:string;body:string;image_url:string}}[]; own:boolean; can_blog:boolean}>("profile&id=" + encodeURIComponent(id));
       setData(result);
+      if(result.profile.public_slug && window.location.pathname.startsWith("/members/"))
+        window.history.replaceState(null,"","/c/"+result.profile.public_slug+window.location.search);
       setTab(previous => previous === "posts" && result.profile.portfolio?.length ? "portfolio" : previous);
       setError("");
     } catch (e) {
@@ -1242,9 +1258,9 @@ export function ProfilePage({ id }: { id: string }) {
       {(editing || (editRequested && data.own)) ? (
         <ProfileEditor
           profile={p}
-          onCancel={() => { setEditing(false); if (editRequested) window.location.assign("/members/" + id); }}
+          onCancel={() => { setEditing(false); if (editRequested) window.location.assign("/c/" + (p.public_slug || id)); }}
           onSave={() => {
-            if (editRequested) window.history.replaceState(null, "", "/members/" + id);
+            if (editRequested) window.history.replaceState(null, "", "/c/" + (p.public_slug || id));
             setEditing(false);
             void load();
           }}
@@ -1259,7 +1275,8 @@ export function ProfilePage({ id }: { id: string }) {
           <div className="social-profile-info">
             <Avatar name={p.name} url={p.avatar_url} />
             <h1>{p.name}</h1>
-            {p.username && <p className="social-handle">@{p.username}</p>}
+            {p.username && p.show_discord_name && <p className="social-handle">@{p.username}</p>}{p.codename && p.name!==p.codename && <p className="social-handle">{p.codename}</p>}
+            <div className="con-reputation-row"><span>{p.points||0} reward points</span><span>{p.reputation||0} reputation</span></div>
             <h2>{p.headline}</h2>
             <p className="social-body">{p.bio}</p>
             {p.location && <p className="social-handle">{p.location}</p>}
@@ -1418,12 +1435,12 @@ export function MemberDirectory() {
           .map((p) => (
             <a
               className="social-member"
-              href={"/members/" + p.user_id}
+              href={"/c/" + (p.public_slug || p.user_id)}
               key={p.user_id}
             >
               <Avatar name={p.name} url={p.avatar_url} />
               <h2>{p.name}</h2>
-              <small>@{p.username}</small>
+              {p.username && <small>@{p.username}</small>}
               <p>{p.headline}</p>
               {!!p.disciplines?.length && <div className="member-discipline-tags">
                 {p.disciplines.slice(0, 3).map(d => <small key={d}>{d}</small>)}

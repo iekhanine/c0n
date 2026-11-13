@@ -1,4 +1,5 @@
 import { authorAvatars } from "./author-avatars.js";
+import { ensureMembershipSchema } from "./membership.js";
 import { randomUUID } from "node:crypto";
 import { database } from "./db.js";
 import { json, ORIGIN, readSession, accessFor } from "./auth.js";
@@ -12,6 +13,12 @@ export const socialSchema = [
   "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS disciplines jsonb NOT NULL DEFAULT '[]'::jsonb",
   "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS portfolio jsonb NOT NULL DEFAULT '[]'::jsonb",
   "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS available_for_work boolean NOT NULL DEFAULT false",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS public_display_name text NOT NULL DEFAULT ''",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS show_discord_name boolean NOT NULL DEFAULT false",
+  "CREATE TABLE IF NOT EXISTS con.reputation_ledger (id uuid PRIMARY KEY, user_id text NOT NULL, post_id uuid NOT NULL, voter_id text NOT NULL, points integer NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
+  "CREATE INDEX IF NOT EXISTS con_rep_user ON con.reputation_ledger(user_id)",
+  "ALTER TABLE con.reputation_ledger ENABLE ROW LEVEL SECURITY",
+  "REVOKE ALL ON con.reputation_ledger FROM PUBLIC,anon,authenticated",
   "CREATE INDEX IF NOT EXISTS con_member_posts_user ON con.member_posts(user_id,created_at DESC)",
   "CREATE TABLE IF NOT EXISTS con.post_likes(post_id uuid NOT NULL, user_id text NOT NULL, PRIMARY KEY(post_id,user_id))",
   "CREATE TABLE IF NOT EXISTS con.post_replies(id uuid PRIMARY KEY, post_id uuid NOT NULL,user_id text NOT NULL REFERENCES con.profiles(user_id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
@@ -35,6 +42,7 @@ export const socialSchema = [
 ]; 
 const ready = new WeakMap();
 export async function ensureSocial(db) {
+  await ensureMembershipSchema(db);
   if (!ready.has(db))
     ready.set(
       db,
@@ -100,6 +108,8 @@ export function profileInput(b) {
     throw new AppError(400, "Choose up to six creative disciplines.");
   return {
     name: text(b.name, 80, true),
+    public_display_name: text(b.public_display_name ?? "", 80),
+    show_discord_name: b.show_discord_name === true,
     headline: text(b.headline, 160),
     bio: text(b.bio, 3000),
     location: text(b.location, 100),
@@ -149,7 +159,7 @@ async function registerProfile(db, u) {
     [u.id, u.name, u.username || u.name, discordAvatar(u)],
   );
 }
-const memberSelect = `SELECT m.id,m.user_id AS author_id,p.name AS author_name,p.username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id`;
+const memberSelect = `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id`;
 async function decorate(db, posts, viewer) {
   if (!posts.length) return [];
   const ids = posts.map((p) => p.id);
@@ -307,12 +317,16 @@ export async function socialHandler(req, res, dbFactory = database) {
       return json(res, 200, {
         profiles: (
           await db.query(
-            "SELECT user_id,name,username,avatar_url,headline,bio,location,disciplines,available_for_work,portfolio FROM con.profiles ORDER BY updated_at DESC LIMIT 200",
+            `SELECT p.user_id, COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,p.headline,p.bio,p.location,p.disciplines,p.available_for_work,p.portfolio,ms.public_slug FROM con.profiles p LEFT JOIN con.memberships ms ON ms.user_id=p.user_id WHERE (ms.active=true OR ms.user_id IS NULL) ORDER BY p.updated_at DESC LIMIT 200`,
           )
         ).rows,
       });
     if (action === "profile" && req.method === "GET") {
-      const uid = userId(url.searchParams.get("id") || user?.id);
+      const requested=url.searchParams.get("id") || user?.id;
+      const uid = typeof requested==="string" && /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(requested)
+        ? (await db.query("SELECT user_id FROM con.memberships WHERE public_slug=$1",[requested])).rows[0]?.user_id
+        : userId(requested);
+      if(!uid) throw new AppError(404,"Member not found.");
       let profile = (
         await db.query("SELECT * FROM con.profiles WHERE user_id=$1", [uid])
       ).rows[0];
@@ -347,6 +361,11 @@ export async function socialHandler(req, res, dbFactory = database) {
           disciplines: [], portfolio: [], available_for_work: false,
         };
       }
+      const identity=(await db.query("SELECT codename,public_slug FROM con.memberships WHERE user_id=$1",[uid])).rows[0];
+      const earned=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[uid])).rows[0]?.points||0;
+      profile={...profile,public_slug:identity?.public_slug || "",codename:identity?.codename || "",points:earned,reputation:Math.floor(Math.max(0,earned)/5),
+        name:profile.public_display_name || identity?.codename || profile.name || "Member",
+        username:profile.show_discord_name ? profile.username : ""};
       const projects = profile.show_projects
         ? (
             await db.query(
@@ -378,7 +397,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "profile" && req.method === "PUT") {
       const v = profileInput(b);
       await db.query(
-        "UPDATE con.profiles SET name=$2,headline=$3,bio=$4,location=$5,avatar_url=$6,cover_url=$7,links=$8::jsonb,show_projects=$9,disciplines=$10::jsonb,portfolio=$11::jsonb,available_for_work=$12,updated_at=now() WHERE user_id=$1",
+        "UPDATE con.profiles SET name=$2,headline=$3,bio=$4,location=$5,avatar_url=$6,cover_url=$7,links=$8::jsonb,show_projects=$9,disciplines=$10::jsonb,portfolio=$11::jsonb,available_for_work=$12,public_display_name=$13,show_discord_name=$14,updated_at=now() WHERE user_id=$1",
         [
           user.id,
           v.name,
@@ -392,6 +411,8 @@ export async function socialHandler(req, res, dbFactory = database) {
           JSON.stringify(v.disciplines),
           JSON.stringify(v.portfolio),
           v.available_for_work,
+          v.public_display_name,
+          v.show_discord_name,
         ],
       );
       return json(res, 200, { ok: true });
@@ -399,10 +420,10 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "top_member_posts" && req.method === "GET") {
       // Public, bounded and text-only. Likes determine ranking, newest breaks ties.
       const top = (await db.query(
-        `SELECT m.id,m.user_id AS author_id,p.name AS author_name,p.username,
+        `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,
           m.body,m.created_at AS published_at,
           (SELECT count(*)::int FROM con.post_likes l WHERE l.post_id=m.id) AS likes
-          FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id
+          FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id
           ORDER BY likes DESC,m.created_at DESC LIMIT 5`,
       )).rows;
       const avatars = await authorAvatars(db, top.map(p => p.author_id));
@@ -418,7 +439,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       if (slug) {
         communitySlug(slug);
         const exists = await db.query("SELECT 1 FROM con.communities WHERE slug=$1", [slug]);
-        if (!exists.rowCount) throw new AppError(404, "Community not found.");
+        if (!exists.rows.length) throw new AppError(404, "Community not found.");
       }
       const updates = slug && slug !== "community" ? [] : (
         await db.query(
@@ -439,8 +460,10 @@ export async function socialHandler(req, res, dbFactory = database) {
       )).rows;
       const merged = [...updates, ...memberRows].sort((a,b) => Date.parse(b.published_at)-Date.parse(a.published_at));
       const page = merged.slice(0, 50);
+      const decorated = await decorate(db, page, user?.id);
+      decorated.sort((a,b)=>(b.score||0)-(a.score||0)||Date.parse(b.published_at)-Date.parse(a.published_at));
       return json(res, 200, {
-        posts: await decorate(db, page, user?.id),
+        posts: decorated,
         next: merged.length > 50 ? page.at(-1).published_at : null,
       });
     }
@@ -448,7 +471,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       const community = b.community_slug ? communitySlug(b.community_slug) : null;
       if (community) {
         const exists = await db.query("SELECT 1 FROM con.communities WHERE slug=$1", [community]);
-        if (!exists.rowCount) throw new AppError(404, "Community not found.");
+        if (!exists.rows.length) throw new AppError(404, "Community not found.");
         if (!text(b.title, 200, true)) throw new AppError(400, "Community posts need a title.");
       }
       const v = memberPostInput(
@@ -468,12 +491,17 @@ export async function socialHandler(req, res, dbFactory = database) {
       );
       return json(res, 201, { id: postId });
     }
+    if (action === "points" && req.method === "GET") {
+      if(!user) throw new AppError(401,"Sign in to view points.");
+      const balance=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[user.id])).rows[0].points;
+      return json(res,200,{points:balance,reputation:Math.floor(Math.max(0,balance)/5)});
+    }
     const postId = id(url.searchParams.get("id") || b.id);
     const post = await getPost(db, postId, user?.id);
     if (action === "post" && req.method === "GET") {
       const replies = (
         await db.query(
-          "SELECT r.*,p.name AS author_name,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
+          "SELECT r.*,COALESCE(NULLIF(p.public_display_name,''),ms.codename,p.name) AS author_name,ms.public_slug AS author_slug,p.avatar_url FROM con.post_replies r JOIN con.profiles p ON p.user_id=r.user_id LEFT JOIN con.memberships ms ON ms.user_id=r.user_id WHERE r.post_id=$1 ORDER BY r.created_at LIMIT 300",
           [postId],
         )
       ).rows;
@@ -525,16 +553,25 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "vote" && req.method === "PUT") {
       if (![-1,0,1].includes(b.value) || typeof b.value !== "number")
         throw new AppError(400, "Invalid vote.");
-      if (b.value === 0) {
-        await db.query("DELETE FROM con.post_votes WHERE post_id=$1 AND user_id=$2", [postId,user.id]);
-      } else {
-        await db.query(
-          "INSERT INTO con.post_votes(post_id,user_id,value)VALUES($1,$2,$3) ON CONFLICT(post_id,user_id) DO UPDATE SET value=EXCLUDED.value",
-          [postId,user.id,b.value],
-        );
-      }
-      const score = (await db.query("SELECT coalesce(sum(value),0)::int AS score FROM con.post_votes WHERE post_id=$1",[postId])).rows[0].score;
-      return json(res, 200, { score, vote: b.value });
+      const client=await db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[postId+":"+user.id]);
+        const previous=(await client.query("SELECT value FROM con.post_votes WHERE post_id=$1 AND user_id=$2",[postId,user.id])).rows[0]?.value || 0;
+        if (b.value === 0) {
+          await client.query("DELETE FROM con.post_votes WHERE post_id=$1 AND user_id=$2",[postId,user.id]);
+        } else {
+          await client.query("INSERT INTO con.post_votes(post_id,user_id,value)VALUES($1,$2,$3) ON CONFLICT(post_id,user_id) DO UPDATE SET value=EXCLUDED.value",[postId,user.id,b.value]);
+        }
+        // Reputation is earned by other members' upvotes, not by self-voting.
+        const author=(await client.query("SELECT user_id FROM con.member_posts WHERE id=$1",[postId])).rows[0]?.user_id;
+        const delta=(Number(b.value===1)-Number(previous===1));
+        if (author && author!==user.id && delta)
+          await client.query("INSERT INTO con.reputation_ledger(id,user_id,post_id,voter_id,points)VALUES($1,$2,$3,$4,$5)",[randomUUID(),author,postId,user.id,delta]);
+        const score=(await client.query("SELECT coalesce(sum(value),0)::int AS score FROM con.post_votes WHERE post_id=$1",[postId])).rows[0].score;
+        await client.query("COMMIT");
+        return json(res,200,{score,vote:b.value});
+      } catch(e){await client.query("ROLLBACK");throw e;} finally{client.release();}
     }
     if (action === "like" && req.method === "PUT") {
       if (typeof b.liked !== "boolean")
@@ -574,17 +611,18 @@ export async function socialHandler(req, res, dbFactory = database) {
         "INSERT INTO con.post_replies(id,post_id,user_id,body,parent_id)VALUES($1,$2,$3,$4,$5)",
         [replyId,postId,user.id,body,parentId],
       );
+      const publicActor=(await db.query("SELECT COALESCE(NULLIF(p.public_display_name,''),m.codename,p.name) AS name FROM con.memberships m LEFT JOIN con.profiles p ON p.user_id=m.user_id WHERE m.user_id=$1",[user.id])).rows[0]?.name||"Member";
       // Notify the person addressed by the reply, never the sender.
       // Post authors retain their per-post notification preference.
       if (parent && parent.user_id !== user.id) {
         await db.query(
           "INSERT INTO con.reply_notifications(id,post_id,user_id,actor_id,actor_name,reply_id) SELECT $1,$2,$3,$4,$5,$6 WHERE NOT EXISTS (SELECT 1 FROM con.member_posts m WHERE m.id=$2 AND m.user_id=$3 AND m.notify_replies=false)",
-          [randomUUID(),postId,parent.user_id,user.id,user.name,replyId],
+          [randomUUID(),postId,parent.user_id,user.id,publicActor,replyId],
         );
       } else if (!parent && post.kind === "member" && post.author_id !== user.id) {
         await db.query(
           "INSERT INTO con.reply_notifications(id,post_id,user_id,actor_id,actor_name,reply_id) SELECT $1,m.id,m.user_id,$2,$3,$4 FROM con.member_posts m WHERE m.id=$5 AND m.notify_replies=true",
-          [randomUUID(),user.id,user.name,replyId,postId],
+          [randomUUID(),user.id,publicActor,replyId,postId],
         );
       }
       return json(res, 201, { id:replyId });

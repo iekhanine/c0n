@@ -23,11 +23,12 @@ export const isSiteOwner = (id) =>
 const fail = (status, message) => {
   throw Object.assign(Error(message), { status });
 };
+const isEditableKey=key=>Object.hasOwn(SITE_COPY,key) || (typeof key==="string" && /^ui\.[0-9a-f]{8}$/.test(key));
 export function validateSiteCopy(body) {
   if (
     !body ||
     typeof body !== "object" ||
-    !Object.hasOwn(SITE_COPY, body.key) ||
+    !isEditableKey(body.key) ||
     !Number.isSafeInteger(body.version) ||
     body.version < 0
   )
@@ -45,6 +46,7 @@ export function validateSiteCopy(body) {
     value: body.value.trim(),
     version: body.version,
     ...(body.removed !== undefined ? { removed: body.removed } : {}),
+    default_value: typeof body.original==="string" && body.original.length<=4000 ? body.original : "",
   };
 }
 export async function siteContentHandler(req, res, dbFactory = database) {
@@ -146,7 +148,7 @@ export async function siteContentHandler(req, res, dbFactory = database) {
           [body.event_id],
         )
       ).rows[0];
-      if (!event || !Object.hasOwn(SITE_COPY, event.key))
+      if (!event || !isEditableKey(event.key))
         fail(404, "History entry not found.");
       const side = body.side || "before";
       input = {
@@ -164,7 +166,7 @@ export async function siteContentHandler(req, res, dbFactory = database) {
     ).rows[0];
     const before = current || {
       key: input.key,
-      value: SITE_COPY[input.key],
+      value: SITE_COPY[input.key] ?? input.default_value ?? "",
       version: 0,
       removed: false,
     };

@@ -1,3 +1,4 @@
+import { ensureSocial } from "./social.js";
 import { categories, addCategory, normalizeCategory } from "./project-categories.js";
 import { authorAvatars } from "./author-avatars.js";
 import {
@@ -65,16 +66,18 @@ const idOf = (s) => {
 };
 export async function publicProjects(db, userId = "", showcase = false) {
   await ensureProjectModeration(db);
+  await ensureSocial(db);
   const projects = (
     await db.query(
-      `SELECT p.id,p.published,p.published_at,p.owner_id,p.owner_name,p.homepage_pinned,p.homepage_hidden,(SELECT count(*)::int FROM con.project_votes v WHERE v.project_id=p.id) AS votes,(SELECT count(*)::int FROM con.project_comments c WHERE c.project_id=p.id) AS comments,EXISTS(SELECT 1 FROM con.project_votes v WHERE v.project_id=p.id AND v.user_id=$1) AS voted FROM con.projects p WHERE p.published IS NOT NULL ${showcase ? "AND NOT p.homepage_hidden" : ""} ORDER BY ${showcase ? "p.homepage_pinned DESC," : ""} votes DESC,p.published_at DESC LIMIT ${showcase ? 15 : 200}`,
+      `SELECT p.id,p.published,p.published_at,p.owner_id,p.owner_name,COALESCE(NULLIF(pf.public_display_name,''),ms.codename,p.owner_name) AS public_author_name,ms.public_slug AS owner_slug,p.homepage_pinned,p.homepage_hidden,(SELECT count(*)::int FROM con.project_votes v WHERE v.project_id=p.id) AS votes,(SELECT count(*)::int FROM con.project_comments c WHERE c.project_id=p.id) AS comments,EXISTS(SELECT 1 FROM con.project_votes v WHERE v.project_id=p.id AND v.user_id=$1) AS voted FROM con.projects p LEFT JOIN con.memberships ms ON ms.user_id=p.owner_id LEFT JOIN con.profiles pf ON pf.user_id=p.owner_id WHERE p.published IS NOT NULL ${showcase ? "AND NOT p.homepage_hidden" : ""} ORDER BY ${showcase ? "p.homepage_pinned DESC," : ""} votes DESC,p.published_at DESC LIMIT ${showcase ? 15 : 200}`,
       [userId],
     )
   ).rows.map((p) => ({
     id: p.id,
     ...p.published,
     kind: "project",
-    author_name: p.owner_name,
+    author_name: p.public_author_name,
+    owner_slug: p.owner_slug,
     owner_id: p.owner_id,
     homepage_pinned: p.homepage_pinned,
     homepage_hidden: p.homepage_hidden,
@@ -86,11 +89,7 @@ export async function publicProjects(db, userId = "", showcase = false) {
   const avatars = await authorAvatars(db, projects.map(p => p.owner_id));
   for (const project of projects) project.avatar_url = avatars.get(project.owner_id) || "";
   if (!showcase) return projects;
-  const pinned = projects.filter((p) => p.homepage_pinned).slice(0, 5);
-  const normal = projects
-    .filter((p) => !p.homepage_pinned)
-    .slice(0, (5 - pinned.length) * 3);
-  return [...pinned, ...normal];
+  return projects.slice(0,15);
 }
 export async function projectsHandler(
   req,
@@ -308,13 +307,16 @@ export async function projectsHandler(
             )
           ).rows
         : [];
+      await ensureSocial(db);
+      const identity=(await db.query("SELECT COALESCE(NULLIF(pf.public_display_name,''),ms.codename,'Member') AS name,ms.public_slug AS slug FROM con.memberships ms LEFT JOIN con.profiles pf ON pf.user_id=ms.user_id WHERE ms.user_id=$1",[p.owner_id])).rows[0];
       const authorPictures = await authorAvatars(db, [p.owner_id]);
       return json(res, 200, {
         project: {
           id,
           ...(p.published || p.draft),
           avatar_url: authorPictures.get(p.owner_id) || "",
-          author_name: p.owner_name,
+          author_name: identity?.name || p.owner_name,
+          owner_slug: identity?.slug || "",
           owner_id: p.owner_id,
           published_at: p.published_at,
           ...stats,
@@ -329,16 +331,19 @@ export async function projectsHandler(
     }
     if (action === "vote" && req.method === "PUT") {
       if (typeof b.voted !== "boolean") fail(400, "Invalid vote.");
+      await ensureSocial(db);
       const client = await db.connect();
       try {
         await client.query("BEGIN");
         const p = (
           await client.query(
-            "SELECT id FROM con.projects WHERE id=$1 AND published IS NOT NULL FOR SHARE",
+            "SELECT id,owner_id FROM con.projects WHERE id=$1 AND published IS NOT NULL FOR SHARE",
             [id],
           )
         ).rows[0];
         if (!p) fail(404, "Project is not published.");
+        await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[id+":"+user.id]);
+        const previouslyVoted=Boolean((await client.query("SELECT 1 FROM con.project_votes WHERE project_id=$1 AND user_id=$2",[id,user.id])).rowCount);
         if (b.voted)
           await client.query(
             "INSERT INTO con.project_votes(project_id,user_id)VALUES($1,$2) ON CONFLICT DO NOTHING",
@@ -349,6 +354,8 @@ export async function projectsHandler(
             "DELETE FROM con.project_votes WHERE project_id=$1 AND user_id=$2",
             [id, user.id],
           );
+        if(p.owner_id!==user.id && previouslyVoted!==b.voted)
+          await client.query("INSERT INTO con.reputation_ledger(id,user_id,post_id,voter_id,points)VALUES($1,$2,$3,$4,$5)",[randomUUID(),p.owner_id,id,user.id,b.voted?1:-1]);
         const votes = (
           await client.query(
             "SELECT count(*)::int AS n FROM con.project_votes WHERE project_id=$1",

@@ -36,6 +36,8 @@ export default function App() {
       window.location.replace("/membership");
   }, [account?.user?.id]);
   const [membershipAccess, setMembershipAccess] = useState<boolean | null>(null);
+  const [memberSlug,setMemberSlug] = useState<string | null>(null);
+  const [publicName,setPublicName] = useState("Member");
   useEffect(() => {
     if (!account) return;
     if (!account.user) { setMembershipAccess(false); return; }
@@ -44,11 +46,20 @@ export default function App() {
       .then(async response => {
         if (!response.ok) throw Error("Membership verification unavailable");
         const result = await response.json();
-        if(active) setMembershipAccess(result.member?.active===true);
+        if(active) {setMembershipAccess(result.member?.active===true);setMemberSlug(result.member?.public_slug||null);setPublicName(result.member?.codename||"Member");}
       })
       .catch(()=>{if(active) setMembershipAccess(false);});
     return ()=>{active=false;};
   },[account?.user?.id]);
+  useEffect(()=>{
+    if(!membershipAccess||!account?.user)return;
+    let active=true;
+    void fetch("/api/social?action=profile&id="+encodeURIComponent(account.user.id),{cache:"no-store"})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{if(active&&d?.profile?.name)setPublicName(d.profile.name);})
+      .catch(()=>{});
+    return ()=>{active=false;};
+  },[membershipAccess,account?.user?.id]);
   const [seedError, setSeedError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -96,7 +107,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
+  const page = path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -155,9 +166,6 @@ export default function App() {
           </nav>
           <a className="con-member-header-link" href="/merch">Merch</a>
           {account?.user && <div className="con-header-actions">
-            {["explore","community","subcon"].includes(page) ?
-              <button type="button" className="con-global-submit" onClick={() => window.dispatchEvent(new Event("con-open-submit"))}>+ POST</button> :
-              <a className="con-global-submit" href="/community?submit=1">+ POST</a>}
             <a className="con-header-inbox" href="/inbox" aria-label={`Inbox, ${unread} unread notifications`} title="Inbox">
               <Bell size={19}/>
               {unread > 0 && <span className="con-inbox-badge">{unread > 99 ? "99+" : unread}</span>}
@@ -188,17 +196,17 @@ export default function App() {
                     {account.user.name.slice(0,2).toUpperCase()}
                   </span>
                 )}
-                <span>{account.authorized ? "Admin" : account.user.name}</span>
+                <span>{publicName}</span>
                 <ChevronDown size={15}/>
               </button>
               {accountOpen && <>
                 <button type="button" className="con-account-scrim" aria-label="Close account menu"
                   onClick={() => setAccountOpen(false)}/>
                 <div className="con-account-dropdown">
-                  <strong>{account.user.name}</strong>
+                  <strong>{publicName}</strong>
                   {account.authorized && <a href="/admin"><Settings size={16}/> Admin dashboard</a>}
-                  <a href={`/members/${account.user.id}`}><UserRound size={16}/> View profile</a>
-                  <a href={`/members/${account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
+                  <a href={`/c/${memberSlug || account.user.id}`}><UserRound size={16}/> View profile</a>
+                  <a href={`/c/${memberSlug || account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
                   <a href="/inbox">Inbox · Replies</a>
                   <a href="/membership">Membership & invitations</a>
                   <a href="/merch">Member supply</a>

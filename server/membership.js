@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { database } from "./db.js";
 import { json, ORIGIN, readSession } from "./auth.js";
+import { codenameFor, slugFor } from "../shared/codenames.js";
 
 const ownerIds = () => (process.env.DISCORD_ADMIN_IDS || "").split(",").map(x => x.trim()).filter(Boolean);
 const digest = value => createHash("sha256").update(value).digest("hex");
@@ -24,6 +25,10 @@ const schema = [
     redeemed_by text UNIQUE REFERENCES con.memberships(user_id), redeemed_at timestamptz,
     revoked_at timestamptz
   )`,
+  "ALTER TABLE con.memberships ADD COLUMN IF NOT EXISTS codename text",
+  "ALTER TABLE con.memberships ADD COLUMN IF NOT EXISTS public_slug text",
+  "CREATE UNIQUE INDEX IF NOT EXISTS con_memberships_codename_unique ON con.memberships(codename)",
+  "CREATE UNIQUE INDEX IF NOT EXISTS con_memberships_slug_unique ON con.memberships(public_slug)",
   "CREATE INDEX IF NOT EXISTS con_membership_invites_issuer ON con.membership_invites(issuer_id,created_at DESC)",
   "CREATE SEQUENCE IF NOT EXISTS con.membership_batch_sequence START WITH 1",
   "ALTER TABLE con.memberships ENABLE ROW LEVEL SECURITY",
@@ -31,21 +36,32 @@ const schema = [
   "REVOKE ALL ON con.memberships, con.membership_invites FROM PUBLIC, anon, authenticated",
   "REVOKE ALL ON SEQUENCE con.membership_batch_sequence FROM PUBLIC, anon, authenticated"
 ];
-let setupPromise;
+const setupPromises=new WeakMap();
 async function setup(db) {
-  if (!setupPromise) setupPromise = (async () => { for (const q of schema) await db.query(q); })().catch(e => { setupPromise = null; throw e; });
-  await setupPromise;
+  if(!setupPromises.has(db))
+    setupPromises.set(db,(async()=>{for(const q of schema)await db.query(q);})().catch(e=>{setupPromises.delete(db);throw e;}));
+  await setupPromises.get(db);
 }
+export async function ensureMembershipSchema(db){await setup(db);}
 async function ensureFounder(db, user) {
   if (!ownerIds().includes(user.id)) return;
   // Founding number 000001 is reserved for the first owner to initialize membership.
   const created = await db.query("INSERT INTO con.memberships(user_id,member_no,display_name,invite_allowance) VALUES($1,1,$2,10000) ON CONFLICT(user_id) DO NOTHING RETURNING member_no", [user.id, user.name]);
   if (created.rowCount) await db.query("SELECT setval(pg_get_serial_sequence('con.memberships','member_no'), GREATEST((SELECT max(member_no) FROM con.memberships),1),true)");
 }
+async function assignIdentity(db,userId,memberNo){
+  const codename=codenameFor(Number(memberNo)),slug=slugFor(Number(memberNo));
+  await db.query("UPDATE con.memberships SET codename=$2,public_slug=$3 WHERE user_id=$1 AND (codename IS DISTINCT FROM $2 OR public_slug IS DISTINCT FROM $3)",[userId,codename,slug]);
+}
+async function backfillIdentity(db){
+  const pending=(await db.query("SELECT user_id,member_no FROM con.memberships WHERE codename IS NULL OR public_slug IS NULL ORDER BY member_no LIMIT 62500")).rows;
+  for(const row of pending) await assignIdentity(db,row.user_id,row.member_no);
+}
 export async function hasActiveMembership(user, db = database()) {
   if (!user) return false;
   await setup(db);
   await ensureFounder(db, user);
+  await backfillIdentity(db);
   const {rows} = await db.query("SELECT active FROM con.memberships WHERE user_id=$1",[user.id]);
   return rows[0]?.active === true;
 }
@@ -87,8 +103,9 @@ export async function membershipHandler(req,res,dbFactory=database) {
     if (!user && action !== "public") return json(res,401,{error:"Sign in with Discord to continue."});
     const db = dbFactory(); await setup(db);
     if (user) await ensureFounder(db,user);
+    await backfillIdentity(db);
     if (action === "me" && req.method === "GET") {
-      const member = (await db.query("SELECT member_no,display_name,inviter_id,joined_at,active,invite_allowance FROM con.memberships WHERE user_id=$1",[user.id])).rows[0];
+      const member = (await db.query("SELECT member_no,display_name,codename,public_slug,inviter_id,joined_at,active,invite_allowance FROM con.memberships WHERE user_id=$1",[user.id])).rows[0];
       if (!member) return json(res,200,{member:null});
       const counts = (await db.query("SELECT count(*)::int AS issued,count(*) FILTER (WHERE redeemed_by IS NOT NULL)::int AS redeemed,count(*) FILTER (WHERE redeemed_by IS NULL AND revoked_at IS NULL)::int AS unused FROM con.membership_invites WHERE issuer_id=$1",[user.id])).rows[0];
       const inviter = member.inviter_id ? (await db.query("SELECT member_no,display_name FROM con.memberships WHERE user_id=$1",[member.inviter_id])).rows[0] : null;
@@ -100,10 +117,11 @@ export async function membershipHandler(req,res,dbFactory=database) {
       const rows=(await db.query("SELECT serial,batch_no,city,state,zip,created_at,redeemed_at,revoked_at,redeemed_by FROM con.membership_invites WHERE issuer_id=$1 ORDER BY created_at DESC LIMIT 100",[user.id])).rows;
       return json(res,200,{invites:rows.map(({redeemed_by,...row})=>({...row,status:row.revoked_at?"revoked":redeemed_by?"redeemed":"available"}))});
     }
-    if (action === "issue" && req.method === "POST") {
+    if ((action === "issue" || action === "issue_test") && req.method === "POST") {
+      if(action==="issue_test" && !ownerIds().includes(user.id)) fail(403,"Founder only.");
       const data=await body(req);
       const count=Number(data.count);
-      if (!Number.isInteger(count)||count<1||count>10) fail(400,"Issue between 1 and 10 invitations.");
+      if (!Number.isInteger(count)||count<1||count>10 || (action==="issue_test" && count!==1)) fail(400,"Issue between 1 and 10 invitations.");
       const city=location(data.city || "",64,/^[\p{L}\p{N} .'-]+$/u);
       const state=location(data.state || "",24,/^[A-Za-z ]+$/);
       const zip=location(data.zip || "",12,/^[A-Za-z0-9 -]+$/);
@@ -112,7 +130,7 @@ export async function membershipHandler(req,res,dbFactory=database) {
         await client.query("BEGIN");
         const member=(await client.query("SELECT member_no,active,invite_allowance FROM con.memberships WHERE user_id=$1 FOR UPDATE",[user.id])).rows[0];
         if(!member?.active) fail(403,"Active membership required.");
-        const used=Number((await client.query("SELECT count(*)::int AS count FROM con.membership_invites WHERE issuer_id=$1 AND revoked_at IS NULL",[user.id])).rows[0].count);
+        const used=Number((await client.query("SELECT count(*)::int AS count FROM con.membership_invites WHERE issuer_id=$1 AND revoked_at IS NULL AND redeemed_by IS NULL",[user.id])).rows[0].count);
         if(used+count>member.invite_allowance) fail(403,"Invitation allowance reached.");
         const batch=Number((await client.query("SELECT nextval('con.membership_batch_sequence') AS n")).rows[0].n);
         const issued=[];
@@ -140,6 +158,7 @@ export async function membershipHandler(req,res,dbFactory=database) {
         const issuer=(await client.query("SELECT active FROM con.memberships WHERE user_id=$1",[invite.issuer_id])).rows[0];
         if(!issuer?.active) fail(403,"This invitation is no longer active.");
         const newMember=(await client.query("INSERT INTO con.memberships(user_id,display_name,inviter_id) VALUES($1,$2,$3) RETURNING member_no",[user.id,user.name,invite.issuer_id])).rows[0];
+        await assignIdentity(client,user.id,newMember.member_no);
         await client.query("UPDATE con.membership_invites SET redeemed_by=$2,redeemed_at=now() WHERE id=$1",[invite.id,user.id]);
         await client.query("COMMIT");
         return json(res,201,{ok:true,member_no:Number(newMember.member_no)});
@@ -155,8 +174,8 @@ export async function membershipHandler(req,res,dbFactory=database) {
     if(action==="verify" && req.method==="GET"){
       const number=Number(url.searchParams.get("number"));
       if(!Number.isSafeInteger(number)||number<1) fail(400,"Invalid membership number");
-      const member=(await db.query("SELECT member_no,display_name,joined_at,active FROM con.memberships WHERE member_no=$1",[number])).rows[0];
-      return json(res,200,{valid:!!member?.active,member:member?{member_no:Number(member.member_no),name:member.display_name,joined_at:member.joined_at}:null});
+      const member=(await db.query("SELECT member_no,codename,joined_at,active FROM con.memberships WHERE member_no=$1",[number])).rows[0];
+      return json(res,200,{valid:!!member?.active,member:member?{member_no:Number(member.member_no),name:member.codename,joined_at:member.joined_at}:null});
     }
     return json(res,404,{error:"Unknown membership action"});
   } catch(e) {

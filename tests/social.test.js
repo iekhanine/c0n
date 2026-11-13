@@ -79,9 +79,11 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     await pg.exec(projectMigration);
     const db = {
       async query(sql, args) {
+        if(sql.includes("pg_advisory_xact_lock")) return { rows: [], rowCount: 0 };
         const r = await pg.query(sql, args);
         return { ...r, rowCount: r.affectedRows ?? r.rows.length };
       },
+      async connect(){return {...this,release(){}};}
     };
     async function call(
       uid,
@@ -278,7 +280,7 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     const submission = await call(bob, "post", "POST", {
       title: "My lab build", body: "Servers and cables", community_slug: "homelab",
     });
-    assert.equal(submission.statusCode, 201);
+    assert.equal(submission.statusCode, 201, JSON.stringify(submission.body));
     const communityPost = submission.body.id;
     const subnet = (await call(null, "feed&community=homelab")).body.posts;
     assert.equal(subnet.length, 1);
