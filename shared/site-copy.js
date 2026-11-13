@@ -28,6 +28,7 @@ export const SITE_COPY = {
   "admin.audit.title": "Content audit & restore",
   "admin.audit.description":
     "Review changes, recover removed content, and undo earlier actions.",
+  "layout.discord.sidebar": "[\"overview\",\"channels\",\"activity\",\"members\"]",
   "discord.channels.title": "Most active channels",
   "discord.members.title": "Active this week",
   "discord.connection": "Join the conversation in our Discord server.",
