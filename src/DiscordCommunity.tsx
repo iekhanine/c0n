@@ -127,10 +127,9 @@ export function DiscordActivity({ data }: { data: DiscordData | null }) {
       {data.activity.map((c) => (
         <div className="server-activity" key={c.channel_id}>
           <span className="project-tag"># {c.name}</span>
-          <p>
-            New conversation activity
-            <small>{new Date(c.occurred_at).toLocaleString()}</small>
-          </p>
+          <time dateTime={c.occurred_at}>
+            {new Date(c.occurred_at).toLocaleString()}
+          </time>
         </div>
       ))}
     </>
