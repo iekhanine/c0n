@@ -946,10 +946,12 @@ export function ProfilePage({ id }: { id: string }) {
     [error, setError] = useState(""),
     [editing, setEditing] = useState(false),
     [composing, setComposing] = useState(false),
-    [tab, setTab] = useState("portfolio");
+    [tab, setTab] = useState("posts");
   async function load() {
     try {
-      setData(await socialApi("profile&id=" + encodeURIComponent(id)));
+      const result = await socialApi<{profile: Profile; posts: SocialPost[]; projects: {id: string; published: {title:string;body:string;image_url:string}}[]; own:boolean; can_blog:boolean}>("profile&id=" + encodeURIComponent(id));
+      setData(result);
+      setTab(previous => previous === "posts" && result.profile.portfolio?.length ? "portfolio" : previous);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Profile unavailable.");
@@ -1159,7 +1161,15 @@ export function MemberDirectory() {
               <h2>{p.name}</h2>
               <small>@{p.username}</small>
               <p>{p.headline}</p>
-              <span>View profile →</span>
+              {!!p.disciplines?.length && <div className="member-discipline-tags">
+                {p.disciplines.slice(0, 3).map(d => <small key={d}>{d}</small>)}
+              </div>}
+              {p.available_for_work && <small className="member-available">Open to work</small>}
+              {!!p.portfolio?.length && <div className="member-portfolio-thumbs">
+                {p.portfolio.filter(item => safeUrl(item.image_url)).slice(0,3).map((item,i) =>
+                  <img src={safeUrl(item.image_url)} alt="" key={i} loading="lazy"/>)}
+              </div>}
+              <span>View work →</span>
             </a>
           ))}
       </div>
