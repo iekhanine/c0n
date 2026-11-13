@@ -219,7 +219,7 @@ export function PostCard({
   }
   const truncated = !full && post.body.length > 600;
   return (
-    <section className="social-post">
+    <article className={"social-post " + (post.kind === "member" ? "social-member-post" : "social-editorial-post")}>
       {post.pinned && (
         <div className="social-pinned">
           <Pin size={13} />
