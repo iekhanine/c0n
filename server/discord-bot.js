@@ -198,6 +198,7 @@ async function acceptSync(db, s, b, headers) {
       "control_poll",
       "control_result",
       "bootstrap",
+      "health_check",
       "heartbeat",
       "members",
       "member_remove",
@@ -237,6 +238,11 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    if (b.kind === "health_check") {
+      await client.query("SELECT 1 AS database_connected");
+      await client.query("COMMIT");
+      return { ok: true, guild_id: s.guild_id, database_connected: true };
     }
     let progress = [];
     if (b.kind === "participation" || b.kind === "participation_check") {
