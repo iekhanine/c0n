@@ -157,7 +157,7 @@ async function registerProfile(db, u) {
     [u.id, u.name, u.username || u.name, discordAvatar(u)],
   );
 }
-const memberSelect = `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id`;
+const memberSelect = `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id`;
 async function decorate(db, posts, viewer) {
   if (!posts.length) return [];
   const ids = posts.map((p) => p.id);
@@ -417,7 +417,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "top_member_posts" && req.method === "GET") {
       // Public, bounded and text-only. Likes determine ranking, newest breaks ties.
       const top = (await db.query(
-        `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,
+        `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,ms.public_slug AS author_slug,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,
           m.body,m.created_at AS published_at,
           (SELECT count(*)::int FROM con.post_likes l WHERE l.post_id=m.id) AS likes
           FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id
