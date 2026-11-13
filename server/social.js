@@ -12,6 +12,12 @@ export const socialSchema = [
   "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS disciplines jsonb NOT NULL DEFAULT '[]'::jsonb",
   "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS portfolio jsonb NOT NULL DEFAULT '[]'::jsonb",
   "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS available_for_work boolean NOT NULL DEFAULT false",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS public_display_name text NOT NULL DEFAULT ''",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS show_discord_name boolean NOT NULL DEFAULT false",
+  "CREATE TABLE IF NOT EXISTS con.reputation_ledger (id uuid PRIMARY KEY, user_id text NOT NULL, post_id uuid NOT NULL, voter_id text NOT NULL, points integer NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
+  "CREATE INDEX IF NOT EXISTS con_rep_user ON con.reputation_ledger(user_id)",
+  "ALTER TABLE con.reputation_ledger ENABLE ROW LEVEL SECURITY",
+  "REVOKE ALL ON con.reputation_ledger FROM PUBLIC,anon,authenticated",
   "CREATE INDEX IF NOT EXISTS con_member_posts_user ON con.member_posts(user_id,created_at DESC)",
   "CREATE TABLE IF NOT EXISTS con.post_likes(post_id uuid NOT NULL, user_id text NOT NULL, PRIMARY KEY(post_id,user_id))",
   "CREATE TABLE IF NOT EXISTS con.post_replies(id uuid PRIMARY KEY, post_id uuid NOT NULL,user_id text NOT NULL REFERENCES con.profiles(user_id), body text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
@@ -100,6 +106,8 @@ export function profileInput(b) {
     throw new AppError(400, "Choose up to six creative disciplines.");
   return {
     name: text(b.name, 80, true),
+    public_display_name: text(b.public_display_name ?? "", 80),
+    show_discord_name: b.show_discord_name === true,
     headline: text(b.headline, 160),
     bio: text(b.bio, 3000),
     location: text(b.location, 100),
@@ -149,7 +157,7 @@ async function registerProfile(db, u) {
     [u.id, u.name, u.username || u.name, discordAvatar(u)],
   );
 }
-const memberSelect = `SELECT m.id,m.user_id AS author_id,p.name AS author_name,p.username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id`;
+const memberSelect = `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,m.title,m.body,m.image_url,m.pinned,m.version,m.community_slug,m.link_url,m.video_url,m.notify_replies,m.created_at AS published_at,m.updated_at,'member' AS kind FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id`;
 async function decorate(db, posts, viewer) {
   if (!posts.length) return [];
   const ids = posts.map((p) => p.id);
@@ -307,12 +315,16 @@ export async function socialHandler(req, res, dbFactory = database) {
       return json(res, 200, {
         profiles: (
           await db.query(
-            "SELECT user_id,name,username,avatar_url,headline,bio,location,disciplines,available_for_work,portfolio FROM con.profiles ORDER BY updated_at DESC LIMIT 200",
+            `SELECT p.user_id, COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,p.headline,p.bio,p.location,p.disciplines,p.available_for_work,p.portfolio,ms.public_slug FROM con.profiles p LEFT JOIN con.memberships ms ON ms.user_id=p.user_id ORDER BY p.updated_at DESC LIMIT 200`,
           )
         ).rows,
       });
     if (action === "profile" && req.method === "GET") {
-      const uid = userId(url.searchParams.get("id") || user?.id);
+      const requested=url.searchParams.get("id") || user?.id;
+      const uid = typeof requested==="string" && /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(requested)
+        ? (await db.query("SELECT user_id FROM con.memberships WHERE public_slug=$1",[requested])).rows[0]?.user_id
+        : userId(requested);
+      if(!uid) throw new AppError(404,"Member not found.");
       let profile = (
         await db.query("SELECT * FROM con.profiles WHERE user_id=$1", [uid])
       ).rows[0];
@@ -347,6 +359,10 @@ export async function socialHandler(req, res, dbFactory = database) {
           disciplines: [], portfolio: [], available_for_work: false,
         };
       }
+      const identity=(await db.query("SELECT codename,public_slug FROM con.memberships WHERE user_id=$1",[uid])).rows[0];
+      profile={...profile,public_slug:identity?.public_slug || "",codename:identity?.codename || "",
+        name:profile.public_display_name || identity?.codename || "Member",
+        username:profile.show_discord_name ? profile.username : ""};
       const projects = profile.show_projects
         ? (
             await db.query(
@@ -378,7 +394,7 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "profile" && req.method === "PUT") {
       const v = profileInput(b);
       await db.query(
-        "UPDATE con.profiles SET name=$2,headline=$3,bio=$4,location=$5,avatar_url=$6,cover_url=$7,links=$8::jsonb,show_projects=$9,disciplines=$10::jsonb,portfolio=$11::jsonb,available_for_work=$12,updated_at=now() WHERE user_id=$1",
+        "UPDATE con.profiles SET name=$2,headline=$3,bio=$4,location=$5,avatar_url=$6,cover_url=$7,links=$8::jsonb,show_projects=$9,disciplines=$10::jsonb,portfolio=$11::jsonb,available_for_work=$12,public_display_name=$13,show_discord_name=$14,updated_at=now() WHERE user_id=$1",
         [
           user.id,
           v.name,
@@ -392,6 +408,8 @@ export async function socialHandler(req, res, dbFactory = database) {
           JSON.stringify(v.disciplines),
           JSON.stringify(v.portfolio),
           v.available_for_work,
+          v.public_display_name,
+          v.show_discord_name,
         ],
       );
       return json(res, 200, { ok: true });
@@ -399,10 +417,10 @@ export async function socialHandler(req, res, dbFactory = database) {
     if (action === "top_member_posts" && req.method === "GET") {
       // Public, bounded and text-only. Likes determine ranking, newest breaks ties.
       const top = (await db.query(
-        `SELECT m.id,m.user_id AS author_id,p.name AS author_name,p.username,
+        `SELECT m.id,m.user_id AS author_id,COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS author_name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,
           m.body,m.created_at AS published_at,
           (SELECT count(*)::int FROM con.post_likes l WHERE l.post_id=m.id) AS likes
-          FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id
+          FROM con.member_posts m JOIN con.profiles p ON p.user_id=m.user_id LEFT JOIN con.memberships ms ON ms.user_id=m.user_id
           ORDER BY likes DESC,m.created_at DESC LIMIT 5`,
       )).rows;
       const avatars = await authorAvatars(db, top.map(p => p.author_id));
@@ -439,8 +457,10 @@ export async function socialHandler(req, res, dbFactory = database) {
       )).rows;
       const merged = [...updates, ...memberRows].sort((a,b) => Date.parse(b.published_at)-Date.parse(a.published_at));
       const page = merged.slice(0, 50);
+      const decorated = await decorate(db, page, user?.id);
+      decorated.sort((a,b)=>(b.score||0)-(a.score||0)||Date.parse(b.published_at)-Date.parse(a.published_at));
       return json(res, 200, {
-        posts: await decorate(db, page, user?.id),
+        posts: decorated,
         next: merged.length > 50 ? page.at(-1).published_at : null,
       });
     }
