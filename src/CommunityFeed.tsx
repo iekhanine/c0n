@@ -117,7 +117,7 @@ export default function CommunityFeed({
     );
   const projects =
     page === "explore"
-      ? ranked.filter((p) => !p.homepage_hidden).slice(0, 6)
+      ? ranked.filter((p) => !p.homepage_hidden).slice(0, 15)
       : ranked;
   return (
     <>
