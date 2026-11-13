@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, ChevronDown, LogOut, UserRound, Settings } from "lucide-react";
+import { ArrowRight, ChevronDown, LogOut, UserRound, Settings, Bell } from "lucide-react";
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage, OutboundPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
@@ -33,6 +33,27 @@ export default function App() {
   const [seedError, setSeedError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!account?.user) { setUnread(0); return; }
+    let active = true;
+    async function refreshInbox() {
+      try {
+        const response = await fetch("/api/social?action=inbox_count", {cache:"no-store"});
+        if (!response.ok) return;
+        const data: {unread?: number} = await response.json();
+        if (active) setUnread(Math.max(0, Number(data.unread)||0));
+      } catch { /* Keep the current count if the network is unavailable. */ }
+    }
+    void refreshInbox();
+    const timer = window.setInterval(() => void refreshInbox(), 45000);
+    window.addEventListener("focus", refreshInbox);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshInbox);
+    };
+  },[account?.user?.id]);
   async function signOut() {
     setSigningOut(true);
     try {
@@ -109,7 +130,13 @@ export default function App() {
               </CopyRegion>
             ))}
           </nav>
-          {account?.user && <a className="con-global-submit" href="/community?submit=1">+ Submit</a>}
+          {account?.user && <div className="con-header-actions">
+            <a className="con-global-submit" href="/community?submit=1">+ POST</a>
+            <a className="con-header-inbox" href="/inbox" aria-label={`Inbox, ${unread} unread notifications`} title="Inbox">
+              <Bell size={19}/>
+              {unread > 0 && <span className="con-inbox-badge">{unread > 99 ? "99+" : unread}</span>}
+            </a>
+          </div>}
           <a
             className="discord-invite"
             href="https://discord.gg/dSHMeZ4ETJ"
