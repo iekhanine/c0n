@@ -36,6 +36,14 @@
     {
       "source": "/posts/:id",
       "destination": "/index.html"
+    },
+    {
+      "source": "/inbox",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/out/:id",
+      "destination": "/index.html"
     }
   ],
   "headers": [
