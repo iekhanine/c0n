@@ -109,6 +109,7 @@ export default function App() {
               </CopyRegion>
             ))}
           </nav>
+          {account?.user && <a className="con-global-submit" href="/community?submit=1">+ Submit</a>}
           <a
             className="discord-invite"
             href="https://discord.gg/dSHMeZ4ETJ"
