@@ -15,6 +15,7 @@ import { executeControl, controlError } from "./control.js";
 import { assignNewMemberStatus, applyParticipationProgress, participationEvent } from "./participation.js";
 import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js";
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
+import { updateStatsMessage } from "./server-stats.js";
 const SITE = process.env.CON_SITE_URL || "https://c0n.ivansays.com";
 if (new URL(SITE).origin !== "https://c0n.ivansays.com")
   throw Error("CON_SITE_URL must be the C0N production origin.");
@@ -481,6 +482,7 @@ async function main() {
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
       run(reconcileWelcomeReactions);
       run(checkProgress);
+      run(() => updateStatsMessage(guild, client.user.id, SITE));
       console.log("C0N Discord worker connected.");
     }),
   );
@@ -607,6 +609,7 @@ async function main() {
   client.on(Events.ShardResume, () => {
     state = "ready";
     run(heartbeat);
+    run(() => updateStatsMessage(guild, client.user.id, SITE));
   });
   client.on(Events.Error, (e) =>
     console.error("Discord client error", { code: e.code || "connection" }),
@@ -615,10 +618,12 @@ async function main() {
     heartbeatTimer = setInterval(() => run(heartbeat), 60000),
     welcomeTimer = setInterval(() => { if (!welcome?.messageId) run(refreshWelcome); }, 300000),
     progressTimer = setInterval(() => run(checkProgress), 3600000),
-    controlTimer = setInterval(() => run(commands), 5000);
+    controlTimer = setInterval(() => run(commands), 5000),
+    statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE)); }, 15 * 60 * 1000);
   const shutdown = async () => {
     state = "stopping";
     clearInterval(controlTimer);
+    clearInterval(statsTimer);
     clearInterval(progressTimer);
     clearInterval(welcomeTimer);
     clearInterval(flushTimer);
