@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Search, ChevronDown, LogOut, UserRound, Settings } from "lucide-react";
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory } from "./Social";
 import CommunityFeed from "./CommunityFeed";
@@ -14,7 +14,7 @@ import {
 import "./CommunityFeed.css";
 export default function App() {
   const [account, setAccount] = useState<{
-    user: { id: string; name: string } | null;
+    user: { id: string; name: string; avatar?: string | null } | null;
     authorized: boolean;
     owner?: boolean;
   } | null>(null);
@@ -31,6 +31,16 @@ export default function App() {
     };
   }, []);
   const [seedError, setSeedError] = useState("");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw Error("Sign-out failed");
+      window.location.assign("/");
+    } catch { setSigningOut(false); }
+  }
   async function prepareProjects() {
     try {
       await projectApi("seed", "POST", {});
@@ -115,51 +125,41 @@ export default function App() {
             <Copy id="discord.join" />
           </a>
           <WebsiteEditToggle />
-          {account?.user && (
-            <a className="showcase-login" href={"/members/" + account.user.id}>
-              My profile
+          {!account?.user ? (
+            <a className="showcase-login" href="/api/auth/discord/login">
+              Login <ArrowRight size={16} />
             </a>
-          )}
-          <CopyRegion
-            ids={[
-              account?.authorized
-                ? "account.admin"
-                : account?.user
-                  ? "account.projects"
-                  : "login",
-            ]}
-          >
-            <div className="account-entry">
-              <a
-                className="showcase-login"
-                href={
-                  account?.authorized
-                    ? "/admin"
-                    : account?.user
-                      ? "/my-projects"
-                      : "/api/auth/discord/login"
-                }
-              >
-                {account?.authorized ? (
-                  <Copy id="account.admin" />
-                ) : account?.user ? (
-                  <Copy id="account.projects" />
+          ) : (
+            <div className="con-account-menu">
+              <button type="button" className="con-account-trigger" aria-expanded={accountOpen}
+                aria-label="Open account menu" onClick={() => setAccountOpen(open => !open)}>
+                {account.user.avatar ? (
+                  <img src={`https://cdn.discordapp.com/avatars/${account.user.id}/${account.user.avatar}.png?size=64`}
+                    alt="" className="con-account-avatar"/>
                 ) : (
-                  <Copy id="login" />
+                  <span className="con-account-avatar con-avatar-fallback">
+                    {account.user.name.slice(0,2).toUpperCase()}
+                  </span>
                 )}
-                <ArrowRight size={16} />
-              </a>
-              <EditButton
-                id={
-                  account?.authorized
-                    ? "account.admin"
-                    : account?.user
-                      ? "account.projects"
-                      : "login"
-                }
-              />
+                <span>{account.authorized ? "Admin" : account.user.name}</span>
+                <ChevronDown size={15}/>
+              </button>
+              {accountOpen && <>
+                <button type="button" className="con-account-scrim" aria-label="Close account menu"
+                  onClick={() => setAccountOpen(false)}/>
+                <div className="con-account-dropdown">
+                  <strong>{account.user.name}</strong>
+                  {account.authorized && <a href="/admin"><Settings size={16}/> Admin dashboard</a>}
+                  <a href={`/members/${account.user.id}`}><UserRound size={16}/> View profile</a>
+                  <a href={`/members/${account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
+                  <a href="/my-projects">My projects</a>
+                  <button type="button" disabled={signingOut} onClick={() => void signOut()}>
+                    <LogOut size={16}/> {signingOut ? "Signing out…" : "Log out"}
+                  </button>
+                </div>
+              </>}
             </div>
-          </CopyRegion>
+          )}
         </header>
         <main className="showcase-main">
           {account?.owner && seedError && (
