@@ -104,7 +104,7 @@ test("login uses canonical callback and secure state cookie", async () => {
   assert.equal(url.hostname, "discord.com");
   assert.equal(
     url.searchParams.get("redirect_uri"),
-    "https://c0n.ivansays.com/api/auth/discord/callback",
+    "https://cultofnixon.com/api/auth/discord/callback",
   );
   assert.equal(url.searchParams.get("scope"), "identify");
   assert.ok(url.searchParams.get("state").length >= 32);
@@ -121,7 +121,7 @@ test("callback rejects missing and mismatched OAuth state before exchange", asyn
     },
     missing,
   );
-  assert.equal(missing.headers.Location, "/admin?error=login");
+  assert.equal(missing.headers.Location, "/?error=login");
   const token = await seal({ state: "expected-state" }, 60);
   const mismatch = response();
   await discordCallback(
@@ -132,7 +132,7 @@ test("callback rejects missing and mismatched OAuth state before exchange", asyn
     },
     mismatch,
   );
-  assert.equal(mismatch.headers.Location, "/admin?error=login");
+  assert.equal(mismatch.headers.Location, "/?error=login");
 });
 test("successful callback exchanges the code and sets a private session", async () => {
   const original = globalThis.fetch;
@@ -165,7 +165,7 @@ test("successful callback exchanges the code and sets a private session", async 
       },
       res,
     );
-    assert.equal(res.headers.Location, "/admin");
+    assert.equal(res.headers.Location, "/");
     assert.equal(calls, 2);
     const sessionCookie = res.headers["Set-Cookie"].find((c) =>
       c.startsWith("__Host-con_session="),
@@ -192,7 +192,7 @@ test("sign out requires POST and same-origin request", async () => {
   assert.equal(foreign.statusCode, 403);
   const valid = response();
   await logout(
-    { method: "POST", headers: { origin: "https://c0n.ivansays.com" } },
+    { method: "POST", headers: { origin: "https://cultofnixon.com" } },
     valid,
   );
   assert.equal(valid.statusCode, 200);
