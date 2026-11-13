@@ -29,7 +29,10 @@ export function activityRecord(message, allowedIds, publicIds, guildId) {
     : message.channelId;
   if (
     message.guildId !== guildId ||
-    message.author.bot ||
+    (message.author.bot && (
+      message.author.id === message.client?.user?.id ||
+      !["thegames", "thearcade"].includes(canonicalRoleName(message.channel.parent?.name))
+    )) ||
     message.webhookId ||
     !allowedIds.includes(channelId) ||
     !publicIds.includes(channelId)
