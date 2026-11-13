@@ -1,5 +1,4 @@
 import ProjectCardMenu from "./ProjectCardMenu";
-import { StreamPage } from "./Social";
 import DiscordSidebar from "./DiscordSidebar";
 import { VoteButton, type Project } from "./ProjectPages";
 import { Editable, Copy, useSiteCopy } from "./SiteText";
@@ -253,18 +252,8 @@ export default function CommunityFeed({
               <Editable id="copy.9" />
             </p>
           )}
-          {page === "explore" && (
-            <div className="home-transmissions">
-              <StreamPage compact />
-            </div>
-          )}
         </div>
         <DiscordSidebar />
-        {page !== "explore" && (
-          <div className="home-transmissions">
-            <StreamPage compact />
-          </div>
-        )}
       </div>
     </>
   );
