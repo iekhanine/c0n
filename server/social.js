@@ -542,19 +542,33 @@ export async function socialHandler(req, res, dbFactory = database) {
       await db.query("DELETE FROM con.post_replies WHERE post_id=$1", [postId]);
       return json(res, 200, { ok: true });
     }
+    if (action === "points" && req.method === "GET") {
+      if(!user) throw new AppError(401,"Sign in to view points.");
+      const balance=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[user.id])).rows[0].points;
+      return json(res,200,{points:balance,reputation:Math.floor(Math.max(0,balance)/5)});
+    }
     if (action === "vote" && req.method === "PUT") {
       if (![-1,0,1].includes(b.value) || typeof b.value !== "number")
         throw new AppError(400, "Invalid vote.");
-      if (b.value === 0) {
-        await db.query("DELETE FROM con.post_votes WHERE post_id=$1 AND user_id=$2", [postId,user.id]);
-      } else {
-        await db.query(
-          "INSERT INTO con.post_votes(post_id,user_id,value)VALUES($1,$2,$3) ON CONFLICT(post_id,user_id) DO UPDATE SET value=EXCLUDED.value",
-          [postId,user.id,b.value],
-        );
-      }
-      const score = (await db.query("SELECT coalesce(sum(value),0)::int AS score FROM con.post_votes WHERE post_id=$1",[postId])).rows[0].score;
-      return json(res, 200, { score, vote: b.value });
+      const client=await db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[postId+":"+user.id]);
+        const previous=(await client.query("SELECT value FROM con.post_votes WHERE post_id=$1 AND user_id=$2",[postId,user.id])).rows[0]?.value || 0;
+        if (b.value === 0) {
+          await client.query("DELETE FROM con.post_votes WHERE post_id=$1 AND user_id=$2",[postId,user.id]);
+        } else {
+          await client.query("INSERT INTO con.post_votes(post_id,user_id,value)VALUES($1,$2,$3) ON CONFLICT(post_id,user_id) DO UPDATE SET value=EXCLUDED.value",[postId,user.id,b.value]);
+        }
+        // Reputation is earned by other members' upvotes, not by self-voting.
+        const author=(await client.query("SELECT user_id FROM con.member_posts WHERE id=$1",[postId])).rows[0]?.user_id;
+        const delta=(Number(b.value===1)-Number(previous===1));
+        if (author && author!==user.id && delta)
+          await client.query("INSERT INTO con.reputation_ledger(id,user_id,post_id,voter_id,points)VALUES($1,$2,$3,$4,$5)",[randomUUID(),author,postId,user.id,delta]);
+        const score=(await client.query("SELECT coalesce(sum(value),0)::int AS score FROM con.post_votes WHERE post_id=$1",[postId])).rows[0].score;
+        await client.query("COMMIT");
+        return json(res,200,{score,vote:b.value});
+      } catch(e){await client.query("ROLLBACK");throw e;} finally{client.release();}
     }
     if (action === "like" && req.method === "PUT") {
       if (typeof b.liked !== "boolean")
