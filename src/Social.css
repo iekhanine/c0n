@@ -745,3 +745,32 @@
 
 .con-global-submit,.con-compact-submit a {display:inline-flex;align-items:center;white-space:nowrap;text-decoration:none;background:#d1f77b;color:#17200f!important;border-radius:7px;padding:8px 13px;font-size:13px;font-weight:750}
 .con-compact-submit {display:flex;justify-content:flex-end;margin-bottom:12px}
+
+/* Header inbox is always beside the POST shortcut and shows unread replies. */
+.con-header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.con-header-inbox { position:relative; display:inline-flex; width:42px; height:38px; align-items:center; justify-content:center; border:1px solid #45513e; border-radius:7px; background:#202820; color:#ecf4e3!important; text-decoration:none; }
+.con-header-inbox:hover { border-color:#d1f77b; color:#d1f77b!important; }
+.con-inbox-badge { position:absolute; top:-7px; right:-8px; min-width:19px; height:19px; padding:1px 5px; border-radius:99px; background:#d1f77b; color:#15200f; font-size:10px; font-weight:800; line-height:17px; text-align:center; box-shadow:0 0 0 2px #10110f; }
+/* Reddit-style conversation trees: indentation with guide lines, compact content. */
+.social-replies .con-thread-node { min-width:0; scroll-margin-top:110px; }
+.social-replies .con-thread-comment { margin:0; padding:13px 0 15px; border-bottom:1px solid #343b46; }
+.social-replies .con-thread-node:target > .con-thread-comment { background:#2d3b24; outline:1px solid #647e44; border-radius:6px; padding-left:9px; }
+.social-replies .con-thread-children { margin:0 0 0 17px; padding-left:14px; border-left:2px solid #3d4b37; }
+.social-replies .con-thread-meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; }
+.social-replies .con-thread-meta .social-avatar { width:25px; height:25px; flex-basis:25px; font-size:9px; }
+.social-replies .con-thread-meta a { color:#d1f77b; font-weight:650; text-decoration:none; }
+.social-replies .con-thread-meta time { display:inline; margin:0; font-size:11px; color:#a9b0bb; }
+.social-replies .con-thread-comment .social-body { margin:8px 0; font-size:14px; line-height:1.6; }
+.social-replies .con-thread-actions { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.social-replies .con-thread-actions button, .social-replies .con-thread-actions a { font-size:12px; padding:3px 0; color:#b7c6a8; background:none; border:0; text-decoration:none; cursor:pointer; }
+.social-replies .con-thread-actions button:hover, .social-replies .con-thread-actions a:hover { color:#d1f77b; }
+.social-replies .con-thread-reply-form { margin:10px 0 0; padding:10px 12px; border-radius:6px; border:1px solid #394a30; background:#202a20; max-width:600px; }
+.social-replies .con-thread-reply-form label { margin:0 0 8px; }
+.social-replies .con-thread-reply-form textarea { font-size:14px; }
+.social-replies .con-thread-reply-form button { font-size:13px; }
+.social-replies .con-thread-deleted { color:#929e92; }
+@media(max-width:600px) {
+  .con-header-actions { gap:5px; }
+  .con-header-inbox { width:34px; height:34px; }
+  .social-replies .con-thread-children { margin-left:7px; padding-left:9px; border-left-width:1px; }
+}
