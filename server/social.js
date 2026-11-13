@@ -517,6 +517,8 @@ export async function socialHandler(req, res, dbFactory = database) {
       await db.query("DELETE FROM con.post_votes WHERE post_id=$1", [postId]);
       await db.query("DELETE FROM con.member_posts WHERE id=$1", [postId]);
       await db.query("DELETE FROM con.post_likes WHERE post_id=$1", [postId]);
+      // Detach nested children before bulk deletion to satisfy the parent FK.
+      await db.query("UPDATE con.post_replies SET parent_id=NULL WHERE post_id=$1 AND parent_id IS NOT NULL", [postId]);
       await db.query("DELETE FROM con.post_replies WHERE post_id=$1", [postId]);
       return json(res, 200, { ok: true });
     }
