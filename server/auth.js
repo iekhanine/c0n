@@ -6,7 +6,7 @@ import * as oauth from "oauth4webapi";
 import { lookupStaff, assignedAccess, registerApplicant } from "./staff.js";
 
 // HEADER 001: Canonical origin and private, encrypted cookies.
-export const ORIGIN = "https://c0n.ivansays.com";
+export const ORIGIN = "https://cultofnixon.com";
 const SESSION = "__Host-con_session";
 const STATE = "__Host-con_oauth";
 const options = { httpOnly: true, secure: true, sameSite: "lax", path: "/" };
