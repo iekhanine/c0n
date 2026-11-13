@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { BadgeCheck, Copy, Gift, LockKeyhole, Ticket, UserRoundCheck, ShieldCheck, ArrowRight } from "lucide-react";
 import "./Membership.css";
 import VaultEntrance from "./VaultEntrance";
-type Member = {member_no:number;display_name:string;joined_at:string;active:boolean;invite_allowance:number;founding:boolean;invited_by:null|{member_no:number;name:string}};
+type Member = {member_no:number;display_name:string;codename:string;public_slug:string;joined_at:string;active:boolean;invite_allowance:number;founding:boolean;invited_by:null|{member_no:number;name:string}};
 type Invite = {serial:string;batch_no:number;status:string;city:string;state:string;created_at:string;redeemed_at?:string|null};
 type Issued = {serial:string;code:string;url:string};
 async function request<T>(action:string,method="GET",data?:unknown):Promise<T>{
@@ -53,7 +53,7 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
     setBusy(true);setError("");setIssued([]);
     try {
       // This is a REAL single-use invitation, never a public bypass.
-      const result=await request<{issued:Issued[]}>("issue","POST",{count:1,city:"Test",state:"QA",zip:""});
+      const result=await request<{issued:Issued[]}>("issue_test","POST",{count:1,city:"Test",state:"QA",zip:""});
       setIssued(result.issued);
       setNotice("Test invitation created. Copy it now, then redeem it with a DIFFERENT Discord account in a private window.");
       await refresh();
@@ -89,13 +89,13 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
         <section className="con-pass-section"><div className="con-member-section-head"><div><span className="con-member-eyebrow">MEMBERSHIP / DIGITAL</span><h2>Your membership pass</h2></div><span className="con-member-status"><BadgeCheck size={15}/> {member.active?"ACTIVE":"INACTIVE"}</span></div>
           <div className="con-digital-pass">
             <div className="con-pass-top"><img src="/con-logo.png" alt="C0N"/><div><b>CULT OF NIX0N</b><span>THE COMPOUND</span></div></div>
-            <div className="con-pass-identity"><span><ShieldCheck size={17}/> VERIFIED MEMBER</span><h2>@{member.display_name}</h2><p>MEMBER NO. <strong>{pad(member.member_no)}</strong></p></div>
+            <div className="con-pass-identity"><span><ShieldCheck size={17}/> VERIFIED MEMBER</span><h2>{member.codename}</h2><p>MEMBER ID <strong>{member.codename.replace(/\s+/g,"").toUpperCase()+"-"+String(new Date(member.joined_at).getMonth()+1).padStart(2,"0")+new Date(member.joined_at).getFullYear()+"-"+pad(member.member_no).slice(-4)}</strong></p></div>
             <div className="con-pass-bottom"><span>{member.founding?"FOUNDING MEMBER":"VERIFIED MEMBER"}</span><span>MEMBER SINCE {new Date(member.joined_at).getFullYear()}</span></div>
-            <div className="con-pass-lineage">INVITED BY: {member.invited_by?member.invited_by.name+" / "+pad(member.invited_by.member_no):"GENESIS"}</div>
+            <div className="con-pass-lineage">INVITED BY: {member.invited_by?pad(member.invited_by.member_no):"GENESIS"}</div>
           </div>
           <p className="con-member-muted">This is your digital C0N card. Apple Wallet and Samsung Wallet passes will be added after issuer enrollment. A membership number alone is not proof of identity.</p>
         </section>
-        {member.active&&<section className="con-member-panel"><div className="con-member-section-head"><div><span className="con-member-eyebrow">DISTRIBUTION</span><h2>Issue digital invitations</h2></div><Gift/></div><p>Each one-use link connects a new member to your account. Your allowance is {member.invite_allowance} issued invitations.</p>
+        {member.active&&<section className="con-member-panel"><div className="con-member-section-head"><div><span className="con-member-eyebrow">DISTRIBUTION</span><h2>Issue digital invitations</h2></div><Gift/></div><p>Each one-use link connects a new member to your account. You have {Math.max(0,member.invite_allowance-(counts?.unused||0))} invitations available. Redeemed or revoked codes return their slot.</p>
           {isOwner && <button type="button" className="con-test-invite" disabled={busy} onClick={()=>void createTestInvitation()}>Generate one-use test code</button>}
           <form className="con-member-form" onSubmit={issue}>
             <div className="con-invite-fields"><label>Number of invitations<input type="number" min={1} max={10} value={count} onChange={e=>setCount(Number(e.target.value))}/></label><label>City (optional)<input value={city} maxLength={64} onChange={e=>setCity(e.target.value)} placeholder="Racine"/></label><label>State (optional)<input value={state} maxLength={24} onChange={e=>setState(e.target.value)} placeholder="WI"/></label><label>ZIP (optional)<input value={zip} maxLength={12} onChange={e=>setZip(e.target.value)} placeholder="53403"/></label></div>
