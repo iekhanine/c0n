@@ -79,9 +79,11 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     await pg.exec(projectMigration);
     const db = {
       async query(sql, args) {
+        if(sql.includes("pg_advisory_xact_lock")) return { rows: [], rowCount: 0 };
         const r = await pg.query(sql, args);
         return { ...r, rowCount: r.affectedRows ?? r.rows.length };
       },
+      async connect(){return {...this,release(){}};}
     };
     async function call(
       uid,
