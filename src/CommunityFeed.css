@@ -2194,3 +2194,16 @@ img.member-initial.project-author-avatar {
 .project-detail-author .project-author-avatar {
   width:32px; height:32px; min-width:32px;
 }
+
+/* Homepage editorial blog is distinct from project listings and member timelines. */
+.con-home-blog {
+  border-top: 1px solid rgba(165, 188, 113, .34);
+  margin: 40px 0 0;
+  padding: 24px 0 40px;
+}
+.con-home-blog .social-compact {
+  max-width: 900px;
+  width: 100%;
+  margin-inline: auto;
+}
+.con-home-blog .social-page-heading h2 { margin:0 0 20px; font-size:24px; }
