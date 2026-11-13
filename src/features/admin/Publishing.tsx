@@ -8,11 +8,15 @@ import {
   Terminal,
   Users,
   Type,
+  Layers,
+  CheckSquare,
 } from "lucide-react";
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
 import DiscordFontTool from "./DiscordFontTool";
+import ProjectApprovals from "./ProjectApprovals";
+import ProjectCategories from "./ProjectCategories";
 import ContentAudit from "./ContentAudit";
 import { Editable, CopyRegion } from "../../SiteText";
 import Posts from "./Posts";
@@ -32,7 +36,9 @@ type Tab =
   | "discord"
   | "audit"
   | "projectReports"
-  | "font";
+  | "font"
+  | "approvals"
+  | "categories";
 export default function Publishing({
   permissions,
   owner = false,
@@ -56,6 +62,8 @@ export default function Publishing({
           permissions.includes("website.publish")),
       discord: owner,
       font: owner,
+      approvals: owner || (permissions.includes("projects.publish") && permissions.includes("website.publish")),
+      categories: owner || (permissions.includes("projects.publish") && permissions.includes("website.publish")),
       audit: owner,
       update: permissions.includes("updates.view"),
       project: permissions.includes("projects.view"),
@@ -97,6 +105,8 @@ export default function Publishing({
   const items: [Tab, string, typeof Radio][] = [
     ["update", "Updates", Radio],
     ["project", "Featured projects", Terminal],
+    ["approvals", "Project approvals", CheckSquare],
+    ["categories", "Creator categories", Layers],
     ["reports", "Publishing reports", BarChart3],
     ["projectReports", "Reported projects", BarChart3],
     ["webhooks", "Publishing webhooks", Hash],
@@ -193,6 +203,10 @@ export default function Publishing({
         <div className="con-tool-empty">
           This tool is not enabled for your account.
         </div>
+      ) : tab === "approvals" ? (
+        <ProjectApprovals />
+      ) : tab === "categories" ? (
+        <ProjectCategories />
       ) : tab === "font" ? (
         <DiscordFontTool />
       ) : tab === "audit" ? (
