@@ -362,3 +362,19 @@ test("role-gated community channels are available for explicit activity tracking
   assert.equal(activityRecord({ ...message, guildId: "345678901234567890" },
     ["111"], ["111","112"], "345678901234567890")?.channel_id, "111");
 });
+
+test("approved gaming channels can count third-party bot messages without counting staff bots or C0N itself", () => {
+  const base = {
+    id: "789012345678901234", guildId: guild, channelId: channel,
+    channel: { isThread: () => false, parent: { name: "[ ᴛʜᴇ ɢᴀᴍᴇꜱ ]" } },
+    client: { user: { id: bot } },
+    author: { id: "123456789012345679", bot: true },
+    createdTimestamp: Date.now(),
+    webhookId: null,
+  };
+  assert.equal(activityRecord(base, [channel], [channel], guild)?.channel_id, channel);
+  assert.equal(activityRecord({ ...base, author: { id: bot, bot: true } }, [channel], [channel], guild), null);
+  assert.equal(activityRecord({ ...base, channel: { ...base.channel, parent: { name: "[ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴛɪᴏɴ ]" } } }, [channel], [channel], guild), null);
+  assert.equal(activityRecord({ ...base, webhookId: "234567890123456789" }, [channel], [channel], guild), null);
+  assert.equal(activityRecord(base, [], [channel], guild), null);
+});
