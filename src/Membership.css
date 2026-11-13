@@ -78,3 +78,7 @@
  .vault-continue{min-width:210px;padding:13px 20px;font-size:13px}
 }
 @media(prefers-reduced-motion:reduce){.vault-cursor{animation:none}}
+
+.con-test-invite{display:inline-flex;justify-content:center;align-items:center;width:max-content;max-width:100%;padding:10px 16px;border:1px solid #b9d980;border-radius:8px;background:#26321e;color:#dcfbb3;font-weight:700;cursor:pointer}
+.con-test-invite:hover{background:#34482a}
+.con-test-invite:disabled{opacity:.55;cursor:wait}
