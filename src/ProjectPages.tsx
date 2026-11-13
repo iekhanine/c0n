@@ -10,6 +10,7 @@ export type Project = {
   git_url: string;
   link_url: string;
   author_name: string;
+  avatar_url?: string;
   owner_id?: string;
   votes: number;
   comments: number;
@@ -173,13 +174,13 @@ export function ProjectPage({ id }: { id: string }) {
         <div>
           <span className="project-tag">{p.category}</span>
           <h1>{p.title}</h1>
-          <p>
-            Created by{" "}
-            {p.owner_id ? (
-              <a href={`/members/${p.owner_id}`}>{p.author_name}</a>
-            ) : (
-              p.author_name
-            )}
+          <p className="project-detail-author">
+            {p.avatar_url && <img src={p.avatar_url} alt="" className="member-initial project-author-avatar" />}
+            <span>Created by{" "}
+              {p.owner_id ? (
+                <a href={`/members/${p.owner_id}`}>{p.author_name}</a>
+              ) : p.author_name}
+            </span>
           </p>
         </div>
         {data.canEdit && (
