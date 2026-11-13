@@ -278,6 +278,74 @@ export function SiteTextProvider({
       inFlight.current = false;
     }
   }
+  // Owner's site-wide editor for site-authored UI labels and headings that
+  // are not yet represented by a named SITE_COPY key. User content is excluded.
+  useEffect(() => {
+    if (!ready) return;
+    const candidates = document.querySelectorAll<HTMLElement>(
+      "main h1,main h2,main h3,main h4,main p,main label,main button,main a,header nav a,footer"
+    );
+    const blocked = ".project-card,.social-post,.social-profile-info,.social-member-grid,.member-workspace,.con-feed-list,.site-text-dialog,.editable-copy,.site-copy-controls,.website-edit-toggle,.con-digital-pass,.con-invite-item,.con-discord-sidebar,.con-account-menu";
+    function keyFor(el: HTMLElement) {
+      let element: HTMLElement | null = el;
+      const segments: string[] = [];
+      while (element && element !== document.body) {
+        const parent: HTMLElement | null = element.parentElement;
+        if (!parent) break;
+        const matching = Array.from(parent.children).filter(child=>child.tagName===element!.tagName);
+        segments.push(element.tagName.toLowerCase()+":"+matching.indexOf(element));
+        element=parent;
+      }
+      const raw=location.pathname+":"+segments.reverse().join("/");
+      let hash=2166136261;
+      for (let i=0;i<raw.length;i++) {hash^=raw.charCodeAt(i);hash=Math.imul(hash,16777619);}
+      return "ui."+(hash>>>0).toString(16).padStart(8,"0");
+    }
+    const targets = new Map<string,{el:HTMLElement,node:Text,original:string}>();
+    for (const el of candidates) {
+      if(el.closest(blocked)||el.closest("[contenteditable]"))continue;
+      const node=Array.from(el.childNodes).find(n=>n.nodeType===Node.TEXT_NODE && !!n.textContent?.trim()) as Text|undefined;
+      if(!node && !el.dataset.conOriginal)continue;
+      const original=el.dataset.conOriginal ?? node?.textContent?.trim() ?? "";
+      if(!original)continue;
+      const key=keyFor(el);
+      el.dataset.conOriginal=original;
+      el.dataset.conEditorKey=key;
+      let textNode=node;
+      if(!textNode) {
+        textNode=document.createTextNode("");
+        el.insertBefore(textNode,el.firstChild);
+      }
+      const stored=entries[key];
+      const next=stored?.removed ? (owner && editing ? "[removed]" : "") : (stored?.value ?? original);
+      if(textNode.nodeValue?.trim()!==next)textNode.nodeValue=next;
+      targets.set(key,{el,node:textNode,original});
+    }
+    document.body.classList.toggle("con-inline-editing",owner && editing);
+    const handler=async(event:MouseEvent)=>{
+      if(!owner||!editing)return;
+      const target=event.target;
+      if(!(target instanceof HTMLElement))return;
+      const element=target.closest<HTMLElement>("[data-con-editor-key]");
+      if(!element||element.closest(blocked))return;
+      const key=element.dataset.conEditorKey||"";
+      const row=targets.get(key);
+      if(!row)return;
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      const entered=window.prompt("Edit site text. Leave empty to hide it.",entries[key]?.removed?"":entries[key]?.value??row.original);
+      if(entered===null)return;
+      try{
+        const change=await contentRequest("PUT",{key,value:entered.trim()||row.original,original:row.original,version:entries[key]?.version??0,removed:!entered.trim()});
+        accept(change);
+        row.node.nodeValue=entered.trim()||(editing?"[removed]":"");
+      }catch(e){window.alert(e instanceof Error?e.message:"Unable to save site text");}
+    };
+    if(owner&&editing)document.addEventListener("click",handler,true);
+    return ()=>{
+      document.removeEventListener("click",handler,true);
+      document.body.classList.remove("con-inline-editing");
+    };
+  },[owner,editing,ready,entries]);
   return (
     <TextContext.Provider
       value={{
