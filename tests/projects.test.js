@@ -43,10 +43,12 @@ test("project input validates categories, length and safe links", () => {
   const legacy = { ...draft };
   delete legacy.git_url;
   assert.equal(projectInput(legacy).git_url, "");
+  assert.equal(projectInput({ ...draft, category:"Photography" }).category, "Photography");
+  assert.equal(projectInput({ ...draft, category:"Glass sculpture" }).category, "Glass sculpture");
   for (const change of [
     { title: "" },
     { body: "a".repeat(10001) },
-    { category: "Other" },
+    { category: "<script>" },
     { link_url: "javascript:alert(1)" },
     { git_url: "javascript:alert(1)" },
     { git_url: "https://user:pass@github.com/example/repo" },
@@ -176,6 +178,20 @@ test("project lifecycle keeps authorship, approval snapshots, votes and comments
         );
       },
     );
+    await t.test("shared categories are visible and new creator categories are available globally", async()=>{
+      const initial=await call(null,"categories");
+      assert.equal(initial.statusCode,200);
+      assert.ok(initial.body.categories.some(c=>c.name==="Photography"));
+      const made=await call(alice,"categories","POST",{name:"Glass Sculpture"});
+      assert.equal(made.statusCode,201);
+      assert.equal(made.body.name,"Glass Sculpture");
+      const global=await call(null,"categories");
+      assert.ok(global.body.categories.some(c=>c.name==="Glass Sculpture"));
+      assert.equal((await call(bob,"categories","PUT",{name:"Glass Sculpture",active:false})).statusCode,403);
+      assert.equal((await call(owner,"categories","PUT",{name:"Glass Sculpture",active:false})).statusCode,200);
+      const hidden=await call(null,"categories");
+      assert.ok(hidden.body.categories.some(c=>c.name==="Glass Sculpture" && c.active===false));
+    });
     await t.test(
       "submission stays private until reviewed, and stale approvals fail",
       async () => {
