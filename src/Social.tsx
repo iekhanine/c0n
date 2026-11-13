@@ -496,6 +496,27 @@ function ComposerOverlay({
     </dialog>
   );
 }
+// Keep the overview deliberately dense, like old Reddit. Full content lives on the post page.
+function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
+  const title = post.title?.trim() || post.body.trim().split("\n").find(Boolean)?.slice(0, 110) || "Untitled post";
+  const posted = new Date(post.published_at);
+  return (
+    <article className="con-feed-row">
+      <span className="con-feed-rank" aria-hidden="true">{rank}.</span>
+      <div className="con-feed-entry">
+        <h2><a href={`/posts/${post.id}`}>{title}</a></h2>
+        <div className="con-feed-byline">
+          <time dateTime={post.published_at} title={Number.isNaN(posted.valueOf()) ? undefined : posted.toLocaleString()}>
+            {Number.isNaN(posted.valueOf()) ? "Posted" : posted.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+          </time>
+          <span>by <a href={`/members/${post.author_id}`}>{post.author_name}</a></span>
+          <span>to <a href="/community" className="con-feed-community">c/community</a></span>
+          <a className="con-feed-comments" href={`/posts/${post.id}#replies`}>{post.replies || 0} comments</a>
+        </div>
+      </div>
+    </article>
+  );
+}
 export function StreamPage({ compact = false }: { compact?: boolean }) {
   const [posts, setPosts] = useState<SocialPost[]>([]),
     [error, setError] = useState(""),
@@ -527,9 +548,11 @@ export function StreamPage({ compact = false }: { compact?: boolean }) {
           <button onClick={() => void load()}>Retry</button>
         </p>
       )}
-      {posts.slice(0, compact ? 4 : undefined).map((p) => (
-        <PostCard key={p.id} post={p} />
-      ))}
+      <div className="con-feed-list" aria-label="Recent posts">
+        {posts.slice(0, compact ? 4 : undefined).map((p, index) => (
+          <FeedRow key={p.id} post={p} rank={index + 1} />
+        ))}
+      </div>
       {loading && <p role="status">Loading posts…</p>}
       {!loading && !posts.length && !error && <p>No transmissions yet.</p>}
       {compact ? (
