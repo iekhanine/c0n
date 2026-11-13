@@ -703,6 +703,65 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
       next && <button disabled={loading} onClick={()=>void load(true)}>Load more</button>}
   </section>;
 }
+export function InboxPage() {
+  const user = useUser();
+  type Notice = {id:string;post_id:string;actor_name:string;created_at:string;read_at:string|null};
+  const [items,setItems] = useState<Notice[]>([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState("");
+  useEffect(() => {
+    if (!user) return;
+    void socialApi<{notifications:Notice[]}>("inbox")
+      .then(d=>{setItems(d.notifications);setError("");})
+      .catch(e=>setError(e instanceof Error?e.message:"Could not load inbox."))
+      .finally(()=>setLoading(false));
+  },[user?.id]);
+  async function read(item:Notice) {
+    if(!item.read_at) {
+      try {
+        await socialApi("inbox","PUT",{id:item.id});
+        setItems(prev=>prev.map(x=>x.id===item.id?{...x,read_at:new Date().toISOString()}:x));
+      } catch(e) { setError(e instanceof Error?e.message:"Couldn't mark as read."); }
+    }
+    window.location.assign("/posts/"+item.post_id+"#replies");
+  }
+  return <section className="con-inbox-page">
+    <header><span className="con-community-kicker">YOUR ACTIVITY</span><h1>Inbox</h1><p>Replies to posts you've asked to follow.</p></header>
+    {!user && <p><a href="/api/auth/discord/login">Sign in with Discord to see your notifications.</a></p>}
+    {loading && user && <p>Loading notifications…</p>}
+    {error && <p role="alert" className="social-error">{error}</p>}
+    {!loading && !items.length && !error && <p>No replies yet. Your inbox is all caught up.</p>}
+    <div className="con-inbox-list">{items.map(item=><button key={item.id} className={item.read_at?"":"unread"} onClick={()=>void read(item)}>
+      <strong>{item.actor_name} replied to your post</strong>
+      <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time>
+      <span>View conversation →</span>
+    </button>)}</div>
+  </section>;
+}
+export function OutboundPage({ id }: { id: string }) {
+  const [post,setPost] = useState<SocialPost|null>(null);
+  const [error,setError] = useState("");
+  useEffect(()=>{
+    void socialApi<{post:SocialPost}>("post&id="+encodeURIComponent(id))
+      .then(d=>{if(!safeUrl(d.post.link_url))throw Error("This post doesn't have an external link.");setPost(d.post);})
+      .catch(e=>setError(e instanceof Error?e.message:"Link unavailable."));
+  },[id]);
+  const url = safeUrl(post?.link_url);
+  return <section className="con-outbound">
+    <div className="con-outbound-bar">
+      <a className="con-outbound-home" href="/"><strong>C0N</strong> · Home</a>
+      <a href={post?.community_slug?"/c/"+post.community_slug:"/community"}>Back to c/{post?.community_slug || "community"}</a>
+      <a href={"/posts/"+id}>Comments</a>
+      {url && <a href={url} target="_blank" rel="noopener noreferrer">Open original ↗</a>}
+    </div>
+    {error && <p className="social-error" role="alert">{error}</p>}
+    {!post && !error && <p>Opening external link…</p>}
+    {url && <>
+      <div className="con-outbound-fallback">Some websites block embedded viewing. If the page is blank, <a href={url} target="_blank" rel="noopener noreferrer">open the original in a new tab</a>. C0N will remain here.</div>
+      <iframe title={"External content: "+post?.title} src={url} referrerPolicy="no-referrer" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" />
+    </>}
+  </section>;
+}
 export function PostPage({ id }: { id: string }) {
   const user = useUser(),
     [data, setData] = useState<{
