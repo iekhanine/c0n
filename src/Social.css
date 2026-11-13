@@ -600,3 +600,12 @@
 .member-portfolio-thumbs{display:flex;gap:5px;margin:14px 0}
 .member-portfolio-thumbs img{width:calc((100% - 10px)/3);aspect-ratio:1.25;object-fit:cover;border-radius:5px;background:#0e1612}
 @media(max-width:680px){.profile-portfolio-grid,.member-discovery-filters{grid-template-columns:1fr}.profile-portfolio-piece>img{height:210px}.portfolio-editor-section{padding:12px}}
+
+/* Member micro-posts deliberately read like a compact social timeline, not editorial articles. */
+.social-profile .social-member-post { padding:16px 20px; margin-bottom:10px; border-radius:10px; }
+.social-profile .social-member-post header {margin-bottom:10px;}
+.social-profile .social-member-post .social-avatar {width:36px;height:36px;flex-basis:36px;}
+.social-profile .social-member-post .social-body {margin:8px 0 12px;line-height:1.55;white-space:pre-wrap;}
+.social-profile .social-member-post footer {margin-top:12px;padding-top:12px;}
+.social-profile .social-member-post .social-image {margin:12px 0; border-radius:8px;}
+.social-profile .social-profile-post-action button {min-width:140px; letter-spacing:normal;}
