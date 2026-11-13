@@ -329,6 +329,20 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     assert.equal(nested.find(r => r.id === child.body.id).parent_id, response.body.id);
     assert.equal(nested.find(r => r.id === grandchild.body.id).parent_id, child.body.id);
     assert.equal((await call(bob, "inbox_count")).body.unread, 0);
+    assert.equal((await call(alice, "reply", "POST", {
+      id: communityPost, parent_id: randomUUID(), body: "Invalid parent",
+    })).statusCode, 400);
+    assert.equal((await call(alice, "reply", "DELETE", {
+      id: communityPost, reply_id: response.body.id,
+    })).statusCode, 200);
+    const afterRemove = (await call(null, "post&id=" + communityPost)).body.replies;
+    assert.equal(afterRemove.find(r => r.id === response.body.id).body, "[deleted]");
+    assert.equal(afterRemove.find(r => r.id === child.body.id).parent_id, response.body.id);
+    assert.equal((await call(alice, "reply", "POST", {
+      id: communityPost, parent_id: response.body.id, body: "Deleted parent",
+    })).statusCode, 400);
+    assert.equal((await call(bob, "post", "DELETE", {id:communityPost})).statusCode, 200);
+
 
 
     await db.query("UPDATE con.posts SET published_at=NULL WHERE id=$1", [
