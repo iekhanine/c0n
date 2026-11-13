@@ -3,7 +3,7 @@ type Status = {
   guild_id: string;
   channel_ids: string[];
   publish_members: boolean;
-  channels: { id: string; name: string }[];
+  channels: { id: string; name: string; category?: string }[];
   last_heartbeat: string | null;
   member_count: number;
   bot_id: string | null;
@@ -87,6 +87,11 @@ export default function DiscordConnection() {
       setBusy(false);
     }
   }
+  const simplify = (name: string) => [...name.toLowerCase()]
+    .map(char => Object.fromEntries([..."ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ"].map((x, i) => [x, "abcdefghijklmnopqrstuvwxyz"[i]]))[char] || char)
+    .join("").replace(/[^a-z0-9]/g, "");
+  const gameChannels = (status?.channels || []).filter(c =>
+    ["thegames", "thearcade"].includes(simplify(c.category || "")));
   const connected =
     status?.last_heartbeat &&
     Date.now() - Date.parse(status.last_heartbeat) < 180000;
@@ -158,6 +163,14 @@ export default function DiscordConnection() {
             Show member names and avatars on the community website
           </label>
           <h3>Channels to include</h3>
+          <p>Only selected channels contribute to public activity. Game bot posts in selected Games and Arcade channels count too. Ephemeral games cannot be counted.</p>
+          <p>{channels.length} selected, including {gameChannels.filter(c => channels.includes(c.id)).length} of {gameChannels.length} gaming channels.</p>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+            <button type="button" disabled={busy || !gameChannels.length}
+              onClick={() => setChannels(old => [...new Set([...old, ...gameChannels.map(c => c.id)])])}>Select game channels</button>
+            <button type="button" disabled={busy || !gameChannels.length}
+              onClick={() => setChannels(old => old.filter(id => !gameChannels.some(c => c.id === id)))}>Clear game channels</button>
+          </div>
           {!status?.channels.length && (
             <p>
               The public channel checklist appears after the worker first
@@ -177,7 +190,7 @@ export default function DiscordConnection() {
                   )
                 }
               />
-              #{c.name}
+              #{c.name}{c.category ? ' · ' + c.category : ''}
             </label>
           ))}
           <button disabled={busy}>Save server settings</button>
