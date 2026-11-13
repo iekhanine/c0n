@@ -31,6 +31,10 @@ export default function App() {
       document.body.classList.remove("showcase-page");
     };
   }, []);
+  useEffect(() => {
+    if (account?.user && window.location.pathname === "/" && sessionStorage.getItem("con-pending-invite"))
+      window.location.replace("/membership");
+  }, [account?.user?.id]);
   const [seedError, setSeedError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
