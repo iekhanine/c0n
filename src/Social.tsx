@@ -687,7 +687,7 @@ export function PostPage({ id }: { id: string }) {
         reply_id: replyId,
       });
       if (replyId) await load();
-      else window.location.assign(data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community");
+      else window.location.assign(data?.post.community_slug ? "/c/" + data.post.community_slug : data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed.");
     } finally {
@@ -696,7 +696,7 @@ export function PostPage({ id }: { id: string }) {
   }
   return (
     <section className="social-stream">
-      <a className="social-back" href={data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community"}>
+      <a className="social-back" href={data?.post.community_slug && data?.post.title ? "/c/" + data.post.community_slug : data?.post.kind === "member" ? "/members/" + data.post.author_id : "/community"}>
         ← {data?.post.kind === "member" ? "Profile" : "Community"}
       </a>
       {error && (
@@ -709,7 +709,7 @@ export function PostPage({ id }: { id: string }) {
         <>
           {editing ? (
             <ComposerOverlay
-              blog={data.post.kind === "update"}
+              blog={data.post.kind === "update" || Boolean(data.post.title)}
               post={data.post}
               onClose={() => setEditing(false)}
               onSave={() => {
