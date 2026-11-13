@@ -26,6 +26,10 @@ function parseLayout(value?: string): Section[] {
     for (const key of saved) {
       if (options.some(o => o.id === key) && !ids.includes(key)) ids.push(key);
     }
+    // Existing custom layouts predate member posts. Add the new section once,
+    // but respect the owner's later decision to remove it.
+    if (!saved.includes("__member_posts_v1") && !ids.includes("posts"))
+      ids.splice(Math.min(1, ids.length), 0, "posts");
     return ids;
   } catch { return fallback; }
 }
@@ -52,7 +56,7 @@ export default function DiscordSidebar() {
   async function save() {
     setBusy(true); setError(""); setNotice("");
     try {
-      await change(LAYOUT_KEY, JSON.stringify(order), current?.version || 0, false);
+      await change(LAYOUT_KEY, JSON.stringify(["__member_posts_v1", ...order]), current?.version || 0, false);
       setEditingLayout(false);
       setNotice("Layout saved for all visitors.");
     } catch(e) { setError(e instanceof Error ? e.message : "Could not save layout."); }
