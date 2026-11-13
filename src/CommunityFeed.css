@@ -2234,3 +2234,66 @@ img.member-initial.project-author-avatar {
 @media(max-width:600px){
   .con-discord-section .server-activity time{font-size:10px;white-space:normal;}
 }
+
+/* C0N creator workspace: organized work inventory and generous editing area. */
+.member-workspace {max-width:1450px; padding:18px 22px 64px;}
+.member-workspace-head{display:flex;justify-content:space-between;gap:24px;align-items:center;padding:18px 0 25px;}
+.member-workspace-head h1{margin:8px 0 10px;font-size:clamp(30px,4vw,46px);}
+.member-workspace-head p{max-width:720px;line-height:1.6;color:#bfcab6;margin:0;}
+.workspace-eyebrow{font:700 11px system-ui;letter-spacing:.16em;color:#bada8c;}
+.member-workspace .workspace-new-primary{border:1px solid #c7e891;background:#c7e891;color:#1c2917;padding:12px 19px;border-radius:8px;font-weight:750;white-space:nowrap;cursor:pointer;}
+.workspace-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px;}
+.workspace-metrics div{display:grid;gap:4px;background:#1b241a;border:1px solid #43543d;border-radius:10px;padding:16px;}
+.workspace-metrics strong{font:750 26px/1.2 system-ui;color:#e4f3cb;}
+.workspace-metrics span{font-size:12px;color:#acbea5;}
+.member-workspace .workspace-layout{grid-template-columns:minmax(250px, .85fr) minmax(0,2fr);gap:18px;align-items:start;margin-top:8px;}
+.member-workspace .workspace-layout>section,.member-workspace .workspace-layout>form{padding:24px;border:1px solid #40523a;border-radius:12px;background:#192119;}
+.member-workspace .workspace-inventory{display:grid;gap:12px;}
+.workspace-inventory-heading{display:flex;align-items:center;justify-content:space-between;gap:9px;}
+.workspace-inventory-heading h2{margin:0;font-size:18px;}
+.workspace-inventory-heading select{max-width:140px;min-width:0;background:#101910;color:#e0ecd8;padding:7px;border-radius:6px;border:1px solid #596b50;font-size:12px;}
+.workspace-inventory-list{display:grid;gap:8px;max-height:660px;overflow:auto;overscroll-behavior:contain;}
+.member-workspace .owned-project-card{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:#222c20;border:1px solid #40543d;border-radius:9px;padding:10px;color:#e9efd9;cursor:pointer;min-width:0;}
+.member-workspace .owned-project-card:hover,.member-workspace .owned-project-card.selected{border-color:#c7e891;background:#2b3926;}
+.owned-project-card img,.owned-project-placeholder{width:60px;height:60px;flex:0 0 60px;border-radius:6px;object-fit:cover;background:#3a4a34;}
+.owned-project-placeholder{display:grid;place-items:center;color:#cce6a7;font-size:23px;font-weight:bold;}
+.owned-project-content{min-width:0;display:grid;gap:4px;flex:1;}
+.owned-project-content strong{font:650 14px system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.owned-project-content small{color:#aebfa5;font-size:11px;}
+.owned-project-content em{font:650 10px system-ui;letter-spacing:.05em;color:#c6dbb5;text-transform:uppercase;}
+.owned-project-content em[data-status="approved"]{color:#c7e891;}
+.owned-project-content em[data-status="pending"]{color:#f0d48f;}
+.workspace-inventory-empty{color:#aab8a3;font-size:14px;line-height:1.5;}
+.workspace-editor-head{border-bottom:1px solid #40523a;padding-bottom:18px;margin-bottom:20px;}
+.workspace-editor-head h2{font-size:24px;margin:6px 0 8px;}
+.workspace-editor-head p{color:#b4c3ad;margin:0;line-height:1.5;}
+.member-workspace .workspace-editor>label{display:grid;gap:7px;margin:15px 0;color:#e2ebd9;font-size:13px;font-weight:650;}
+.member-workspace .workspace-editor input:not([type="file"]),.member-workspace .workspace-editor textarea,.member-workspace .workspace-editor select{box-sizing:border-box;width:100%;background:#101810;border:1px solid #516449;border-radius:7px;padding:11px;color:#e4eddb;font:15px/1.5 system-ui;}
+.member-workspace .workspace-editor textarea{resize:vertical;}
+.workspace-add-category-toggle{background:none;border:0;color:#c8e99a;text-decoration:underline;cursor:pointer;padding:8px 0;}
+.workspace-new-category{padding:15px;border:1px dashed #607a52;border-radius:8px;display:grid;gap:10px;}
+.workspace-new-category label{display:grid;gap:7px;}
+.workspace-new-category small{font-size:12px;color:#b4c3a8;}
+@media(max-width:1000px){.member-workspace .workspace-layout{grid-template-columns:1fr;}.workspace-inventory-list{max-height:320px;}}
+@media(max-width:600px){.workspace-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}.member-workspace-head{align-items:flex-start;flex-direction:column;}.member-workspace{padding:15px;}}
+/* Admin queue and category taxonomy tools. */
+.con-approvals,.con-category-admin{display:grid;gap:17px;padding:22px;}
+.con-approvals header p,.con-category-admin header p{color:#b9c6b1;line-height:1.55;}
+.con-approvals label,.con-category-add label{display:grid;gap:8px;}
+.con-approvals textarea,.con-category-admin input{box-sizing:border-box;width:100%;border-radius:7px;border:1px solid #516449;background:#121a12;color:#e9f0e4;padding:10px;}
+.con-approval-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;}
+.con-approval-grid article{border:1px solid #4a5a44;border-radius:9px;background:#1d271c;overflow:hidden;}
+.con-approval-grid article>img{height:155px;width:100%;object-fit:cover;}
+.con-approval-copy{padding:16px;}
+.con-approval-copy>span{color:#b5c4ac;font-size:12px;}
+.con-approval-copy>p{line-height:1.5;max-height:160px;overflow:auto;white-space:pre-wrap;}
+.con-approval-links,.con-approval-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.con-category-add{display:flex;align-items:end;gap:12px;}
+.con-category-add label{flex:1;}
+.con-category-admin-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+.con-category-admin-list>div{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:10px;border:1px solid #465842;border-radius:7px;}
+.con-category-admin-list small{display:block;color:#c4b98b;}
+/* Match activity date/time size to a slightly larger channel pill. */
+.con-discord-section .server-activity .project-tag{font-size:12px;line-height:1.4;padding:5px 9px;max-width:none;}
+.con-discord-section .server-activity time{font-size:12px;line-height:1.4;}
+@media(max-width:600px){.con-discord-section .server-activity time{font-size:12px;}}
