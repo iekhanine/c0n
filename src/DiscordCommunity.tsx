@@ -112,7 +112,7 @@ export function DiscordChannels({ data }: { data: DiscordData | null }) {
         </div>
       ))}
       <p className="discord-sync-label">
-        Messages in selected channels · past 7 days
+        Past 7 days
       </p>
     </>
   ) : (
