@@ -33,6 +33,27 @@ export type SocialPost = {
   version: number;
   link_url?: string;
 };
+type PortfolioPiece = {
+  kind: "image" | "website" | "video" | "game" | "craft" | "project" | "other";
+  title: string;
+  description: string;
+  image_url: string;
+  link_url: string;
+};
+const creativeDisciplines = [
+  "Developer", "Designer", "Artist", "Photographer", "Videographer",
+  "Musician", "Writer", "Maker & Craftsperson", "Business & Marketing",
+  "Project Manager", "Game Creator", "Other",
+];
+const portfolioKinds = [
+  ["image", "Photography / artwork"],
+  ["website", "Website"],
+  ["video", "Video"],
+  ["game", "Game"],
+  ["craft", "Physical creation / craft"],
+  ["project", "Project"],
+  ["other", "Other work"],
+] as const;
 type Profile = {
   user_id: string;
   name: string;
@@ -44,6 +65,9 @@ type Profile = {
   location: string;
   links: { label: string; url: string }[];
   show_projects: boolean;
+  disciplines: string[];
+  portfolio: PortfolioPiece[];
+  available_for_work: boolean;
 };
 type Reply = {
   id: string;
@@ -675,7 +699,7 @@ function ProfileEditor({
   onCancel: () => void;
 }) {
   const [uploading, setUploading] = useState(false);
-  const [draft, setDraft] = useState(profile),
+  const [draft, setDraft] = useState<Profile>({ ...profile, disciplines: profile.disciplines || [], portfolio: profile.portfolio || [], available_for_work: profile.available_for_work || false }),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   function change(key: keyof Profile, value: unknown) {
@@ -716,6 +740,27 @@ function ProfileEditor({
             />
           </label>
         ))}
+        <div className="portfolio-editor-section">
+          <h3>What do you create?</h3>
+          <p>Choose up to six disciplines. These make you discoverable in the member directory, whether you're a coder, a concert photographer, a bladesmith or something else entirely.</p>
+          <div className="creative-discipline-grid">
+            {creativeDisciplines.map(discipline => (
+              <label key={discipline} className="creative-discipline">
+                <input type="checkbox" checked={draft.disciplines.includes(discipline)}
+                  disabled={!draft.disciplines.includes(discipline) && draft.disciplines.length >= 6}
+                  onChange={e => change("disciplines", e.target.checked
+                    ? [...draft.disciplines, discipline]
+                    : draft.disciplines.filter(x => x !== discipline))}/>
+                {discipline}
+              </label>
+            ))}
+          </div>
+          <label className="social-check">
+            <input type="checkbox" checked={draft.available_for_work}
+              onChange={e => change("available_for_work", e.target.checked)}/>
+            Available for collaborations, commissions or work
+          </label>
+        </div>
         <label>
           About you
           <textarea
@@ -763,6 +808,53 @@ function ProfileEditor({
           />
           Show my published projects
         </label>
+        <div className="portfolio-editor-section">
+          <h3>Featured work</h3>
+          <p>Build a visual portfolio. Upload photos of your work, add an optional website, video, game or project link, and explain what you created. Up to 24 pieces.</p>
+          {draft.portfolio.map((piece, i) => (
+            <div className="portfolio-piece-editor" key={i}>
+              <div className="portfolio-piece-editor-heading">
+                <strong>Piece {i + 1}</strong>
+                <button type="button" onClick={() => change("portfolio", draft.portfolio.filter((_, j) => i !== j))}>Remove</button>
+              </div>
+              <label>Work type
+                <select value={piece.kind} onChange={e => change("portfolio", draft.portfolio.map((v,j) =>
+                  i === j ? {...v, kind: e.target.value as PortfolioPiece["kind"]} : v))}>
+                  {portfolioKinds.map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label>Title
+                <input maxLength={120} required value={piece.title} placeholder="Live at the Fillmore, hand-forged chef knife, latest game…"
+                  onChange={e => change("portfolio", draft.portfolio.map((v,j) =>
+                    i === j ? {...v, title:e.target.value} : v))}/>
+              </label>
+              <label>Description
+                <textarea rows={3} maxLength={600} value={piece.description}
+                  onChange={e => change("portfolio", draft.portfolio.map((v,j) =>
+                    i === j ? {...v, description:e.target.value} : v))}/>
+              </label>
+              <ImageUpload label={piece.image_url ? "Replace portfolio image" : "Upload portfolio image"}
+                onBusyChange={setUploading}
+                onUpload={url => change("portfolio", draft.portfolio.map((v,j) =>
+                  i === j ? {...v,image_url:url} : v))}/>
+              {safeUrl(piece.image_url) && <div className="portfolio-editor-preview">
+                <img src={safeUrl(piece.image_url)} alt="" loading="lazy"/>
+                <button type="button" onClick={() => change("portfolio", draft.portfolio.map((v,j) =>
+                  i === j ? {...v, image_url:""} : v))}>Remove image</button>
+              </div>}
+              <label>Link to the work (optional, HTTPS)
+                <input type="url" maxLength={2000} value={piece.link_url}
+                  placeholder="https://..."
+                  onChange={e => change("portfolio", draft.portfolio.map((v,j) =>
+                    i === j ? {...v, link_url:e.target.value} : v))}/>
+              </label>
+            </div>
+          ))}
+          <button type="button" disabled={draft.portfolio.length >= 24}
+            onClick={() => change("portfolio", [...draft.portfolio, {
+              kind:"image",title:"",description:"",image_url:"",link_url:"",
+            }])}>+ Add portfolio piece</button>
+        </div>
         <h3>Social links</h3>
         {draft.links.map((l, i) => (
           <div className="social-link-editor" key={i}>
