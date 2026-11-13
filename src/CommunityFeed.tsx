@@ -21,6 +21,7 @@ type Post = {
   git_url: string;
   featured: boolean;
   author_name: string;
+  avatar_url?: string;
   published_at: string;
   owner_id: string;
   homepage_pinned?: boolean;
@@ -40,6 +41,14 @@ const safe = (s: string) => {
     return undefined;
   }
 };
+function ProjectAuthorAvatar({ name, url }: { name: string; url?: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  return url?.startsWith("https://") && !failed ? (
+    <img className="member-initial project-author-avatar" src={url}
+      loading="lazy" alt="" onError={() => setFailed(true)} />
+  ) : <span className="member-initial">{name.slice(0, 2).toUpperCase()}</span>;
+}
 export default function CommunityFeed({
   page = "explore",
 }: {
@@ -195,9 +204,7 @@ export default function CommunityFeed({
                     </a>
                   )}
                   <div className="project-meta">
-                    <span className="member-initial">
-                      {p.author_name.slice(0, 2).toUpperCase()}
-                    </span>
+                    <ProjectAuthorAvatar name={p.author_name} url={p.avatar_url} />
                     <a
                       className="member-profile-link"
                       href={`/members/${p.owner_id}`}
