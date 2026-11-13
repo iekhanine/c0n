@@ -130,7 +130,7 @@ export function discordPayload(post) {
     footer: {
       text: `CoN // ${post.kind === "project" ? "FEATURED PROJECT" : "TRANSMISSION"} · ${post.author_name}`,
     },
-    thumbnail: { url: "https://c0n.ivansays.com/con-logo.png" },
+    thumbnail: { url: "https://cultofnixon.com/con-logo.png" },
   };
   if (post.title) embed.title = post.title;
   if (post.link_url) {
