@@ -101,7 +101,7 @@ export async function login(req, res) {
     redirect(res, url.toString());
   } catch {
     console.error("Discord login configuration unavailable");
-    redirect(res, "/admin?error=configuration");
+    redirect(res, "/?error=configuration");
   }
 }
 
@@ -159,11 +159,11 @@ export async function discordCallback(req, res) {
       serialize(STATE, "", { ...options, maxAge: 0 }),
       serialize(SESSION, session, { ...options, maxAge: seconds }),
     ]);
-    redirect(res, "/admin");
+    redirect(res, "/");
   } catch {
     // Do not log the callback URL, authorization code, token or cookie.
     console.error("Discord OAuth callback rejected");
-    redirect(res, "/admin?error=login");
+    redirect(res, "/?error=login");
   }
 }
 
