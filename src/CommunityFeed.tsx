@@ -1,5 +1,6 @@
 import ProjectCardMenu from "./ProjectCardMenu";
 import DiscordSidebar from "./DiscordSidebar";
+import { StreamPage } from "./Social";
 import { VoteButton, type Project } from "./ProjectPages";
 import { Editable, Copy, useSiteCopy } from "./SiteText";
 import { useEffect, useState } from "react";
@@ -255,6 +256,9 @@ export default function CommunityFeed({
         </div>
         <DiscordSidebar />
       </div>
+      {page === "explore" && <section className="con-home-blog" aria-label="Latest community blog posts">
+        <StreamPage compact />
+      </section>}
     </>
   );
 }
