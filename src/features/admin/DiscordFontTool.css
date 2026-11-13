@@ -1,0 +1,11 @@
+.con-font-tool { max-width: 850px; display:grid; gap:14px; padding:26px; }
+.con-font-heading { display:flex; align-items:flex-start; gap:12px; }
+.con-font-heading h2 { margin:0 0 8px; }
+.con-font-heading p,.con-font-note {margin:0; opacity:.75; line-height:1.5;}
+.con-font-tool > label:not(.con-font-frame) {font-weight:650; font-size:13px;}
+.con-font-tool textarea {box-sizing:border-box; width:100%; min-height:100px; padding:13px; background:#111810; color:#e5eadb; border:1px solid #55624a; border-radius:7px; font:16px/1.6 system-ui; resize:vertical;}
+.con-font-tool textarea[readonly] {color:#d1f77b;}
+.con-font-frame {display:flex; gap:9px; align-items:center; font-size:13px; }
+.con-font-actions {display:flex; gap:10px; flex-wrap:wrap;}
+.con-font-actions button {display:inline-flex; align-items:center; gap:8px; padding:10px 15px; cursor:pointer;}
+.con-font-note {font-size:12px;}
