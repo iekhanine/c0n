@@ -946,7 +946,7 @@ export function ProfilePage({ id }: { id: string }) {
     [error, setError] = useState(""),
     [editing, setEditing] = useState(false),
     [composing, setComposing] = useState(false),
-    [tab, setTab] = useState("posts");
+    [tab, setTab] = useState("portfolio");
   async function load() {
     try {
       setData(await socialApi("profile&id=" + encodeURIComponent(id)));
@@ -997,6 +997,8 @@ export function ProfilePage({ id }: { id: string }) {
             <h2>{p.headline}</h2>
             <p className="social-body">{p.bio}</p>
             {p.location && <p className="social-handle">{p.location}</p>}
+            {!!p.disciplines?.length && <div className="profile-discipline-list">{p.disciplines.map(d => <span key={d}>{d}</span>)}</div>}
+            {p.available_for_work && <p className="profile-available">Open to collaborations and commissions</p>}
             <div className="social-profile-links">
               {p.links.map((l, i) => (
                 <a
@@ -1019,6 +1021,9 @@ export function ProfilePage({ id }: { id: string }) {
         </>
       )}
       <nav className="social-tabs" aria-label="Profile sections">
+        {!!p.portfolio?.length && <button aria-pressed={tab === "portfolio"} onClick={() => setTab("portfolio")}>
+          Portfolio ({p.portfolio.length})
+        </button>}
         <button aria-pressed={tab === "posts"} onClick={() => setTab("posts")}>
           Posts
         </button>
@@ -1032,7 +1037,23 @@ export function ProfilePage({ id }: { id: string }) {
         )}
         {data.own && <a href="/my-projects">Manage projects →</a>}
       </nav>
-      {tab === "posts" ? (
+      {tab === "portfolio" ? (
+        <div className="profile-portfolio-grid">
+          {(p.portfolio || []).map((piece, index) => (
+            <article className="profile-portfolio-piece" key={index}>
+              {safeUrl(piece.image_url) && <img src={safeUrl(piece.image_url)} alt={piece.title} loading="lazy"/>}
+              <div className="profile-portfolio-content">
+                <span className="profile-portfolio-kind">{portfolioKinds.find(([value]) => value === piece.kind)?.[1] || "Creative work"}</span>
+                <h2>{piece.title}</h2>
+                {piece.description && <p>{piece.description}</p>}
+                {safeUrl(piece.link_url) && <a href={safeUrl(piece.link_url)} target="_blank" rel="noopener noreferrer">
+                  View work <ArrowUpRight size={15}/>
+                </a>}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : tab === "posts" ? (
         <>
           {data.own && (
             <div className="social-profile-post-action">
