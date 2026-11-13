@@ -219,7 +219,7 @@ export function PostCard({
   }
   const truncated = !full && post.body.length > 600;
   return (
-    <article className="social-post">
+    <section className="social-post">
       {post.pinned && (
         <div className="social-pinned">
           <Pin size={13} />
@@ -281,7 +281,7 @@ export function PostCard({
           <ArrowUpRight size={15} />
         </a>
       )}
-      {!full && (
+      {!full && (truncated || post.kind === "update") && (
         <a className="social-read" href={"/posts/" + post.id}>
           Read more…
         </a>
@@ -523,7 +523,7 @@ export function StreamPage({ compact = false }: { compact?: boolean }) {
     <section className={"social-stream " + (compact ? "social-compact" : "")}>
       {compact && (
         <div className="social-page-heading">
-          <h2>Latest transmissions</h2>
+          <h2>Latest from the blog</h2>
         </div>
       )}
       {error && (
@@ -606,7 +606,7 @@ export function PostPage({ id }: { id: string }) {
         <>
           {editing ? (
             <ComposerOverlay
-              blog={data.can_blog}
+              blog={data.post.kind === "update"}
               post={data.post}
               onClose={() => setEditing(false)}
               onSave={() => {
@@ -1063,13 +1063,13 @@ export function ProfilePage({ id }: { id: string }) {
                 className="social-primary"
                 onClick={() => setComposing(true)}
               >
-                POST
+                Write a post
               </button>
             </div>
           )}
           {composing && (
             <ComposerOverlay
-              blog={data.can_blog}
+              blog={false}
               onClose={() => setComposing(false)}
               onSave={() => {
                 setComposing(false);
