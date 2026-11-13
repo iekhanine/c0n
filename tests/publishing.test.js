@@ -63,7 +63,7 @@ test("embeds suppress mentions and keep logo inside the card", () => {
   assert.deepEqual(payload.allowed_mentions, { parse: [] });
   assert.equal(
     payload.embeds[0].thumbnail.url,
-    "https://c0n.ivansays.com/con-logo.png",
+    "https://cultofnixon.com/con-logo.png",
   );
   assert.deepEqual(payload.attachments, []);
   assert.throws(() => deliveryAction({ state: "uncertain" }));
