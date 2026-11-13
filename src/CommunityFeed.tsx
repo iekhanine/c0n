@@ -8,7 +8,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   MessageCircle,
-  Search,
 } from "lucide-react";
 type Post = {
   id: string;
@@ -46,7 +45,6 @@ export default function CommunityFeed({
 }) {
   const text = useSiteCopy();
   const [category, setCategory] = useState("All projects"),
-    [query, setQuery] = useState(""),
     [sort, setSort] = useState("featured");
   const [canManage, setCanManage] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -87,9 +85,7 @@ export default function CommunityFeed({
     .filter(
       (p) =>
         (category === "All projects" || p.category === category) &&
-        `${p.title} ${p.body} ${p.author_name}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
+        true,
     )
     .sort(
       (a, b) =>
@@ -148,19 +144,6 @@ export default function CommunityFeed({
               </>
             )}
           </div>
-          <label className="compact-search" id="project-search">
-            <Search size={16} />
-            <input
-              aria-label="Search projects"
-              placeholder={text("search.placeholder")}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <EditButton id="search.placeholder" />
-            <span>
-              <Editable id="copy.7" />
-            </span>
-          </label>
           {projectError && (
             <p role="status" className="muted">
               {projectError}
