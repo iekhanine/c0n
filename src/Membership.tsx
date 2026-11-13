@@ -65,6 +65,20 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
     try{await request("revoke","POST",{serial});setNotice("Invitation revoked.");await refresh();}
     catch(e){setError((e as Error).message);}
   }
+  const [vaultFile,setVaultFile]=useState<File|null>(null);
+  const [vaultBusy,setVaultBusy]=useState(false);
+  const [vaultNotice,setVaultNotice]=useState("");
+  async function updateVault(e:FormEvent){
+    e.preventDefault();if(!vaultFile)return;
+    if(vaultFile.size>2*1024*1024){setVaultNotice("Use a JPEG or PNG under 2 MB.");return;}
+    setVaultBusy(true);setVaultNotice("");
+    try{
+      const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]||"");reader.onerror=()=>reject(Error("File read failed"));reader.readAsDataURL(vaultFile);});
+      const response=await fetch("/api/vault-background",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data})});
+      const result=await response.json();if(!response.ok)throw Error(result.error||"Upload failed");
+      setVaultNotice("Vault background updated. Refresh the access page to see it.");setVaultFile(null);
+    }catch(e){setVaultNotice((e as Error).message);}finally{setVaultBusy(false);}
+  }
   const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);setNotice("Copied to clipboard.");}catch{setError("Copy failed. Select and copy the text manually.");}};
   if (signedIn === null) {
     return <div className="vault-screen vault-loading"><img src="/con-logo.png" alt="C0N" /></div>;
@@ -103,6 +117,7 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
           </form>
           {issued.length>0&&<div className="con-issued-list"><h3>New invitations · save these now</h3>{issued.map(item=><div key={item.serial} className="con-invite-item"><div><strong>{item.serial}</strong><code>{item.code}</code></div><button onClick={()=>void copy(item.url)}><Copy size={15}/> Copy link</button></div>)}</div>}
         </section>}
+        {isOwner && <section className="con-member-panel"><h2>Vault background</h2><p>Replace the public entrance image without a GitHub or Vercel deployment. Use a JPEG or PNG under 2 MB.</p><form className="con-vault-upload" onSubmit={e=>void updateVault(e)}><input type="file" accept="image/jpeg,image/png" onChange={e=>setVaultFile(e.target.files?.[0]||null)}/><button disabled={!vaultFile||vaultBusy}>{vaultBusy?"Uploading…":"Update vault image"}</button>{vaultNotice && <p role="status">{vaultNotice}</p>}</form></section>}
         {member.active&&<section className="con-member-panel"><h2>Invitation history</h2>{invites.length===0?<p>No invitations issued yet.</p>:<div className="con-member-invite-list">{invites.map(item=><div className="con-invite-item" key={item.serial}><div><strong>{item.serial}</strong><small>{item.status.toUpperCase()}{item.city?", "+item.city:""}</small></div>{item.status==="available"&&<button onClick={()=>void revoke(item.serial)}>Revoke</button>}</div>)}</div>}</section>}
       </div>
       <aside className="con-membership-side"><div className="con-member-panel"><UserRoundCheck/><h3>The network</h3><div className="con-member-stat"><strong>{pad(member.member_no)}</strong><span>Your member number</span></div><div className="con-member-stat"><strong>{counts?.redeemed||0}</strong><span>Members invited</span></div><div className="con-member-stat"><strong>{counts?.unused||0}</strong><span>Invitations available</span></div></div><a href="/merch" className="con-member-panel con-merch-link"><Gift/><h3>Member supply</h3><p>Members-only merchandise</p><span>Explore merch →</span></a></aside>
