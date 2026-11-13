@@ -147,6 +147,15 @@ async function main() {
     if (!guild || !client.user) return;
     await guild.channels.fetch();
     welcome = await ensureWelcomePost(guild, client.user.id);
+    const firstContact = [...guild.channels.cache.values()].find(c => norm(c.name) === "firstcontact");
+    const perms = firstContact?.permissionsFor(await guild.members.fetchMe());
+    console.info("C0N welcome post diagnostic", JSON.stringify({
+      channelFound: Boolean(firstContact), channelId: firstContact?.id,
+      messageId: welcome?.messageId,
+      view: perms?.has("ViewChannel"), history: perms?.has("ReadMessageHistory"),
+      send: perms?.has("SendMessages"), react: perms?.has("AddReactions"),
+      channelIsText: firstContact?.isTextBased(),
+    }));
   }
   async function ensureInitiatedCompoundAccess() {
     await guild.channels.fetch();
