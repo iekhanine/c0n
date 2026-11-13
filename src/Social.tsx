@@ -66,6 +66,8 @@ type Profile = {
   username: string;
   codename?: string;
   public_slug?: string;
+  points?: number;
+  reputation?: number;
   public_display_name?: string;
   show_discord_name?: boolean;
   avatar_url: string;
@@ -1271,6 +1273,7 @@ export function ProfilePage({ id }: { id: string }) {
             <Avatar name={p.name} url={p.avatar_url} />
             <h1>{p.name}</h1>
             {p.username && p.show_discord_name && <p className="social-handle">@{p.username}</p>}{p.codename && p.name!==p.codename && <p className="social-handle">{p.codename}</p>}
+            <div className="con-reputation-row"><span>{p.points||0} reward points</span><span>{p.reputation||0} reputation</span></div>
             <h2>{p.headline}</h2>
             <p className="social-body">{p.bio}</p>
             {p.location && <p className="social-handle">{p.location}</p>}
