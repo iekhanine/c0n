@@ -584,6 +584,11 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
   const [saving,setSaving] = useState(false);
   const [notice,setNotice] = useState("");
   useEffect(() => { setTarget(communitySlug || "community"); },[communitySlug]);
+  useEffect(() => {
+    const open = () => setShowPost(true);
+    window.addEventListener("con-open-submit", open);
+    return () => window.removeEventListener("con-open-submit", open);
+  }, []);
   async function load(more = false) {
     setLoading(true);
     try {
@@ -624,7 +629,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
     } catch(e) { setNotice(e instanceof Error ? e.message : "Couldn't publish."); setSaving(false); }
   }
   return <section className={"social-stream con-community-page "+(compact?"social-compact":"")}>
-    {compact && user && <div className="con-compact-submit"><a href="/community?submit=1">+ Submit a post</a></div>}
+    {compact && user && <div className="con-compact-submit"><button type="button" onClick={() => setShowPost(true)}>+ Submit a post</button></div>}
     {!compact && <>
       <div className="con-community-heading">
         <div>
@@ -648,6 +653,13 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
         <label>Description<textarea maxLength={2000} rows={3} value={description} onChange={e=>setDescription(e.target.value)}/></label>
         <button type="submit" disabled={saving}>Create community</button>
       </form>}
+
+      {notice && !showPost && <p role="alert" className="social-error">{notice}</p>}
+      <nav className="con-community-nav" aria-label="Browse subcons">
+        <a className={!communitySlug?"selected":""} href="/community">All posts</a>
+        {communities.map(c=><a className={communitySlug===c.slug?"selected":""} key={c.slug} href={"/c/"+c.slug}>c/{c.slug}</a>)}
+      </nav>
+    </>}
       <dialog ref={postDialog} className="con-submit-dialog" aria-labelledby="con-submit-title"
         onClose={() => setShowPost(false)}>
         <form className="con-community-form con-submit-form" onSubmit={e=>void submitPost(e)}>
@@ -690,12 +702,6 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
           </div>
         </form>
       </dialog>
-      {notice && !showPost && <p role="alert" className="social-error">{notice}</p>}
-      <nav className="con-community-nav" aria-label="Browse subcons">
-        <a className={!communitySlug?"selected":""} href="/community">All posts</a>
-        {communities.map(c=><a className={communitySlug===c.slug?"selected":""} key={c.slug} href={"/c/"+c.slug}>c/{c.slug}</a>)}
-      </nav>
-    </>}
     {error && <p role="alert" className="social-error">{error} <button onClick={()=>void load()}>Retry</button></p>}
     <div className="con-feed-list" aria-label="Recent posts">
       {posts.slice(0,compact?4:undefined).map((p,i)=><FeedRow key={p.id} post={p} rank={i+1}/>)}
