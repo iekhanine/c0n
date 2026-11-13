@@ -313,6 +313,23 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     assert.equal(editedPost.link_url, "https://example.com/build");
     assert.equal(editedPost.video_url, "https://example.com/demo.mp4");
     assert.equal(editedPost.notify_replies, false);
+    await db.query("UPDATE con.post_replies SET created_at=now()-interval '20 seconds' WHERE id=$1", [response.body.id]);
+    const child = await call(bob, "reply", "POST", {
+      id: communityPost, parent_id: response.body.id, body: "Thanks Alice!",
+    });
+    assert.equal(child.statusCode, 201);
+    assert.equal((await call(alice, "inbox_count")).body.unread, 1);
+    assert.equal((await call(alice, "inbox")).body.notifications[0].reply_id, child.body.id);
+    await db.query("UPDATE con.post_replies SET created_at=now()-interval '20 seconds' WHERE id=$1", [child.body.id]);
+    const grandchild = await call(alice, "reply", "POST", {
+      id: communityPost, parent_id: child.body.id, body: "You're welcome!",
+    });
+    assert.equal(grandchild.statusCode, 201);
+    const nested = (await call(null, "post&id=" + communityPost)).body.replies;
+    assert.equal(nested.find(r => r.id === child.body.id).parent_id, response.body.id);
+    assert.equal(nested.find(r => r.id === grandchild.body.id).parent_id, child.body.id);
+    assert.equal((await call(bob, "inbox_count")).body.unread, 0);
+
 
     await db.query("UPDATE con.posts SET published_at=NULL WHERE id=$1", [
       transmission,
