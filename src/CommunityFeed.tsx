@@ -133,9 +133,6 @@ export default function CommunityFeed({
               <Editable id="copy.4" />
             </p>
           </section>
-          <a className="submission-cta" href="/my-projects">
-            + Submit your project
-          </a>
           <div className="showcase-toolbar" id="projects">
             <div className="showcase-filters">
               {["All projects", "Apps", "Websites", "Tools", "Experiments"].map(
