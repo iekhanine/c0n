@@ -541,7 +541,7 @@ function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
     <span className="con-feed-rank" aria-hidden="true">{rank}.</span>
     <VoteControl post={post} />
     <div className="con-feed-entry">
-      <h2><a href={safeUrl(post.link_url) ? `/out/${post.id}` : `/posts/${post.id}`}>{title}</a></h2>
+      <h2><a href={safeUrl(post.link_url) || `/posts/${post.id}`} target={safeUrl(post.link_url) ? "_blank" : undefined} rel={safeUrl(post.link_url) ? "noopener noreferrer" : undefined}>{title}</a></h2>
       <div className="con-feed-byline">
         <time dateTime={post.published_at} title={Number.isNaN(posted.valueOf()) ? undefined : posted.toLocaleString()}>
           {Number.isNaN(posted.valueOf()) ? "Posted" : posted.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
@@ -745,30 +745,6 @@ export function InboxPage() {
       <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time>
       <span>View conversation →</span>
     </button>)}</div>
-  </section>;
-}
-export function OutboundPage({ id }: { id: string }) {
-  const [post,setPost] = useState<SocialPost|null>(null);
-  const [error,setError] = useState("");
-  useEffect(()=>{
-    void socialApi<{post:SocialPost}>("post&id="+encodeURIComponent(id))
-      .then(d=>{if(!safeUrl(d.post.link_url))throw Error("This post doesn't have an external link.");setPost(d.post);})
-      .catch(e=>setError(e instanceof Error?e.message:"Link unavailable."));
-  },[id]);
-  const url = safeUrl(post?.link_url);
-  return <section className="con-outbound">
-    <div className="con-outbound-bar">
-      <a className="con-outbound-home" href="/"><strong>C0N</strong> · Home</a>
-      <a href={post?.community_slug?"/c/"+post.community_slug:"/community"}>Back to c/{post?.community_slug || "community"}</a>
-      <a href={"/posts/"+id}>Comments</a>
-      {url && <a href={url} target="_blank" rel="noopener noreferrer">Open original ↗</a>}
-    </div>
-    {error && <p className="social-error" role="alert">{error}</p>}
-    {!post && !error && <p>Opening external link…</p>}
-    {url && <>
-      <div className="con-outbound-fallback">Some websites block embedded viewing. If the page is blank, <a href={url} target="_blank" rel="noopener noreferrer">open the original in a new tab</a>. C0N will remain here.</div>
-      <iframe title={"External content: "+post?.title} src={url} referrerPolicy="no-referrer" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" />
-    </>}
   </section>;
 }
 type ThreadReply = Reply & { children: ThreadReply[] };
