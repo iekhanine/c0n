@@ -260,6 +260,39 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     assert.ok(feed.every((p) => p.kind === "update"));
     assert.ok(!feed.some((p) => p.id === postId));
     assert.ok(feed.some((p) => p.id === transmission));
+    // Subcons are namespaced, creator-owned, and vote totals are user-specific.
+    const createdCommunity = await call(bob, "community", "POST", {
+      slug: "homelab", name: "Home Lab", description: "Show us your setup",
+    });
+    assert.equal(createdCommunity.statusCode, 201);
+    assert.equal(createdCommunity.body.community.slug, "homelab");
+    assert.equal((await call(alice, "community", "POST", {
+      slug: "homelab", name: "Impersonation", description: "",
+    })).statusCode, 409);
+    assert.equal((await call(alice, "community", "PUT", {
+      slug: "homelab", name: "Hijacked", description: "",
+    })).statusCode, 403);
+    assert.equal((await call(bob, "community", "PUT", {
+      slug: "homelab", name: "Home Lab", description: "Hardware and software",
+    })).statusCode, 200);
+    const submission = await call(bob, "post", "POST", {
+      title: "My lab build", body: "Servers and cables", community_slug: "homelab",
+    });
+    assert.equal(submission.statusCode, 201);
+    const communityPost = submission.body.id;
+    const subnet = (await call(null, "feed&community=homelab")).body.posts;
+    assert.equal(subnet.length, 1);
+    assert.equal(subnet[0].id, communityPost);
+    assert.equal(subnet[0].community_slug, "homelab");
+    const vote = await call(alice, "vote", "PUT", { id: communityPost, value: 1 });
+    assert.equal(vote.statusCode, 200);
+    assert.equal(vote.body.score, 1);
+    assert.equal((await call(alice, "feed&community=homelab")).body.posts[0].vote, 1);
+    assert.equal((await call(bob, "vote", "PUT", { id: communityPost, value: -1 })).body.score, 0);
+    assert.equal((await call(null, "feed&community=homelab")).body.posts[0].score, 0);
+    assert.equal((await call(alice, "vote", "PUT", { id: communityPost, value: 0 })).body.score, -1);
+    assert.equal((await call(null, "post&id=" + communityPost)).body.post.title, "My lab build");
+    assert.equal((await call(null, "community&slug=homelab")).body.community.creator_id, bob);
     await db.query("UPDATE con.posts SET published_at=NULL WHERE id=$1", [
       transmission,
     ]);
