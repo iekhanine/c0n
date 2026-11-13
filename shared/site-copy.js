@@ -22,6 +22,8 @@ export const SITE_COPY = {
   "admin.reports.description": "Publishing totals and delivery history.",
   "admin.database.title": "Database",
   "admin.database.description": "Connection status and storage updates.",
+  "admin.font.title": "Discord text generator",
+  "admin.font.description": "Convert plain text into C0N small caps, then copy it straight into Discord.",
   "admin.discord.title": "Discord bot",
   "admin.discord.description":
     "Channels, people, publishing, and server controls in one workspace.",
