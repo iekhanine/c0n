@@ -21,3 +21,17 @@
 .con-member-error,.con-member-notice{padding:12px 16px;border-radius:8px;margin:0 0 18px}.con-member-error{background:#5a2424;color:#fff}.con-member-notice{background:#213b24;color:#dff7d5}
 @media(max-width:850px){.con-membership-layout{grid-template-columns:1fr}.con-membership-side{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.con-membership-page{width:calc(100% - 28px);padding-top:30px}.con-member-panel,.con-pass-section{padding:17px}.con-digital-pass{min-height:300px;aspect-ratio:auto;padding:19px}.con-pass-bottom{flex-direction:column;gap:4px}.con-membership-side,.con-invite-fields{grid-template-columns:1fr}.con-pass-top img{width:52px;height:52px}.con-pass-top b{font-size:14px;letter-spacing:2px}.con-pass-top span{letter-spacing:2px}}
+
+/* Invitation-only perimeter */
+.con-locked-shell{min-height:100vh;background:radial-gradient(circle at 50% 15%,#27391b 0%,#121612 35%,#090b09 85%);display:flex;align-items:center;justify-content:center;padding:24px}
+.con-locked-shell .con-membership-page{width:min(580px,100%);margin:0;padding:20px 0}
+.con-locked-shell .con-membership-intro{text-align:center}
+.con-locked-shell .con-membership-intro h1{font-size:clamp(30px,4vw,50px)}
+.con-locked-shell .con-membership-intro p{margin:0 auto}
+.con-locked-shell .con-invite-entrance{text-align:center;padding:clamp(24px,4vw,44px)}
+.con-invite-entrance>svg{width:34px;height:34px;justify-self:center}
+.con-invite-entrance h2{font-weight:850;letter-spacing:1.5px;font-size:27px}
+.con-invite-entrance .con-member-form{text-align:left;margin-top:12px}
+.con-invite-entrance .con-member-form button{width:100%}
+.con-member-signin{font-size:13px;color:#d1f77b!important;margin-top:7px}
+.con-lock-checking{text-align:center;color:#cbd6bc}.con-lock-checking img{width:88px;height:88px;object-fit:contain}
