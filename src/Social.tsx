@@ -848,6 +848,12 @@ export function PostPage({ id }: { id: string }) {
   useEffect(() => {
     void load();
   }, [id]);
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (data && /^#reply-[0-9a-f-]{36}$/i.test(hash)) {
+      requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView({block:"center"}));
+    }
+  }, [data]);
   async function remove(replyId?: string) {
     if (!window.confirm(replyId ? "Delete this reply?" : "Delete this post?"))
       return;
