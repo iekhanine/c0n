@@ -560,7 +560,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
   const [next,setNext] = useState<string | null>(null);
   const [loading,setLoading] = useState(true);
   const [showCreate,setShowCreate] = useState(false);
-  const [showPost,setShowPost] = useState(false);
+  const [showPost,setShowPost] = useState(() => new URLSearchParams(window.location.search).get("submit") === "1");
   const [slug,setSlug] = useState("");
   const [name,setName] = useState("");
   const [description,setDescription] = useState("");
@@ -622,6 +622,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
     } catch(e) { setNotice(e instanceof Error ? e.message : "Couldn't publish."); setSaving(false); }
   }
   return <section className={"social-stream con-community-page "+(compact?"social-compact":"")}>
+    {compact && user && <div className="con-compact-submit"><a href="/community?submit=1">+ Submit a post</a></div>}
     {!compact && <>
       <div className="con-community-heading">
         <div>
