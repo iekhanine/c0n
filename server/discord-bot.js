@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import { ORIGIN, json, readSession, accessFor } from "./auth.js";
 import { database, initializeDatabase } from "./db.js";
+import { requireMembership } from "./membership.js";
 import { discordMigration } from "./discord-schema.js";
 import { verifyBridge, canonicalJson } from "../shared/discord-signing.js";
 import {
@@ -462,8 +463,10 @@ export async function discordBotHandler(
       (action === "sync" && b?.kind === "control_result" ? 512000 : 65536)
     )
       fail(413, "Request too large.");
-    if (action === "public" && req.method === "GET")
+    if (action === "public" && req.method === "GET") {
+      if (!await requireMembership(req,res)) return;
       return json(res, 200, await publicDiscord(dbFactory()));
+    }
     if (action === "sync" && req.method === "POST") {
       const db = dbFactory();
       return json(
