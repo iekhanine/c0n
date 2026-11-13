@@ -742,3 +742,6 @@
 .con-outbound-fallback a {color:#d1f77b}
 .con-outbound iframe {width:100%;height:calc(100vh - 180px);border:0;background:#fff}
 @media(max-width:600px){.con-submit-form{padding:16px}.con-outbound-bar{gap:10px;padding:8px}.con-submit-dialog{width:98vw}}
+
+.con-global-submit,.con-compact-submit a {display:inline-flex;align-items:center;white-space:nowrap;text-decoration:none;background:#d1f77b;color:#17200f!important;border-radius:7px;padding:8px 13px;font-size:13px;font-weight:750}
+.con-compact-submit {display:flex;justify-content:flex-end;margin-bottom:12px}
