@@ -56,7 +56,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path.startsWith("/members/")
+  const page = path.startsWith("/c/") ? "subcon" : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -163,7 +163,9 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "profile" ? (
+          {page === "subcon" ? (
+            <StreamPage communitySlug={decodeURIComponent(path.split("/")[2] || "")} />
+          ) : page === "profile" ? (
             <ProfilePage id={path.split("/")[2]} />
           ) : page === "post" ? (
             <PostPage id={path.split("/")[2]} />
