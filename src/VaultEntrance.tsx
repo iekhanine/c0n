@@ -14,6 +14,13 @@ const format = (value: string) => {
 };
 export default function VaultEntrance({ code, setCode, onContinue, busy = false, authenticated, error = "" }: Props) {
   const [visible, setVisible] = useState(true);
+  const entered = code.replace(/-/g, "").slice(0, 18);
+  const displayed = [..."XXXXXX-XXXXXX-XXXXXX"].map((character, index) => {
+    if (character === "-") return "-";
+    const inputIndex = index - (index > 6 ? 1 : 0) - (index > 13 ? 1 : 0);
+    const typed = entered[inputIndex];
+    return typed ? (visible ? typed : "•") : "X";
+  }).join("");
   return (
     <main className="vault-screen">
       <div className="vault-shade" aria-hidden="true" />
@@ -24,9 +31,9 @@ export default function VaultEntrance({ code, setCode, onContinue, busy = false,
           <div className="vault-terminal">
             <span className="vault-prompt" aria-hidden="true">&gt;</span>
             <div className="vault-editor">
-              <span className={"vault-display" + (code ? "" : " vault-placeholder")} aria-hidden="true">
-                {code ? (visible ? code : code.replace(/[A-Z0-9]/g, "•")) : "XXXXXX-XXXXXX-XXXXXX"}
+              <span className="vault-display" aria-hidden="true">
                 <span className="vault-cursor">_</span>
+                <span>{displayed}</span>
               </span>
               <input
                 aria-label="Invitation access code"
