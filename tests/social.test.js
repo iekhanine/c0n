@@ -293,6 +293,27 @@ test("member posts, profiles, likes, replies and published transmissions keep ow
     assert.equal((await call(alice, "vote", "PUT", { id: communityPost, value: 0 })).body.score, -1);
     assert.equal((await call(null, "post&id=" + communityPost)).body.post.title, "My lab build");
     assert.equal((await call(null, "community&slug=homelab")).body.community.creator_id, bob);
+    const response = await call(alice, "reply", "POST", { id: communityPost, body: "Nice setup!" });
+    assert.equal(response.statusCode, 201);
+    const inbox = await call(bob, "inbox");
+    assert.equal(inbox.statusCode, 200);
+    assert.equal(inbox.body.unread, 1);
+    assert.equal(inbox.body.notifications[0].post_id, communityPost);
+    const noticeId = inbox.body.notifications[0].id;
+    assert.equal((await call(alice, "inbox", "PUT", { id: noticeId })).statusCode, 404);
+    assert.equal((await call(bob, "inbox", "PUT", { id: noticeId })).statusCode, 200);
+    assert.equal((await call(bob, "inbox")).body.unread, 0);
+    const linkEdit = await call(bob, "post", "PUT", {
+      id: communityPost, version: 1, pinned: false, title: "My lab build",
+      body: "", link_url: "https://example.com/build", image_url: "",
+      video_url: "https://example.com/demo.mp4", notify_replies: false,
+    });
+    assert.equal(linkEdit.statusCode, 200);
+    const editedPost = (await call(null, "post&id=" + communityPost)).body.post;
+    assert.equal(editedPost.link_url, "https://example.com/build");
+    assert.equal(editedPost.video_url, "https://example.com/demo.mp4");
+    assert.equal(editedPost.notify_replies, false);
+
     await db.query("UPDATE con.posts SET published_at=NULL WHERE id=$1", [
       transmission,
     ]);
