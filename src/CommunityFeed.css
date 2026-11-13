@@ -2305,3 +2305,6 @@ img.member-initial.project-author-avatar {
 .member-workspace .owned-project-card{min-height:92px;}
 .member-workspace .workspace-editor{width:100%;max-width:1050px;margin:0 auto;}
 @media(max-width:680px){.member-workspace .workspace-inventory-list{grid-template-columns:1fr;}}
+
+/* Subdued time-window caption beneath channel activity totals. */
+.con-discord-section .discord-sync-label { font-size: 10px; opacity: .62; margin: 7px 0 0; text-transform: none; letter-spacing: .01em; }
