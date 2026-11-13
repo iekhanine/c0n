@@ -207,13 +207,14 @@ async function acceptSync(db, s, b, headers) {
       "messages",
       "participation",
       "participation_check",
+      "server_stats",
     ].includes(b.kind)
   )
     fail(400, "Unknown worker event.");
   if (b.kind !== "bootstrap" && b.guild_id !== s.guild_id)
     fail(403, "Wrong Discord server.");
   if (b.kind.startsWith("control_")) await ensureControl(db);
-  if (b.kind.startsWith("participation")) await ensureParticipation(db);
+  if (b.kind.startsWith("participation") || b.kind === "server_stats") await ensureParticipation(db);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -238,6 +239,23 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    if (b.kind === "server_stats") {
+      // Only the signed Discord worker can request aggregate community statistics.
+      // Count all observed human messages, including channels omitted from public
+      // website analytics. Never return private channel names or message content.
+      const counts = (await client.query(
+        `SELECT count(*)::int AS messages,
+          count(DISTINCT channel_id)::int AS active_channels
+         FROM con.discord_participation_events
+         WHERE guild_id=$1 AND event_type='message'
+           AND occurred_at>now()-interval '7 days'`,
+        [s.guild_id],
+      )).rows[0];
+      await client.query("COMMIT");
+      return { guild_id: s.guild_id,
+        weekly_messages: counts.messages,
+        weekly_active_channels: counts.active_channels };
     }
     if (b.kind === "health_check") {
       await client.query("SELECT 1 AS database_connected");
