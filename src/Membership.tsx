@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { BadgeCheck, Copy, Gift, LockKeyhole, Ticket, UserRoundCheck, ShieldCheck, ArrowRight } from "lucide-react";
 import "./Membership.css";
+import VaultEntrance from "./VaultEntrance";
 type Member = {member_no:number;display_name:string;joined_at:string;active:boolean;invite_allowance:number;founding:boolean;invited_by:null|{member_no:number;name:string}};
 type Invite = {serial:string;batch_no:number;status:string;city:string;state:string;created_at:string;redeemed_at?:string|null};
 type Issued = {serial:string;code:string;url:string};
@@ -52,6 +53,17 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
     catch(e){setError((e as Error).message);}
   }
   const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);setNotice("Copied to clipboard.");}catch{setError("Copy failed. Select and copy the text manually.");}};
+  if (signedIn === null) {
+    return <div className="vault-screen vault-loading"><img src="/con-logo.png" alt="C0N" /></div>;
+  }
+  if (!merch && (!signedIn || !member?.active)) {
+    return <VaultEntrance code={code} setCode={setCode} busy={busy} authenticated={signedIn}
+      error={error} onContinue={signedIn ? redeem : (event) => {
+        event.preventDefault();
+        sessionStorage.setItem("con-pending-invite", code.trim().toUpperCase());
+        window.location.assign("/api/auth/discord/login");
+      }} />;
+  }
   return <div className="con-membership-page">
     <div className="con-membership-intro"><span className="con-member-eyebrow">THE COMPOUND / ACCESS</span><h1>{merch?"Member supply":"C0N membership"}</h1><p>{merch?"Official merch is available to verified members. Purchasing merchandise does not grant membership.":"Membership is invitation-only. Every member is connected to the person who invited them."}</p></div>
     {error&&<p className="con-member-error" role="alert">{error}</p>}
