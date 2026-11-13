@@ -16,8 +16,8 @@ import { assignNewMemberStatus, applyParticipationProgress, participationEvent }
 import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js";
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 import { updateStatsMessage } from "./server-stats.js";
-const SITE = process.env.CON_SITE_URL || "https://c0n.ivansays.com";
-if (new URL(SITE).origin !== "https://c0n.ivansays.com")
+const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
+if (new URL(SITE).origin !== "https://cultofnixon.com")
   throw Error("CON_SITE_URL must be the C0N production origin.");
 const token = process.env.DISCORD_BOT_TOKEN,
   key = process.env.CON_SYNC_KEY;
@@ -475,7 +475,7 @@ async function main() {
           type: 1,
         }],
       });
-      client.user.setActivity("c0n.ivansays.com", {
+      client.user.setActivity("cultofnixon.com", {
         type: ActivityType.Watching,
       });
       state = "ready";
