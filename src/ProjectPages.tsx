@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, MessageCircle, ArrowUpRight } from "lucide-react";
+import { ArrowUp, MessageCircle, ArrowUpRight, ImagePlus } from "lucide-react";
+import { readImage, socialApi } from "./Social";
 export type Project = {
   id: string;
   title: string;
@@ -292,6 +293,7 @@ export function MemberProjects() {
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
+    [uploadingImage, setUploadingImage] = useState(false),
     [loading, setLoading] = useState(true),
     [note, setNote] = useState("");
   async function load() {
@@ -353,6 +355,22 @@ export function MemberProjects() {
       setError(e instanceof Error ? e.message : "Save failed.");
     } finally {
       setBusy(false);
+    }
+  }
+  async function uploadPreview(file: File) {
+    setUploadingImage(true);
+    setError("");
+    try {
+      if (!["image/png", "image/jpeg", "image/gif", "image/webp"].includes(file.type))
+        throw Error("Use a PNG, JPEG, GIF or WebP image.");
+      const result = await socialApi<{ image_url: string }>("upload", "POST", {
+        data: await readImage(file),
+      });
+      setDraft(previous => ({ ...previous, image_url: result.image_url }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Image upload failed.");
+    } finally {
+      setUploadingImage(false);
     }
   }
   async function decide(p: Owned, decision: string) {
@@ -496,7 +514,6 @@ export function MemberProjects() {
             ["title", "Project title"],
             ["body", "Description and project page text"],
             ["link_url", "App / website URL (HTTPS)"],
-            ["image_url", "Preview image URL (HTTPS)"],
             ["git_url", "Git repository URL (HTTPS)"],
           ].map(([key, label]) => (
             <label key={key}>
@@ -522,6 +539,26 @@ export function MemberProjects() {
               )}
             </label>
           ))}
+          <div className="project-preview-upload">
+            <label htmlFor="project-preview-file">Project preview image</label>
+            <input id="project-preview-file" type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              disabled={busy || uploadingImage}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void uploadPreview(file);
+              }}/>
+            <small>PNG, JPEG, GIF or WebP · up to 2 MB. Uploaded images are public.</small>
+            {uploadingImage && <p role="status"><ImagePlus size={16}/> Uploading preview…</p>}
+            {safe(draft.image_url) && <div className="project-preview-upload-preview">
+              <img src={safe(draft.image_url)} alt="Project preview" />
+              <button type="button" disabled={busy || uploadingImage}
+                onClick={() => setDraft(previous => ({...previous, image_url: ""}))}>
+                Remove image
+              </button>
+            </div>}
+          </div>
           <label>
             Category
             <select
@@ -536,12 +573,12 @@ export function MemberProjects() {
           <div className="workspace-actions">
             <button
               type="button"
-              disabled={busy || !draft.title.trim() || !draft.body.trim()}
+              disabled={busy || uploadingImage || !draft.title.trim() || !draft.body.trim()}
               onClick={() => void save(false)}
             >
               Save draft
             </button>
-            <button disabled={busy}>Submit for approval</button>
+            <button disabled={busy || uploadingImage}>Submit for approval</button>
             {selected?.published && (
               <a href={`/projects/${selected.id}`}>View live page ↗</a>
             )}
