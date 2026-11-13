@@ -873,16 +873,18 @@ export function ProfilePage({ id }: { id: string }) {
     );
   if (!data) return <p role="status">Loading profile…</p>;
   const p = data.profile;
+  const editRequested = new URLSearchParams(window.location.search).get("edit") === "1";
   return (
     <section className="social-profile">
       <a className="social-back" href="/members">
         ← Members
       </a>
-      {editing ? (
+      {(editing || (editRequested && data.own)) ? (
         <ProfileEditor
           profile={p}
-          onCancel={() => setEditing(false)}
+          onCancel={() => { setEditing(false); if (editRequested) window.location.assign("/members/" + id); }}
           onSave={() => {
+            if (editRequested) window.history.replaceState(null, "", "/members/" + id);
             setEditing(false);
             void load();
           }}
@@ -896,14 +898,6 @@ export function ProfilePage({ id }: { id: string }) {
           </div>
           <div className="social-profile-info">
             <Avatar name={p.name} url={p.avatar_url} />
-            {data.own && (
-              <button
-                className="social-edit-profile"
-                onClick={() => setEditing(true)}
-              >
-                Edit profile
-              </button>
-            )}
             <h1>{p.name}</h1>
             {p.username && <p className="social-handle">@{p.username}</p>}
             <h2>{p.headline}</h2>
