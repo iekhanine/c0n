@@ -430,20 +430,21 @@ export function MemberProjects() {
     );
   return (
     <section className="member-workspace">
-      <header>
-        <h1>My projects</h1>
-        <p>
-          Your own little corner of the internet. Save a draft, then submit it
-          to the community showcase.
-        </p>
-        <a
-          href="https://discord.gg/dSHMeZ4ETJ"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Join our Discord ↗
-        </a>
+      <header className="member-workspace-head">
+        <div><span className="workspace-eyebrow">CREATOR WORKSPACE</span>
+          <h1>My work</h1>
+          <p>Show the community what you've created. Apps, photography, handmade crafts, music, services and everything in between.</p>
+        </div>
+        <button type="button" className="workspace-new-primary" onClick={()=>{setSelected(null);setDraft(empty);setMessage("");}}>
+          + Create something
+        </button>
       </header>
+      <div className="workspace-metrics">
+        <div><strong>{mine.length}</strong><span>Total works</span></div>
+        <div><strong>{mine.filter(p=>p.status==="approved").length}</strong><span>Published</span></div>
+        <div><strong>{mine.filter(p=>p.status==="pending").length}</strong><span>Awaiting review</span></div>
+        <div><strong>{mine.filter(p=>p.status==="draft").length}</strong><span>Drafts</span></div>
+      </div>
       {loading && <p role="status">Loading your workspace…</p>}
       {error && (
         <div role="alert" className="workspace-error">
@@ -460,42 +461,35 @@ export function MemberProjects() {
       )}
       {message && <p role="status">{message}</p>}
       <div className="workspace-layout">
-        <section>
-          <h2>Your projects</h2>
-          <button
-            onClick={() => {
-              setSelected(null);
-              setDraft(empty);
-            }}
-          >
-            + New project
-          </button>
-          {mine.map((p) => (
-            <button
-              className="owned-project"
-              key={p.id}
-              onClick={() => {
-                setSelected(p);
-                setDraft({ ...empty, ...p.draft });
-                setMessage("");
-              }}
-            >
-              <strong>{p.draft.title}</strong>
-              <span>
-                {p.status}
-                {p.published ? " · live version available" : ""}
-              </span>
-              {p.review_note && <span>Review: {p.review_note}</span>}
-            </button>
-          ))}
+        <section className="workspace-inventory">
+          <div className="workspace-inventory-heading">
+            <h2>Your work</h2>
+            <select aria-label="Filter your work" value={projectFilter} onChange={e=>setProjectFilter(e.target.value)}>
+              {["All","draft","pending","approved","rejected"].map(v=><option key={v} value={v}>{v==="All"?"All statuses":v.charAt(0).toUpperCase()+v.slice(1)}</option>)}
+            </select>
+          </div>
+          <div className="workspace-inventory-list">
+            {mine.filter(p=>projectFilter==="All"||p.status===projectFilter).map(p=>(
+              <button type="button" className={"owned-project-card"+(selected?.id===p.id?" selected":"")} key={p.id}
+                onClick={()=>{setSelected(p);setDraft({...empty,...p.draft});setMessage("");}}>
+                {safe(p.draft.image_url)?<img src={safe(p.draft.image_url)} alt="" loading="lazy"/>:<span className="owned-project-placeholder">{p.draft.title.slice(0,1).toUpperCase()}</span>}
+                <span className="owned-project-content"><strong>{p.draft.title}</strong>
+                  <small>{p.draft.category}</small><em data-status={p.status}>{p.status}</em>
+                  {p.review_note&&<small>{p.review_note}</small>}
+                </span>
+              </button>
+            ))}
+            {!mine.length&&<p className="workspace-inventory-empty">No work added yet. Your first creation starts here.</p>}
+            {!!mine.length&&!mine.some(p=>projectFilter==="All"||p.status===projectFilter)&&<p className="workspace-inventory-empty">No work matches this status.</p>}
+          </div>
         </section>
-        <form
+        <form className="workspace-editor"
           onSubmit={(e) => {
             e.preventDefault();
             void save(true);
           }}
         >
-          <h2>{selected ? "Edit project" : "Create a project"}</h2>
+          <div className="workspace-editor-head"><span className="workspace-eyebrow">{selected ? "EDIT CREATION" : "NEW CREATION"}</span><h2>{selected ? "Edit your work" : "Share something you made"}</h2><p>Present your work with an image, a story, and an optional link.</p></div>
           {selected?.published && (
             <p>
               Your current public page stays live until your changes are
@@ -503,17 +497,17 @@ export function MemberProjects() {
             </p>
           )}
           {[
-            ["title", "Project title"],
-            ["body", "Description and project page text"],
-            ["link_url", "App / website URL (HTTPS)"],
-            ["git_url", "Git repository URL (HTTPS)"],
+            ["title", "Title"],
+            ["body", "About this creation"],
+            ["link_url", "Where to view it (optional URL)"],
+            ["git_url", "Source repository (optional)"],
           ].map(([key, label]) => (
             <label key={key}>
               {label}
               {key === "body" ? (
                 <textarea
                   value={draft.body}
-                  rows={9}
+                  rows={6}
                   maxLength={10000}
                   required
                   onChange={(e) => setDraft({ ...draft, body: e.target.value })}
@@ -557,11 +551,17 @@ export function MemberProjects() {
               value={draft.category}
               onChange={(e) => setDraft({ ...draft, category: e.target.value })}
             >
-              {["Apps", "Websites", "Tools", "Experiments"].map((c) => (
+              {[...new Set([...categories, draft.category])].filter(Boolean).map(c=>(
                 <option key={c}>{c}</option>
               ))}
             </select>
           </label>
+          <button type="button" className="workspace-add-category-toggle" onClick={()=>setCategoryOpen(v=>!v)}>+ Add a new category</button>
+          {categoryOpen&&<div className="workspace-new-category">
+            <label>Category name<input maxLength={39} value={customCategory} placeholder="Sculpture, Woodworking, Podcasts…" onChange={e=>setCustomCategory(e.target.value)}/></label>
+            <button type="button" onClick={()=>void addCustomCategory()} disabled={customCategory.trim().length<2}>Create for everyone</button>
+            <small>The category becomes available to everyone across the site.</small>
+          </div>}
           <div className="workspace-actions">
             <button
               type="button"
