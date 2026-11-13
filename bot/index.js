@@ -146,6 +146,16 @@ async function main() {
   async function refreshWelcome() {
     if (!guild || !client.user) return;
     await guild.channels.fetch();
+    const contact = [...guild.channels.cache.values()].find(c => norm(c.name) === "firstcontact" && [0,5].includes(c.type));
+    if (contact) {
+      const me = await guild.members.fetchMe();
+      const botRole = me.roles.cache.find(r => norm(r.name) === "cultofnixon");
+      if (botRole && !contact.permissionsFor(me)?.has("SendMessages")) {
+        await contact.permissionOverwrites.edit(botRole, {
+          ViewChannel: true, ReadMessageHistory: true, SendMessages: true, AddReactions: true,
+        }, { reason: "C0N restore welcome-post delivery and onboarding reactions" });
+      }
+    }
     welcome = await ensureWelcomePost(guild, client.user.id);
     const firstContact = [...guild.channels.cache.values()].find(c => norm(c.name) === "firstcontact");
     const perms = firstContact?.permissionsFor(await guild.members.fetchMe());
