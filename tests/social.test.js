@@ -28,6 +28,36 @@ const profile = {
   links: [{ label: "Website", url: "https://example.com" }],
   show_projects: true,
 };
+test("creative portfolio validates image links, disciplines and legacy profiles", () => {
+  const original = profileInput(profile);
+  assert.deepEqual(original.disciplines, []);
+  assert.deepEqual(original.portfolio, []);
+  assert.equal(original.available_for_work, false);
+  const creative = profileInput({
+    ...profile,
+    disciplines: ["Photographer", "Maker & Craftsperson"],
+    available_for_work: true,
+    portfolio: [
+      { kind: "image", title: "Concert photography", description: "Live music",
+        image_url: "https://example.com/photo.jpg", link_url: "" },
+      { kind: "craft", title: "Hand-forged knife", description: "Custom steel work",
+        image_url: "", link_url: "https://example.com/portfolio" },
+    ],
+  });
+  assert.equal(creative.portfolio.length, 2);
+  assert.equal(creative.disciplines[0], "Photographer");
+  assert.equal(creative.available_for_work, true);
+  assert.throws(() => profileInput({...profile, disciplines: ["Administrator"]}));
+  assert.throws(() => profileInput({...profile, portfolio: [{
+    kind: "image", title: "Bad", description: "", image_url: "javascript:alert(1)", link_url: "",
+  }]}));
+  assert.throws(() => profileInput({...profile, portfolio: [{
+    kind: "madeup", title: "Bad", description: "", image_url: "", link_url: "",
+  }]}));
+  assert.throws(() => profileInput({...profile, portfolio: Array(25).fill({
+    kind: "image", title: "Too many", description: "", image_url: "", link_url: "",
+  })}));
+});
 test("profile validation rejects unsafe links and oversized content", () => {
   assert.equal(profileInput(profile).name, "Alice");
   for (const patch of [
