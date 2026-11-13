@@ -64,6 +64,17 @@
   ],
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "c0n.ivansays.com"
+        }
+      ],
+      "destination": "https://cultofnixon.com/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [
         {
