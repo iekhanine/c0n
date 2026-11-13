@@ -208,6 +208,7 @@ async function acceptSync(db, s, b, headers) {
       "participation",
       "participation_check",
       "server_stats",
+      "membership_roles",
     ].includes(b.kind)
   )
     fail(400, "Unknown worker event.");
@@ -239,6 +240,21 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    if (b.kind === "membership_roles") {
+      // Never expose invitation codes or private membership metadata to the worker.
+      // This is a signed bridge request, not a public API.
+      const exists = await client.query("SELECT to_regclass('con.memberships') IS NOT NULL AS present");
+      if (!exists.rows[0]?.present) {
+        await client.query("COMMIT");
+        return { guild_id: s.guild_id, configured: false, user_ids: [] };
+      }
+      const result = await client.query(
+        "SELECT user_id FROM con.memberships WHERE active=true ORDER BY member_no LIMIT 5001"
+      );
+      if (result.rows.length > 5000) fail(503, "Membership role synchronization exceeds the configured batch limit.");
+      await client.query("COMMIT");
+      return { guild_id: s.guild_id, configured: true, user_ids: result.rows.map(row => row.user_id) };
     }
     if (b.kind === "server_stats") {
       // Only the signed Discord worker can request aggregate community statistics.
