@@ -315,7 +315,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       return json(res, 200, {
         profiles: (
           await db.query(
-            `SELECT p.user_id, COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,p.headline,p.bio,p.location,p.disciplines,p.available_for_work,p.portfolio,ms.public_slug FROM con.profiles p LEFT JOIN con.memberships ms ON ms.user_id=p.user_id ORDER BY p.updated_at DESC LIMIT 200`,
+            `SELECT p.user_id, COALESCE(NULLIF(p.public_display_name,''),ms.codename,'Member') AS name,CASE WHEN p.show_discord_name THEN p.username ELSE '' END AS username,p.avatar_url,p.headline,p.bio,p.location,p.disciplines,p.available_for_work,p.portfolio,ms.public_slug FROM con.profiles p JOIN con.memberships ms ON ms.user_id=p.user_id AND ms.active=true ORDER BY p.updated_at DESC LIMIT 200`,
           )
         ).rows,
       });
@@ -360,7 +360,8 @@ export async function socialHandler(req, res, dbFactory = database) {
         };
       }
       const identity=(await db.query("SELECT codename,public_slug FROM con.memberships WHERE user_id=$1",[uid])).rows[0];
-      profile={...profile,public_slug:identity?.public_slug || "",codename:identity?.codename || "",
+      const earned=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[uid])).rows[0]?.points||0;
+      profile={...profile,public_slug:identity?.public_slug || "",codename:identity?.codename || "",points:earned,reputation:Math.floor(Math.max(0,earned)/5),
         name:profile.public_display_name || identity?.codename || "Member",
         username:profile.show_discord_name ? profile.username : ""};
       const projects = profile.show_projects
