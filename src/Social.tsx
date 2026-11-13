@@ -1228,6 +1228,8 @@ export function ProfilePage({ id }: { id: string }) {
     try {
       const result = await socialApi<{profile: Profile; posts: SocialPost[]; projects: {id: string; published: {title:string;body:string;image_url:string}}[]; own:boolean; can_blog:boolean}>("profile&id=" + encodeURIComponent(id));
       setData(result);
+      if(result.profile.public_slug && window.location.pathname.startsWith("/members/"))
+        window.history.replaceState(null,"","/c/"+result.profile.public_slug+window.location.search);
       setTab(previous => previous === "posts" && result.profile.portfolio?.length ? "portfolio" : previous);
       setError("");
     } catch (e) {
