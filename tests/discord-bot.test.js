@@ -294,6 +294,26 @@ test("owner config, replay protection, channel filtering and membership synchron
       },
     );
     await t.test(
+      "server dashboard totals include activity from all channels, even channels excluded from public panels",
+      async () => {
+        const now = new Date().toISOString();
+        assert.equal((await sync({
+          kind: "participation", guild_id: guild,
+          events: [
+            { type: "message", event_id: "789012345678901236", channel_id: channel,
+              user_id: member, at: now, onboarding: false },
+            { type: "message", event_id: "789012345678901237", channel_id: privateChannel,
+              user_id: member, at: now, onboarding: false },
+          ],
+        })).statusCode, 200);
+        const totals = await sync({ kind: "server_stats", guild_id: guild });
+        assert.equal(totals.statusCode, 200);
+        assert.equal(totals.body.weekly_messages, 2);
+        assert.equal(totals.body.weekly_active_channels, 2);
+        assert.equal(JSON.stringify(totals.body).includes("private"), false);
+      },
+    );
+    await t.test(
       "member departure and privacy controls remove identities from public panels",
       async () => {
         await sync({ kind: "member_remove", guild_id: guild, user_id: member });
