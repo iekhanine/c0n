@@ -1,7 +1,7 @@
 // Resolve author images from Discord's member cache, falling back to saved profile photos.
 // Older installations may not yet have either table. Missing tables are not fatal.
 export async function authorAvatars(db, ids) {
-  const unique = [...new Set(ids.filter(id => typeof id === "string" && /^\\d{17,20}$/.test(id)))];
+  const unique = [...new Set(ids.filter(id => typeof id === "string" && /^[0-9]{17,20}$/.test(id)))];
   const avatars = new Map();
   if (!unique.length) return avatars;
   try {
