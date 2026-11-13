@@ -15,7 +15,7 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
   const [counts,setCounts]=useState<{issued:number;redeemed:number;unused:number}|null>(null);
   const [invites,setInvites]=useState<Invite[]>([]);
   const [issued,setIssued]=useState<Issued[]>([]);
-  const [code,setCode]=useState(new URLSearchParams(location.search).get("code")||"");
+  const [code,setCode]=useState(()=>new URLSearchParams(location.search).get("code")||sessionStorage.getItem("con-pending-invite")||"");
   const [count,setCount]=useState(5);
   const [city,setCity]=useState("");
   const [state,setState]=useState("");
@@ -31,10 +31,14 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
     setMember(result.member);setCounts(result.counts||null);
     if(result.member?.active){const list=await request<{invites:Invite[]}>("invites");setInvites(list.invites);}
   }
-  useEffect(()=>{void refresh().catch(e=>setError(e.message));},[]);
+  useEffect(()=>{
+    const invite=new URLSearchParams(location.search).get("code");
+    if(invite){sessionStorage.setItem("con-pending-invite",invite);history.replaceState({}, "", "/membership");}
+    void refresh().catch(e=>setError(e.message));
+  },[]);
   async function redeem(e:FormEvent){
     e.preventDefault();setBusy(true);setError("");
-    try{await request("redeem","POST",{code:code.trim()});history.replaceState({}, "", "/membership");setNotice("Invitation accepted. Welcome to The Compound.");await refresh();}
+    try{await request("redeem","POST",{code:code.trim()});history.replaceState({}, "", "/membership");sessionStorage.removeItem("con-pending-invite");setNotice("Invitation accepted. Welcome to The Compound.");await refresh();}
     catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   async function issue(e:FormEvent){
