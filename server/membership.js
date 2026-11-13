@@ -43,6 +43,7 @@ async function ensureFounder(db, user) {
   if (created.rowCount) await db.query("SELECT setval(pg_get_serial_sequence('con.memberships','member_no'), GREATEST((SELECT max(member_no) FROM con.memberships),1),true)");
 }
 async function body(req) {
+  if (req.body && typeof req.body === "object") return req.body;
   let raw = ""; for await (const c of req) { raw += c; if (raw.length > 10000) fail(413,"Request too large"); }
   try { return JSON.parse(raw || "{}"); } catch { fail(400,"Invalid JSON"); }
 }
@@ -66,7 +67,7 @@ export async function membershipHandler(req,res,dbFactory=database) {
       if (!member) return json(res,200,{member:null});
       const counts = (await db.query("SELECT count(*)::int AS issued,count(*) FILTER (WHERE redeemed_by IS NOT NULL)::int AS redeemed,count(*) FILTER (WHERE redeemed_by IS NULL AND revoked_at IS NULL)::int AS unused FROM con.membership_invites WHERE issuer_id=$1",[user.id])).rows[0];
       const inviter = member.inviter_id ? (await db.query("SELECT member_no,display_name FROM con.memberships WHERE user_id=$1",[member.inviter_id])).rows[0] : null;
-      return json(res,200,{member:{...member,member_no:Number(member.member_no),founding:member.member_no === "1" || Number(member.member_no)===1,invited_by:inviter ? {member_no:Number(inviter.member_no),name:inviter.display_name} : null},counts});
+      return json(res,200,{member:{...member,member_no:Number(member.member_no),founding:Number(member.member_no)<=100,invited_by:inviter ? {member_no:Number(inviter.member_no),name:inviter.display_name} : null},counts});
     }
     if (action === "invites" && req.method === "GET") {
       const member=(await db.query("SELECT member_no,active FROM con.memberships WHERE user_id=$1",[user.id])).rows[0];
