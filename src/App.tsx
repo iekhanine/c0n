@@ -37,6 +37,7 @@ export default function App() {
   }, [account?.user?.id]);
   const [membershipAccess, setMembershipAccess] = useState<boolean | null>(null);
   const [memberSlug,setMemberSlug] = useState<string | null>(null);
+  const [publicName,setPublicName] = useState("Member");
   useEffect(() => {
     if (!account) return;
     if (!account.user) { setMembershipAccess(false); return; }
@@ -45,11 +46,20 @@ export default function App() {
       .then(async response => {
         if (!response.ok) throw Error("Membership verification unavailable");
         const result = await response.json();
-        if(active) {setMembershipAccess(result.member?.active===true);setMemberSlug(result.member?.public_slug||null);}
+        if(active) {setMembershipAccess(result.member?.active===true);setMemberSlug(result.member?.public_slug||null);setPublicName(result.member?.codename||"Member");}
       })
       .catch(()=>{if(active) setMembershipAccess(false);});
     return ()=>{active=false;};
   },[account?.user?.id]);
+  useEffect(()=>{
+    if(!membershipAccess||!account?.user)return;
+    let active=true;
+    void fetch("/api/social?action=profile&id="+encodeURIComponent(account.user.id),{cache:"no-store"})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{if(active&&d?.profile?.name)setPublicName(d.profile.name);})
+      .catch(()=>{});
+    return ()=>{active=false;};
+  },[membershipAccess,account?.user?.id]);
   const [seedError, setSeedError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -186,14 +196,14 @@ export default function App() {
                     {account.user.name.slice(0,2).toUpperCase()}
                   </span>
                 )}
-                <span>{account.authorized ? "Admin" : account.user.name}</span>
+                <span>{publicName}</span>
                 <ChevronDown size={15}/>
               </button>
               {accountOpen && <>
                 <button type="button" className="con-account-scrim" aria-label="Close account menu"
                   onClick={() => setAccountOpen(false)}/>
                 <div className="con-account-dropdown">
-                  <strong>{account.user.name}</strong>
+                  <strong>{publicName}</strong>
                   {account.authorized && <a href="/admin"><Settings size={16}/> Admin dashboard</a>}
                   <a href={`/c/${memberSlug || account.user.id}`}><UserRound size={16}/> View profile</a>
                   <a href={`/c/${memberSlug || account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
