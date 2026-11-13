@@ -25,6 +25,7 @@ type Change = {
 };
 type TextState = {
   owner: boolean;
+  ready: boolean;
   editing: boolean;
   toggleEditing: () => void;
   entries: Record<string, CopyEntry>;
@@ -46,6 +47,7 @@ type TextState = {
 };
 const TextContext = createContext<TextState>({
   owner: false,
+  ready: false,
   editing: false,
   toggleEditing: () => {},
   entries: {},
@@ -74,6 +76,28 @@ async function contentRequest(method: string, body?: unknown, action = "") {
   if (!r.ok) throw Error(d.error || "Could not update content.");
   return d;
 }
+// Persist only public current copy, never account data or editorial history.
+const COPY_CACHE_KEY = "con.publicCopy.v1";
+function readCachedCopy(): Record<string, CopyEntry> {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(COPY_CACHE_KEY) || "{}");
+    if (!cached || typeof cached !== "object" || Array.isArray(cached)) return {};
+    const entries: Record<string, CopyEntry> = {};
+    for (const [key, row] of Object.entries(cached)) {
+      const item = row as Partial<CopyEntry> | null;
+      if (item && typeof item.value === "string" && typeof item.version === "number")
+        entries[key] = { value: item.value, version: item.version, removed: item.removed === true };
+    }
+    return entries;
+  } catch { return {}; }
+}
+function persistCopy(entries: Record<string, CopyEntry>) {
+  try {
+    const snapshot = Object.fromEntries(Object.entries(entries).map(([key, entry]) =>
+      [key, { value: entry.value, version: entry.version, removed: entry.removed === true }]));
+    sessionStorage.setItem(COPY_CACHE_KEY, JSON.stringify(snapshot));
+  } catch { /* Storage can be unavailable. Network content remains authoritative. */ }
+}
 export function SiteTextProvider({
   children,
   owner,
@@ -81,7 +105,11 @@ export function SiteTextProvider({
   children: ReactNode;
   owner: boolean;
 }) {
-  const [entries, setEntries] = useState<Record<string, CopyEntry>>({}),
+  const [entries, setEntries] = useState<Record<string, CopyEntry>>(readCachedCopy),
+    [ready, setReady] = useState(() => {
+      try { return sessionStorage.getItem(COPY_CACHE_KEY) !== null; }
+      catch { return false; }
+    }),
     [selected, setSelected] = useState<string | null>(null),
     [value, setValue] = useState(""),
     [version, setVersion] = useState(0),
@@ -111,11 +139,12 @@ export function SiteTextProvider({
   }
   async function refresh() {
     const d = await contentRequest("GET", undefined, owner ? "history" : "");
-    setEntries(
-      Object.fromEntries(
-        d.entries.map((e: CopyEntry & { key: string }) => [e.key, e]),
-      ),
+    const latest = Object.fromEntries(
+      d.entries.map((e: CopyEntry & { key: string }) => [e.key, e]),
     );
+    setEntries(latest);
+    persistCopy(latest);
+    setReady(true);
   }
   useEffect(() => {
     const c = new AbortController();
@@ -125,14 +154,16 @@ export function SiteTextProvider({
     })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d) => {
-        if (!c.signal.aborted)
-          setEntries(
-            Object.fromEntries(
-              d.entries.map((e: CopyEntry & { key: string }) => [e.key, e]),
-            ),
+        if (!c.signal.aborted) {
+          const latest = Object.fromEntries(
+            d.entries.map((e: CopyEntry & { key: string }) => [e.key, e]),
           );
+          setEntries(latest);
+          persistCopy(latest);
+          setReady(true);
+        }
       })
-      .catch(() => {});
+      .catch(() => { if (!c.signal.aborted) setReady(true); });
     return () => c.abort();
   }, [owner]);
   useEffect(() => {
@@ -143,7 +174,11 @@ export function SiteTextProvider({
     }
   }, [selected]);
   function accept(row: Change) {
-    setEntries((e) => ({ ...e, [row.key]: row }));
+    setEntries((entries) => {
+      const next = { ...entries, [row.key]: row };
+      persistCopy(next);
+      return next;
+    });
     setRevision((n) => n + 1);
     return row;
   }
@@ -247,6 +282,7 @@ export function SiteTextProvider({
     <TextContext.Provider
       value={{
         owner,
+        ready,
         editing,
         toggleEditing,
         entries,
@@ -376,7 +412,8 @@ export function SiteTextProvider({
 }
 export const useSiteContent = () => useContext(TextContext);
 export function Editable({ id }: { id: string }) {
-  const { owner, editing, entries } = useSiteContent();
+  const { owner, editing, entries, ready } = useSiteContent();
+  if (!ready) return <span className="editable-copy site-copy-loading" aria-hidden="true" />;
   const hidden = entries[id]?.removed;
   if (hidden && !(owner && editing))
     return <span className="site-copy-hidden" hidden />;
@@ -392,13 +429,14 @@ export function Editable({ id }: { id: string }) {
   );
 }
 export function useSiteCopy() {
-  const { entries } = useSiteContent();
+  const { entries, ready } = useSiteContent();
   return (id: string) =>
-    entries[id]?.removed ? "" : (entries[id]?.value ?? SITE_COPY[id]);
+    !ready || entries[id]?.removed ? "" : (entries[id]?.value ?? SITE_COPY[id]);
 }
 export function Copy({ id }: { id: string }) {
-  const { entries, owner, editing } = useSiteContent();
+  const { entries, owner, editing, ready } = useSiteContent();
   const text = useSiteCopy();
+  if (!ready) return <span className="site-copy-loading" aria-hidden="true" />;
   return entries[id]?.removed ? (
     owner && editing ? (
       <span className="site-copy-removed">Removed content</span>
@@ -416,7 +454,8 @@ export function CopyRegion({
   ids: string[];
   children: ReactNode;
 }) {
-  const { entries, owner, editing } = useSiteContent();
+  const { entries, owner, editing, ready } = useSiteContent();
+  if (!ready) return null;
   return ids.every((id) => entries[id]?.removed) &&
     !(owner && editing) ? null : (
     <>{children}</>
