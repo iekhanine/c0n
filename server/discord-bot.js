@@ -314,7 +314,7 @@ async function acceptSync(db, s, b, headers) {
       const channels = b.channels.map((c) => {
         if (!snowflake(c.id) || !cleanName(c.name))
           fail(400, "Invalid channel metadata.");
-        return { id: c.id, name: c.name };
+        return { id: c.id, name: c.name, category: typeof c.category === "string" ? c.category.slice(0,100) : "" };
       });
       await client.query(
         "UPDATE con.discord_settings SET last_heartbeat=now(),member_count=$1,bot_id=$2,bot_name=$3,channels=$4 WHERE id=true",
