@@ -1,3 +1,4 @@
+import { ensureSocial } from "./social.js";
 import { categories, addCategory, normalizeCategory } from "./project-categories.js";
 import { authorAvatars } from "./author-avatars.js";
 import {
@@ -329,16 +330,19 @@ export async function projectsHandler(
     }
     if (action === "vote" && req.method === "PUT") {
       if (typeof b.voted !== "boolean") fail(400, "Invalid vote.");
+      await ensureSocial(db);
       const client = await db.connect();
       try {
         await client.query("BEGIN");
         const p = (
           await client.query(
-            "SELECT id FROM con.projects WHERE id=$1 AND published IS NOT NULL FOR SHARE",
+            "SELECT id,owner_id FROM con.projects WHERE id=$1 AND published IS NOT NULL FOR SHARE",
             [id],
           )
         ).rows[0];
         if (!p) fail(404, "Project is not published.");
+        await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[id+":"+user.id]);
+        const previouslyVoted=Boolean((await client.query("SELECT 1 FROM con.project_votes WHERE project_id=$1 AND user_id=$2",[id,user.id])).rowCount);
         if (b.voted)
           await client.query(
             "INSERT INTO con.project_votes(project_id,user_id)VALUES($1,$2) ON CONFLICT DO NOTHING",
@@ -349,6 +353,8 @@ export async function projectsHandler(
             "DELETE FROM con.project_votes WHERE project_id=$1 AND user_id=$2",
             [id, user.id],
           );
+        if(p.owner_id!==user.id && previouslyVoted!==b.voted)
+          await client.query("INSERT INTO con.reputation_ledger(id,user_id,post_id,voter_id,points)VALUES($1,$2,$3,$4,$5)",[randomUUID(),p.owner_id,id,user.id,b.voted?1:-1]);
         const votes = (
           await client.query(
             "SELECT count(*)::int AS n FROM con.project_votes WHERE project_id=$1",
