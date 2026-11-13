@@ -733,14 +733,6 @@
 .con-inbox-list button.unread {border-left:4px solid #d1f77b;background:#25301e}
 .con-inbox-list time,.con-inbox-list span {font-size:12px;color:#9cac9b}
 .con-post-video {max-width:100%;max-height:550px;display:block;margin:12px auto}
-.page-outbound .showcase-main {max-width:none;padding:0}
-.con-outbound {min-height:calc(100vh - 85px)}
-.con-outbound-bar {display:flex;flex-wrap:wrap;position:sticky;top:0;z-index:25;align-items:center;gap:20px;background:#121a12;border-bottom:1px solid #677d51;padding:8px 22px;font-size:13px}
-.con-outbound-bar a {color:#dde7d0;text-decoration:none}
-.con-outbound-bar .con-outbound-home {color:#d1f77b}
-.con-outbound-fallback {font-size:12px;color:#bfc7bd;padding:8px 18px;background:#1b211c}
-.con-outbound-fallback a {color:#d1f77b}
-.con-outbound iframe {width:100%;height:calc(100vh - 180px);border:0;background:#fff}
 @media(max-width:600px){.con-submit-form{padding:16px}.con-outbound-bar{gap:10px;padding:8px}.con-submit-dialog{width:98vw}}
 
 .con-global-submit,.con-compact-submit a {display:inline-flex;align-items:center;white-space:nowrap;text-decoration:none;background:#d1f77b;color:#17200f!important;border-radius:7px;padding:8px 13px;font-size:13px;font-weight:750}
@@ -778,3 +770,38 @@
 /* Home page submission is a local modal action, not navigation. */
 .social-stream .con-compact-submit button {display:inline-flex;align-items:center;background:#d1f77b;color:#17200f;border:0;border-radius:7px;padding:8px 13px;font-size:13px;font-weight:750;cursor:pointer;}
 .con-header-actions button.con-global-submit {border:0;cursor:pointer;font-family:inherit;}
+
+/* One scroll surface inside the native dialog. Keep the background stable. */
+html { scrollbar-gutter:stable; }
+.con-submit-dialog {
+  box-sizing:border-box;
+  width:min(94vw,690px);
+  height:auto;
+  max-height:min(88dvh,760px);
+  overflow:hidden;
+  overscroll-behavior:contain;
+  background:#171d19;
+  border:1px solid #61774b;
+  border-radius:12px;
+  padding:0;
+}
+.con-submit-dialog::backdrop {background:rgba(8,11,9,.66);backdrop-filter:none;}
+.con-submit-dialog .con-submit-form {
+  box-sizing:border-box;
+  max-height:min(88dvh,760px);
+  height:auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  margin:0;
+  border:0;
+  padding:20px 24px;
+}
+.con-home-feed-heading {display:flex;justify-content:space-between;align-items:end;gap:12px;margin:8px 0 12px;}
+.con-home-feed-heading h2 {font-size:22px;margin:4px 0 0;}
+.con-home-feed-heading a {color:#d1f77b;font-size:12px;text-decoration:none;}
+@media(max-width:600px) {
+  .con-submit-dialog {width:calc(100vw - 16px);max-height:92dvh;}
+  .con-submit-dialog .con-submit-form {max-height:92dvh;padding:14px 16px;}
+}
