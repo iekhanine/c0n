@@ -10,7 +10,7 @@ import {
 } from "../server/discord-bot.js";
 import { signBridge, verifyBridge } from "../shared/discord-signing.js";
 import { seal, ORIGIN } from "../server/auth.js";
-import { activityRecord } from "../bot/protocol.js";
+import { activityRecord, publicChannels } from "../bot/protocol.js";
 const owner = "267489014922215434",
   member = "123456789012345678",
   guild = "345678901234567890",
@@ -333,4 +333,32 @@ test("owner config, replay protection, channel filtering and membership synchron
   } finally {
     await pg.close();
   }
+});
+
+test("role-gated community channels are available for explicit activity tracking, staff areas are excluded", () => {
+  const list = [
+    { id: "111", name: "ɢᴀᴍᴇ-ʟᴏʙʙʏ", type: 0, parentId: "501", viewable: true },
+    { id: "112", name: "ᴡʜᴀᴛ-ᴀʀᴇ-ʏᴏᴜ-ʙᴜɪʟᴅɪɴɢ", type: 0, parentId: "502", viewable: true },
+    { id: "113", name: "staff", type: 0, parentId: "503", viewable: true },
+    { id: "114", name: "ꜰɪʀꜱᴛ-ᴄᴏɴᴛᴀᴄᴛ", type: 0, parentId: "504", viewable: true },
+    { id: "115", name: "secret", type: 0, parentId: "505", viewable: false },
+    { id: "501", name: "[ ᴛʜᴇ ɢᴀᴍᴇꜱ ]", type: 4 },
+    { id: "502", name: "[ ᴛʜᴇ ᴡᴏʀᴋꜱʜᴏᴘ ]", type: 4 },
+    { id: "503", name: "[ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴛɪᴏɴ ]", type: 4 },
+    { id: "504", name: "[ ꜱᴛᴀʀᴛ ʜᴇʀᴇ ]", type: 4 },
+    { id: "505", name: "[ ᴛʜᴇ ɢᴀʟʟᴇʀʏ ]", type: 4 },
+  ];
+  const guild = { channels: { cache: new Map(list.map(item => [item.id, item])) } };
+  assert.deepEqual(publicChannels(guild).map(c => c.id), ["111","112"]);
+  const message = {
+    id: "789012345678901234",
+    guildId: guild,
+    channelId: "111",
+    channel: { isThread: () => false },
+    author: { id: member, bot: false },
+    createdTimestamp: Date.now(),
+  };
+  // No @everyone check is necessary once the channel was explicitly selected.
+  assert.equal(activityRecord({ ...message, guildId: "345678901234567890" },
+    ["111"], ["111","112"], "345678901234567890")?.channel_id, "111");
 });
