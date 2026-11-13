@@ -482,7 +482,7 @@ async function main() {
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
       run(reconcileWelcomeReactions);
       run(checkProgress);
-      run(() => updateStatsMessage(guild, client.user.id, SITE));
+      run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId})));
       console.log("C0N Discord worker connected.");
     }),
   );
@@ -609,7 +609,7 @@ async function main() {
   client.on(Events.ShardResume, () => {
     state = "ready";
     run(heartbeat);
-    run(() => updateStatsMessage(guild, client.user.id, SITE));
+    run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId})));
   });
   client.on(Events.Error, (e) =>
     console.error("Discord client error", { code: e.code || "connection" }),
@@ -619,7 +619,7 @@ async function main() {
     welcomeTimer = setInterval(() => { if (!welcome?.messageId) run(refreshWelcome); }, 300000),
     progressTimer = setInterval(() => run(checkProgress), 3600000),
     controlTimer = setInterval(() => run(commands), 5000),
-    statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE)); }, 15 * 60 * 1000);
+    statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId}))); }, 15 * 60 * 1000);
   const shutdown = async () => {
     state = "stopping";
     clearInterval(controlTimer);
