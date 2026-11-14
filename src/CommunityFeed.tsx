@@ -120,6 +120,7 @@ export default function CommunityFeed({
     page === "explore"
       ? ranked.filter((p) => !p.homepage_hidden).slice(0, 15)
       : ranked;
+  if(page==="explore")return <div className="reference-layout con-reddit-home"><div className="reference-main"><StreamPage compact /></div><DiscordSidebar/></div>;
   return (
     <>
       <section className="page-introduction">
