@@ -28,6 +28,8 @@ const schema=[
 "CREATE TABLE IF NOT EXISTS con.facility_assignments(id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES con.facility_requests(id),member_id text NOT NULL,duty text NOT NULL,status text NOT NULL CHECK(status IN ('assigned','submitted','completed')),report text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now())",
 "CREATE TABLE IF NOT EXISTS con.facility_inventory(user_id text NOT NULL,item text NOT NULL,quantity integer NOT NULL DEFAULT 0,PRIMARY KEY(user_id,item))",
 "CREATE TABLE IF NOT EXISTS con.facility_config(key text PRIMARY KEY,value text NOT NULL)",
+"CREATE TABLE IF NOT EXISTS con.facility_progress(sector text PRIMARY KEY,completed integer NOT NULL DEFAULT 0,goal integer NOT NULL)",
+"INSERT INTO con.facility_progress(sector,completed,goal) VALUES ('water',0,20),('power',0,25),('archive',0,25) ON CONFLICT DO NOTHING",
 "INSERT INTO con.facility_config(key,value) VALUES('directive','Facility restoration is in progress. Supplies and access are fictional in-game resources.') ON CONFLICT DO NOTHING",
 "CREATE INDEX IF NOT EXISTS con_facility_requests_member ON con.facility_requests(member_id,created_at DESC)",
 "CREATE INDEX IF NOT EXISTS con_facility_assignments_member ON con.facility_assignments(member_id,created_at DESC)",
@@ -36,7 +38,8 @@ const schema=[
 "ALTER TABLE con.facility_assignments ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.facility_inventory ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.facility_config ENABLE ROW LEVEL SECURITY",
-"REVOKE ALL ON con.facility_transactions,con.facility_requests,con.facility_assignments,con.facility_inventory,con.facility_config FROM PUBLIC,anon,authenticated"
+"ALTER TABLE con.facility_progress ENABLE ROW LEVEL SECURITY",
+"REVOKE ALL ON con.facility_transactions,con.facility_requests,con.facility_assignments,con.facility_inventory,con.facility_config,con.facility_progress FROM PUBLIC,anon,authenticated"
 ];
 const init=new WeakMap();
 async function setup(db){await ensureMembershipSchema(db);await ensureSocial(db);if(!init.has(db))init.set(db,(async()=>{for(const sql of schema)await db.query(sql);})().catch(e=>{init.delete(db);throw e;}));await init.get(db);}
@@ -47,14 +50,15 @@ async function balance(db,id){
 }
 function publicJobs(){return Object.entries(duties).map(([id,d])=>({id,title:d.title,credits:d.credits,xp:d.xp,sector:d.sector,question:d.question}));}
 async function snapshot(db,id){
- const [wallet,requests,assignments,inventory,config]=await Promise.all([
+ const [wallet,requests,assignments,inventory,config,progress]=await Promise.all([
  balance(db,id),
  db.query("SELECT id,sku,cost,status,note,review,created_at FROM con.facility_requests WHERE member_id=$1 ORDER BY created_at DESC LIMIT 100",[id]),
  db.query("SELECT id,request_id,duty,status,report,created_at FROM con.facility_assignments WHERE member_id=$1 ORDER BY created_at DESC LIMIT 100",[id]),
  db.query("SELECT item,quantity FROM con.facility_inventory WHERE user_id=$1",[id]),
- db.query("SELECT value FROM con.facility_config WHERE key='directive'")
+ db.query("SELECT value FROM con.facility_config WHERE key='directive'"),
+ db.query("SELECT sector,completed,goal FROM con.facility_progress ORDER BY sector")
  ]);
- return {wallet,requests:requests.rows,assignments:assignments.rows,inventory:inventory.rows,directive:config.rows[0]?.value||"",catalog:Object.entries(items).map(([id,d])=>({id,...d})),duties:publicJobs()};
+ return {wallet,requests:requests.rows,assignments:assignments.rows,inventory:inventory.rows,progress:progress.rows,directive:config.rows[0]?.value||"",catalog:Object.entries(items).map(([id,d])=>({id,...d})),duties:publicJobs()};
 }
 async function tx(db,fn){const c=await db.connect();try{await c.query("BEGIN");const out=await fn(c);await c.query("COMMIT");return out;}catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}}
 async function lock(c,id){await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[id]);}
@@ -108,6 +112,7 @@ export async function facilityHandler(req,res,dbFactory=database){
     if(!approve){await c.query("UPDATE con.facility_assignments SET status='assigned',report='' WHERE id=$1",[a.id]);return;}
     const duty=duties[a.duty];await c.query("UPDATE con.facility_assignments SET status='completed' WHERE id=$1",[a.id]);
     await c.query("INSERT INTO con.facility_transactions(id,user_id,credits,xp,reason) VALUES($1,$2,$3,$4,$5)",[randomUUID(),a.member_id,duty.credits,duty.xp,"Completed "+duty.title]);
+    await c.query("UPDATE con.facility_progress SET completed=least(goal,completed+1) WHERE sector=$1",[duty.sector]);
     await c.query("UPDATE con.facility_requests SET status='pending',review='Assignment verified',updated_at=now() WHERE id=$1 AND status='assigned'",[a.request_id]);});
    return json(res,200,{ok:true});
   }
