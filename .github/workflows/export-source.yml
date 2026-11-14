@@ -1,0 +1,26 @@
+name: Export current C0N local source
+on:
+  push:
+    branches:
+      - export/local-dev-20261114
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package repository without secrets or history
+        run: |
+          mkdir -p c0n-local
+          tar --exclude='./.git' --exclude='./node_modules' --exclude='./.env' --exclude='./.env.*' --exclude='./.vercel' --exclude='./dist' --exclude='./coverage' --exclude='./c0n-local' --exclude='./.github/workflows/export-source.yml' -cf - . | tar -xf - -C c0n-local
+          cp /dev/null c0n-local/.export-marker
+          printf 'Source snapshot based on production main commit. Create a local .env file only if you need server-side APIs. Never commit or share API keys.\nStart: npm ci && npm run dev\n' > c0n-local/LOCAL_SETUP.txt
+          zip -q -r c0n-local-source.zip c0n-local
+      - uses: actions/upload-artifact@v4
+        with:
+          name: c0n-local-source
+          path: c0n-local-source.zip
+          retention-days: 2
