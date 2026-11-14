@@ -1,8 +1,10 @@
+import { vaultBackgroundHandler } from "../server/vault-background.js";
 import { requireMembership } from "../server/membership.js";
 import { database } from "../server/db.js";
 import { id } from "../server/content.js";
 import { ORIGIN, json } from "../server/auth.js";
 export default async function handler(req, res) {
+  if (new URL(req.url, ORIGIN).searchParams.get("asset") === "vault") return vaultBackgroundHandler(req,res);
   if (!await requireMembership(req,res)) return;
   if (!["GET", "HEAD"].includes(req.method))
     return json(res, 405, { error: "Method not allowed." });

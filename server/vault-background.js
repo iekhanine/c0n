@@ -13,7 +13,7 @@ async function ensure(db){
   await db.query("ALTER TABLE con.vault_background ENABLE ROW LEVEL SECURITY");
   await db.query("REVOKE ALL ON con.vault_background FROM PUBLIC,anon,authenticated");
 }
-export default async function handler(req,res){
+export async function vaultBackgroundHandler(req,res){
   try{
     if(!["GET","HEAD","POST"].includes(req.method)) return json(res,405,{error:"Method not allowed"});
     const db=database();

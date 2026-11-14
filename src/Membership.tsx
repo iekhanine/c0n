@@ -74,7 +74,7 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
     setVaultBusy(true);setVaultNotice("");
     try{
       const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]||"");reader.onerror=()=>reject(Error("File read failed"));reader.readAsDataURL(vaultFile);});
-      const response=await fetch("/api/vault-background",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data})});
+      const response=await fetch("/api/image?asset=vault",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data})});
       const result=await response.json();if(!response.ok)throw Error(result.error||"Upload failed");
       setVaultNotice("Vault background updated. Refresh the access page to see it.");setVaultFile(null);
     }catch(e){setVaultNotice((e as Error).message);}finally{setVaultBusy(false);}
