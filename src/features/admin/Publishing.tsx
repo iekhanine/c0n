@@ -11,11 +11,13 @@ import {
   Layers,
   CheckSquare,
   Gamepad2,
+  ListOrdered,
 } from "lucide-react";
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
 import FacilityPage from "../../FacilityPage";
+import {NavigationEditor} from "../../PublicNavigation";
 import DiscordFontTool from "./DiscordFontTool";
 import ProjectApprovals from "./ProjectApprovals";
 import ProjectCategories from "./ProjectCategories";
@@ -37,6 +39,7 @@ type Tab =
   | "database"
   | "discord"
   | "games"
+  | "navigation"
   | "audit"
   | "projectReports"
   | "font"
@@ -65,6 +68,7 @@ export default function Publishing({
           permissions.includes("website.publish")),
       discord: owner,
       games: owner,
+      navigation: owner,
       font: owner,
       approvals: owner || (permissions.includes("projects.publish") && permissions.includes("website.publish")),
       categories: owner || (permissions.includes("projects.publish") && permissions.includes("website.publish")),
@@ -118,6 +122,7 @@ export default function Publishing({
     ["database", "Database", Database],
     ["discord", "Discord bot", Radio],
     ["games", "Compound games", Gamepad2],
+    ["navigation", "Navigation", ListOrdered],
     ["font", "Discord text generator", Type],
     ["audit", "Content audit & restore", History],
   ];
@@ -220,6 +225,8 @@ export default function Publishing({
         <DiscordExplorer />
       ) : tab === "games" ? (
         <FacilityPage control />
+      ) : tab === "navigation" ? (
+        <NavigationEditor />
       ) : tab === "database" || !status?.initialized || status.needs_upgrade ? (
         <div className="con-database-panel">
           <span className="con-label">STORAGE STATUS</span>
