@@ -148,10 +148,10 @@ export default function App() {
           </div>
           <nav aria-label="Community">
             {[
-              ["/", "nav.explore"],
+              ["/archive", "nav.archive"],
+              ["/", "nav.compound"],
               ["/projects", "nav.projects"],
-              ["/members", "nav.members"],
-              ["/community", "nav.community"],
+              ["/members", "nav.militia"],
             ].map(([href, id]) => (
               <CopyRegion ids={[id]} key={id}>
                 <div className="nav-entry">
