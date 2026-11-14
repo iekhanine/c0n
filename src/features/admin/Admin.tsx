@@ -114,6 +114,7 @@ export default function Admin() {
           </a>
           <div className="con-header-actions">
             {session?.owner && <a className="con-view-site" href="/facility/control">Facility Control</a>}
+            {session?.owner && <a className="con-view-site" href="/archive/manage">Archive Editor</a>}
             <WebsiteEditToggle />
             <a
               className="con-view-site"
