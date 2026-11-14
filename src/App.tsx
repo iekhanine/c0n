@@ -5,6 +5,7 @@ import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from ".
 import CommunityFeed from "./CommunityFeed";
 import FacilityPage from "./FacilityPage";
 import ArchivePage from "./ArchivePage";
+import FeaturedStrip from "./FeaturedStrip";
 import { MembershipPage } from "./Membership";
 import {
   CopyRegion,
@@ -109,7 +110,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
+  const page = path === "/featured/manage" ? "featured-manage" : path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -231,7 +232,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "membership" ? (
+          {page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "membership" ? (
             <MembershipPage />
           ) : page === "merch" ? (
             <MembershipPage merch />
