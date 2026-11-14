@@ -33,6 +33,7 @@ const schema=[
 "CREATE TABLE IF NOT EXISTS con.facility_progress(sector text PRIMARY KEY,completed integer NOT NULL DEFAULT 0,goal integer NOT NULL)",
 "INSERT INTO con.facility_progress(sector,completed,goal) VALUES ('water',0,20),('power',0,25),('archive',0,25) ON CONFLICT DO NOTHING",
 "INSERT INTO con.facility_config(key,value) VALUES('directive','Facility restoration is in progress. Equipment allocation awaits authorization.') ON CONFLICT DO NOTHING",
+"UPDATE con.facility_config SET value='Facility restoration is in progress. Equipment allocation awaits authorization.' WHERE key='directive' AND value='Facility restoration is in progress. Supplies and access are fictional in-game resources.'",
 "CREATE INDEX IF NOT EXISTS con_facility_requests_member ON con.facility_requests(member_id,created_at DESC)",
 "CREATE INDEX IF NOT EXISTS con_facility_assignments_member ON con.facility_assignments(member_id,created_at DESC)",
 "ALTER TABLE con.facility_transactions ENABLE ROW LEVEL SECURITY",
