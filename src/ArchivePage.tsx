@@ -1,5 +1,5 @@
 import {useEffect,useState,type FormEvent} from "react";
-import {Archive,FileAudio,Plus,Radio,Save,Trash2,Upload} from "lucide-react";
+import {Plus,Radio,Save,Trash2} from "lucide-react";
 import "./ArchivePage.css";
 type RecordEntry={id:string;collection:"index"|"remnants";title:string;subtitle:string;body:string;position:number;published:boolean;audio_id:string|null};
 async function archiveApi<T>(action:string,method="GET",body?:unknown):Promise<T>{
@@ -8,7 +8,6 @@ async function archiveApi<T>(action:string,method="GET",body?:unknown):Promise<T
 }
 const blank=():RecordEntry=>({id:"",collection:"index",title:"",subtitle:"",body:"",position:0,published:false,audio_id:null});
 function audioUrl(id:string){return "/api/site-content?action=archive_audio&id="+encodeURIComponent(id);}
-const exampleNames=["The Compound","The Name","The Chain"];
 export default function ArchivePage({manage=false}:{manage?:boolean}){
  const [view,setView]=useState<"index"|"remnants">(()=>new URLSearchParams(location.search).get("archive")==="remnants"?"remnants":"index");
  const [all,setAll]=useState<RecordEntry[]>([]),[canEdit,setCanEdit]=useState(false),[selected,setSelected]=useState(""),[draft,setDraft]=useState<RecordEntry>(blank),[file,setFile]=useState<File|null>(null);
