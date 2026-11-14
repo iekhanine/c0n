@@ -4,6 +4,8 @@ import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
 import FacilityPage from "./FacilityPage";
+import PublicNavigation from "./PublicNavigation";
+import MilitiaHub from "./MilitiaHub";
 import ArchivePage from "./ArchivePage";
 import FeaturedStrip from "./FeaturedStrip";
 import { MembershipPage } from "./Membership";
@@ -110,7 +112,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/featured/manage" ? "featured-manage" : path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
+  const page = path === "/militia" ? "militia" : path === "/featured/manage" ? "featured-manage" : path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -125,7 +127,7 @@ export default function App() {
               : path === "/community"
                 ? "community"
                 : path === "/"
-                  ? "explore"
+                  ? "facility"
                   : "missing";
   if (account === null || (account.user && membershipAccess === null))
     return <div className="showcase con-locked-shell"><div className="con-lock-checking"><img src="/con-logo.png" alt="C0N"/><p>Checking access to The Compound…</p></div></div>;
@@ -147,27 +149,7 @@ export default function App() {
               <Editable id="brand" />
             </span>
           </div>
-          <nav aria-label="Community">
-            {[
-              ["/archive", "nav.archive"],
-              ["/", "nav.compound"],
-              ["/projects", "nav.projects"],
-              ["/members", "nav.militia"],
-            ].map(([href, id]) => (
-              <CopyRegion ids={[id]} key={id}>
-                <div className="nav-entry">
-                  <a
-                    aria-current={path === href ? "page" : undefined}
-                    href={href}
-                  >
-                    <Copy id={id} />
-                  </a>
-                  <EditButton id={id} />
-                </div>
-              </CopyRegion>
-            ))}
-          </nav>
-          <a className="con-member-header-link" href="/merch">Merch</a>
+          <PublicNavigation />
           {account?.user && <div className="con-header-actions">
             <a className="con-header-inbox" href="/inbox" aria-label={`Inbox, ${unread} unread notifications`} title="Inbox">
               <Bell size={19}/>
@@ -212,8 +194,6 @@ export default function App() {
                   <a href={`/c/${memberSlug || account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
                   <a href="/inbox">Inbox · Replies</a>
                   <a href="/membership">Membership & invitations</a>
-                  <a href="/facility">Facility Control · Supply requests</a>
-                  <a href="/merch">Member supply</a>
                   <a href="/my-projects">My projects</a>
                   <button type="button" disabled={signingOut} onClick={() => void signOut()}>
                     <LogOut size={16}/> {signingOut ? "Signing out…" : "Log out"}
@@ -232,7 +212,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "membership" ? (
+          {page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "militia" ? <MilitiaHub /> : page === "membership" ? (
             <MembershipPage />
           ) : page === "merch" ? (
             <MembershipPage merch />

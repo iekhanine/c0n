@@ -27,19 +27,22 @@ const schema=[
 "CREATE TABLE IF NOT EXISTS con.facility_requests(id uuid PRIMARY KEY,member_id text NOT NULL,sku text NOT NULL,cost integer NOT NULL,status text NOT NULL CHECK(status IN ('pending','assigned','approved','rejected')),note text NOT NULL DEFAULT '',review text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())",
 "CREATE TABLE IF NOT EXISTS con.facility_assignments(id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES con.facility_requests(id),member_id text NOT NULL,duty text NOT NULL,status text NOT NULL CHECK(status IN ('assigned','submitted','completed')),report text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now())",
 "CREATE TABLE IF NOT EXISTS con.facility_inventory(user_id text NOT NULL,item text NOT NULL,quantity integer NOT NULL DEFAULT 0,PRIMARY KEY(user_id,item))",
+"CREATE TABLE IF NOT EXISTS con.facility_grants(id uuid PRIMARY KEY,member_id text NOT NULL,item text NOT NULL,quantity integer NOT NULL CHECK(quantity BETWEEN 1 AND 100),note text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now())",
+"CREATE INDEX IF NOT EXISTS con_facility_grants_member ON con.facility_grants(member_id,created_at DESC)",
 "CREATE TABLE IF NOT EXISTS con.facility_config(key text PRIMARY KEY,value text NOT NULL)",
 "CREATE TABLE IF NOT EXISTS con.facility_progress(sector text PRIMARY KEY,completed integer NOT NULL DEFAULT 0,goal integer NOT NULL)",
 "INSERT INTO con.facility_progress(sector,completed,goal) VALUES ('water',0,20),('power',0,25),('archive',0,25) ON CONFLICT DO NOTHING",
-"INSERT INTO con.facility_config(key,value) VALUES('directive','Facility restoration is in progress. Supplies and access are fictional in-game resources.') ON CONFLICT DO NOTHING",
+"INSERT INTO con.facility_config(key,value) VALUES('directive','Facility restoration is in progress. Equipment allocation awaits authorization.') ON CONFLICT DO NOTHING",
 "CREATE INDEX IF NOT EXISTS con_facility_requests_member ON con.facility_requests(member_id,created_at DESC)",
 "CREATE INDEX IF NOT EXISTS con_facility_assignments_member ON con.facility_assignments(member_id,created_at DESC)",
 "ALTER TABLE con.facility_transactions ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.facility_requests ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.facility_assignments ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.facility_inventory ENABLE ROW LEVEL SECURITY",
+"ALTER TABLE con.facility_grants ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.facility_config ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.facility_progress ENABLE ROW LEVEL SECURITY",
-"REVOKE ALL ON con.facility_transactions,con.facility_requests,con.facility_assignments,con.facility_inventory,con.facility_config,con.facility_progress FROM PUBLIC,anon,authenticated"
+"REVOKE ALL ON con.facility_transactions,con.facility_requests,con.facility_assignments,con.facility_inventory,con.facility_grants,con.facility_config,con.facility_progress FROM PUBLIC,anon,authenticated"
 ];
 const init=new WeakMap();
 async function setup(db){await ensureMembershipSchema(db);await ensureSocial(db);if(!init.has(db))init.set(db,(async()=>{for(const sql of schema)await db.query(sql);})().catch(e=>{init.delete(db);throw e;}));await init.get(db);}
@@ -73,10 +76,12 @@ export async function facilityHandler(req,res,dbFactory=database){
   if(req.method!=="GET"&&req.headers.origin!==ORIGIN)fail(403,"Invalid origin");
   const db=dbFactory();await setup(db);
   if(action==="facility_state"){method(req,"GET");return json(res,200,await snapshot(db,user.id));}
-  if(action==="facility_control"){method(req,"GET");if(!owner)fail(403,"Forbidden");const [requests,assignments]=await Promise.all([
+  if(action==="facility_control"){method(req,"GET");if(!owner)fail(403,"Forbidden");const [requests,assignments,members,grants]=await Promise.all([
     db.query("SELECT r.id,r.member_id,m.codename AS member_name,r.sku,r.cost,r.status,r.note,r.review,r.created_at FROM con.facility_requests r LEFT JOIN con.memberships m ON m.user_id=r.member_id ORDER BY r.created_at DESC LIMIT 250"),
-    db.query("SELECT a.id,a.request_id,a.member_id,m.codename AS member_name,a.duty,a.status,a.report,a.created_at FROM con.facility_assignments a LEFT JOIN con.memberships m ON m.user_id=a.member_id ORDER BY a.created_at DESC LIMIT 250")]);
-    return json(res,200,{requests:requests.rows,assignments:assignments.rows});}
+    db.query("SELECT a.id,a.request_id,a.member_id,m.codename AS member_name,a.duty,a.status,a.report,a.created_at FROM con.facility_assignments a LEFT JOIN con.memberships m ON m.user_id=a.member_id ORDER BY a.created_at DESC LIMIT 250"),
+    db.query("SELECT user_id,codename,member_no FROM con.memberships WHERE active=true ORDER BY member_no LIMIT 2000"),
+    db.query("SELECT g.id,g.member_id,m.codename AS member_name,g.item,g.quantity,g.note,g.created_at FROM con.facility_grants g LEFT JOIN con.memberships m ON m.user_id=g.member_id ORDER BY g.created_at DESC LIMIT 100")]);
+    return json(res,200,{requests:requests.rows,assignments:assignments.rows,members:members.rows,grants:grants.rows});}
   method(req,"POST");const b=input(req);
   if(action==="facility_request"){
    const item=items[b.sku];if(!item)fail(400,"Invalid supply item");
@@ -97,6 +102,20 @@ export async function facilityHandler(req,res,dbFactory=database){
    return json(res,200,{ok:true});
   }
   if(!owner)fail(403,"Forbidden");
+  if(action==="facility_grant"){
+    const member=text(b.member_id,25),sku=text(b.sku,25),quantity=b.quantity,note=text(b.note,400);
+    if(!/^[0-9]{17,20}$/.test(member))fail(400,"Choose a member");
+    if(!Object.hasOwn(items,sku))fail(400,"Choose a valid supply item");
+    if(!Number.isSafeInteger(quantity)||quantity<1||quantity>100)fail(400,"Choose 1 to 100 units");
+    await tx(db,async c=>{
+      const recipient=(await c.query("SELECT 1 FROM con.memberships WHERE user_id=$1 AND active=true",[member])).rows[0];
+      if(!recipient)fail(404,"Active member not found");
+      await lock(c,member);
+      await c.query("INSERT INTO con.facility_inventory(user_id,item,quantity) VALUES($1,$2,$3) ON CONFLICT(user_id,item) DO UPDATE SET quantity=con.facility_inventory.quantity+EXCLUDED.quantity",[member,sku,quantity]);
+      await c.query("INSERT INTO con.facility_grants(id,member_id,item,quantity,note) VALUES($1,$2,$3,$4,$5)",[randomUUID(),member,sku,quantity,note]);
+    });
+    return json(res,201,{ok:true});
+  }
   if(action==="facility_assign"){
    const request=validId(b.id);if(!duties[b.duty])fail(400,"Unknown duty");
    await tx(db,async c=>{const r=(await c.query("SELECT * FROM con.facility_requests WHERE id=$1 FOR UPDATE",[request])).rows[0];

@@ -31,12 +31,15 @@ export const SITE_COPY = {
   "admin.discord.title": "Discord bot",
   "admin.games.title": "Compound games",
   "admin.games.description": "Manage the in-world facility economy, work orders, and member requisitions.",
+  "admin.navigation.title": "Navigation",
+  "admin.navigation.description": "Choose the order of public navigation links.",
   "admin.discord.description":
     "Channels, people, publishing, and server controls in one workspace.",
   "admin.audit.title": "Content audit & restore",
   "admin.audit.description":
     "Review changes, recover removed content, and undo earlier actions.",
   "layout.featured": "[]",
+  "layout.nav.order": "[\"compound\",\"archive\",\"militia\"]",
   "layout.discord.sidebar": "[\"__member_posts_v1\",\"overview\",\"posts\",\"channels\",\"activity\",\"members\"]",
   "discord.channels.title": "Most active channels",
   "discord.members.title": "Active this week",
