@@ -4,6 +4,7 @@ import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
 import FacilityPage from "./FacilityPage";
+import ArchivePage from "./ArchivePage";
 import { MembershipPage } from "./Membership";
 import {
   CopyRegion,
@@ -108,7 +109,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
+  const page = path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -230,7 +231,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "membership" ? (
+          {page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "membership" ? (
             <MembershipPage />
           ) : page === "merch" ? (
             <MembershipPage merch />
