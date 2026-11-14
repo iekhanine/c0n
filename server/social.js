@@ -186,6 +186,8 @@ async function decorate(db, posts, viewer) {
     "SELECT post_id,coalesce(sum(value),0)::int AS score,coalesce(max(CASE WHEN user_id=$2 THEN value END),0)::int AS vote FROM con.post_votes WHERE post_id=ANY($1::uuid[]) GROUP BY post_id",
     [ids, viewer || ""],
   )).rows;
+  const saved=(await db.query("SELECT post_id FROM con.saved_posts WHERE user_id=$1 AND post_id=ANY($2::uuid[])",[viewer||"",ids])).rows;
+  const savedIds=new Set(saved.map(r=>r.post_id));
   const avatars = await authorAvatars(db, posts.map(p => p.author_id));
   return posts.map((p) => ({
     ...p,
@@ -194,6 +196,7 @@ async function decorate(db, posts, viewer) {
     liked: likes.find((l) => l.post_id === p.id)?.liked || false,
     replies: replies.find((r) => r.post_id === p.id)?.n || 0,
     score: votes.find((v) => v.post_id === p.id)?.score || 0,
+    saved:savedIds.has(p.id),
     vote: votes.find((v) => v.post_id === p.id)?.vote || 0,
     community_slug: p.community_slug || "community",
     can_edit: p.kind === "member" && viewer === p.author_id,
