@@ -5,7 +5,7 @@ type Entry={id:string;sku:string;cost:number;status:string;note:string;review:st
 type Assignment={id:string;request_id:string;duty:string;status:string;report:string;created_at:string;member_id?:string;member_name?:string};
 type Catalog={id:string;label:string;cost:number;qty:number};
 type Duty={id:string;title:string;credits:number;xp:number;sector:string;question:string};
-type State={wallet:{credits:number;xp:number;earnedVotes:number;reputation:number};requests:Entry[];assignments:Assignment[];inventory:{item:string;quantity:number}[];directive:string;catalog:Catalog[];duties:Duty[]};
+type State={wallet:{credits:number;xp:number;earnedVotes:number;reputation:number};requests:Entry[];assignments:Assignment[];inventory:{item:string;quantity:number}[];progress:{sector:string;completed:number;goal:number}[];directive:string;catalog:Catalog[];duties:Duty[]};
 type Control={requests:Entry[];assignments:Assignment[]};
 async function request<T>(action:string,method="GET",body?:unknown):Promise<T>{
  const response=await fetch("/api/social?action=facility_"+action,{method,cache:"no-store",headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined});
@@ -23,6 +23,7 @@ export default function FacilityPage({control=false}:{control?:boolean}){
    <div className="facility-header"><div><span>ᴄ0ɴ / ꜱᴇᴄᴛᴏʀ ᴢᴇʀᴏ</span><h1>{control?"Facility Control":"ꜱᴜᴘᴘʟʏ ᴛᴇʀᴍɪɴᴀʟ"}</h1><p>{control?"RESTRICTED OPERATIONS DESK":"AUTHORITY UNDISCLOSED · ALL RESOURCES ARE FICTIONAL"}</p></div><Shield size={24}/></div>
    {loading?<p>Connecting to the supply terminal…</p>:error?<p role="alert">{error}</p>:data&&<>
      <div className="facility-balances"><div><span>CREDITS</span><strong>{data.wallet.credits}</strong></div><div><span>XP</span><strong>{data.wallet.xp}</strong></div><div><span>REPUTATION</span><strong>{data.wallet.reputation}</strong></div><div><span>VOTES EARNED</span><strong>{data.wallet.earnedVotes}</strong></div></div>
+     <section className="facility-progress"><strong>RESTORATION STATUS</strong><div>{data.progress.map(p=><div key={p.sector}><span>{p.sector.toUpperCase()} · {p.completed}/{p.goal}</span><div className="facility-progress-bar"><i style={{width:Math.min(100,p.completed/p.goal*100)+"%"}}/></div></div>)}</div></section>
      <section className="facility-announcement"><Radio size={18}/><div><strong>FACILITY DIRECTIVE</strong><p>{data.directive}</p></div></section>
      {notice&&<p className="facility-notice" role="status">{notice}</p>}
      {control?<div className="facility-columns">
