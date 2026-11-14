@@ -1246,10 +1246,17 @@ export function ProfilePage({ id }: { id: string }) {
     [editing, setEditing] = useState(false),
     [composing, setComposing] = useState(false),
     [tab, setTab] = useState("posts");
+  const [savedPosts,setSavedPosts]=useState<SocialPost[]>([]);
+  const [savedPublic,setSavedPublic]=useState(false);
+  const [followed,setFollowed]=useState(false);
+  const [profileNotice,setProfileNotice]=useState("");
   async function load() {
     try {
       const result = await socialApi<{profile: Profile; posts: SocialPost[]; projects: {id: string; published: {title:string;body:string;image_url:string}}[]; own:boolean; can_blog:boolean}>("profile&id=" + encodeURIComponent(id));
       setData(result);
+      setFollowed(Boolean(result.profile.viewer_following));
+      void socialApi<{posts:SocialPost[];public:boolean}>("saved&id="+encodeURIComponent(result.profile.public_slug||id))
+        .then(d=>{setSavedPosts(d.posts);setSavedPublic(d.public)}).catch(()=>{});
       if(result.profile.public_slug && window.location.pathname.startsWith("/members/"))
         window.history.replaceState(null,"","/c/"+result.profile.public_slug+window.location.search);
       setTab(previous => previous === "posts" && result.profile.portfolio?.length ? "portfolio" : previous);
@@ -1296,6 +1303,9 @@ export function ProfilePage({ id }: { id: string }) {
           <div className="social-profile-info">
             <Avatar name={p.name} url={p.avatar_url} />
             <h1>{p.name}</h1>
+            {!data.own&&<button type="button" className="con-profile-follow" onClick={async()=>{try{await socialApi("follow","PUT",{id:p.user_id,following:!followed});setFollowed(!followed);setProfileNotice("");}catch(e){setProfileNotice((e as Error).message)}}}>{followed?"Following":"Subscribe"}</button>}
+            <p className="social-handle">{p.subscriber_count||0} subscribers</p>
+            {profileNotice&&<p role="status">{profileNotice}</p>}
             {p.username && p.show_discord_name && <p className="social-handle">@{p.username}</p>}{p.codename && p.name!==p.codename && <p className="social-handle">{p.codename}</p>}
             <div className="con-reputation-row"><span>{p.points||0} reward points</span><span>{p.reputation||0} reputation</span></div>
             <h2>{p.headline}</h2>
@@ -1339,6 +1349,7 @@ export function ProfilePage({ id }: { id: string }) {
             Projects
           </button>
         )}
+        {(data.own||savedPublic)&&<button aria-pressed={tab==="saved"} onClick={()=>setTab("saved")}>Saved posts</button>}
         {data.own && <a href="/my-projects">Manage projects →</a>}
       </nav>
       {tab === "portfolio" ? (
@@ -1357,6 +1368,12 @@ export function ProfilePage({ id }: { id: string }) {
             </article>
           ))}
         </div>
+      ) : tab === "saved" ? (
+        <section className="con-profile-saved">
+          {data.own && <label><input type="checkbox" checked={savedPublic} onChange={async e=>{try{await socialApi("saved_visibility","PUT",{public:e.target.checked});setSavedPublic(e.target.checked);}catch(err){setProfileNotice((err as Error).message)}}}/> Make saved posts visible to everyone</label>}
+          {savedPosts.map(post=><div key={post.id} className="con-profile-saved-row"><a href={"/posts/"+post.id}>{post.title||post.body.slice(0,100)}</a>{data.own&&<button onClick={async()=>{await socialApi("save","PUT",{id:post.id,saved:false});setSavedPosts(prev=>prev.filter(p=>p.id!==post.id));}}>Remove</button>}</div>)}
+          {!savedPosts.length&&<p>No saved posts to display.</p>}
+        </section>
       ) : tab === "posts" ? (
         <>
           {data.own && (
