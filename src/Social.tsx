@@ -38,6 +38,7 @@ export type SocialPost = {
   notify_replies?: boolean;
   score?: number;
   vote?: number;
+  saved?: boolean;
 };
 type PortfolioPiece = {
   kind: "image" | "website" | "video" | "game" | "craft" | "project" | "other";
@@ -68,6 +69,9 @@ type Profile = {
   public_slug?: string;
   points?: number;
   reputation?: number;
+  saved_public?: boolean;
+  subscriber_count?: number;
+  viewer_following?: boolean;
   public_display_name?: string;
   show_discord_name?: boolean;
   avatar_url: string;
@@ -543,6 +547,11 @@ function VoteControl({ post }: { post: SocialPost }) {
   </div>;
 }
 function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
+  const [saved,setSaved]=useState(Boolean(post.saved));
+  const [status,setStatus]=useState("");
+  useEffect(()=>setSaved(Boolean(post.saved)),[post.saved]);
+  async function save(){try{await socialApi("save","PUT",{id:post.id,saved:!saved});setSaved(!saved);setStatus("");}catch(e){setStatus((e as Error).message)}}
+  async function share(){const url=location.origin+"/posts/"+post.id;try{if(navigator.share)await navigator.share({title:post.title||"C0N post",url});else {await navigator.clipboard.writeText(url);setStatus("Link copied");}}catch(e){if((e as Error).name!=="AbortError")setStatus("Unable to share")}}
   const title = post.title?.trim() || post.body.trim().split("\n").find(Boolean)?.slice(0,110) || "Untitled post";
   const posted = new Date(post.published_at);
   return <article className="con-feed-row">
@@ -557,6 +566,9 @@ function FeedRow({ post, rank }: { post: SocialPost; rank: number }) {
         <span>by <a href={`/c/${post.author_slug || post.author_id}`}>{post.author_name}</a></span>
         <span>to <a href={`/c/${post.community_slug || "community"}`} className="con-feed-community">c/{post.community_slug || "community"}</a></span>
         <a className="con-feed-comments" href={`/posts/${post.id}#replies`}>{post.replies || 0} comments</a>
+        <button className="con-feed-action" onClick={()=>void share()}>Share</button>
+        {post.kind==="member"&&<button className="con-feed-action" onClick={()=>void save()}>{saved?"Saved":"Save"}</button>}
+        {status&&<span role="status">{status}</span>}
       </div>
     </div>
   </article>;
@@ -569,6 +581,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
   const [error,setError] = useState("");
   const [next,setNext] = useState<string | null>(null);
   const [loading,setLoading] = useState(true);
+  const [feedMode,setFeedMode] = useState<"top"|"new"|"following">("top");
   const [showCreate,setShowCreate] = useState(false);
   const [showPost,setShowPost] = useState(() => new URLSearchParams(window.location.search).get("submit") === "1");
   const [slug,setSlug] = useState("");
@@ -600,10 +613,13 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
   async function load(more = false) {
     setLoading(true);
     try {
-      const query = communitySlug ? "&community="+encodeURIComponent(communitySlug) : "";
+      const query = (communitySlug ? "&community="+encodeURIComponent(communitySlug) : "")+(feedMode==="following"?"&following=1":"");
       const cursor = more && next ? "&before="+encodeURIComponent(next) : "";
       const d = await socialApi<{ posts: SocialPost[]; next: string | null }>("feed"+query+cursor);
-      setPosts(prev => more ? [...prev,...d.posts] : d.posts);
+      setPosts(prev => {
+        const next=more?[...prev,...d.posts]:d.posts;
+        return next.sort((a,b)=>feedMode==="new"?Date.parse(b.published_at)-Date.parse(a.published_at):(b.score||0)-(a.score||0)||Date.parse(b.published_at)-Date.parse(a.published_at));
+      });
       setNext(d.next); setError("");
     } catch(e) { setError(e instanceof Error ? e.message : "Could not load posts."); }
     finally { setLoading(false); }
@@ -618,7 +634,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
         .then(d => setCommunity(d.community))
         .catch(() => setCommunity(null));
     } else setCommunity(null);
-  },[communitySlug]);
+  },[communitySlug,feedMode]);
   async function createCommunity(e: FormEvent) {
     e.preventDefault(); setSaving(true); setNotice("");
     try {
@@ -637,7 +653,15 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
     } catch(e) { setNotice(e instanceof Error ? e.message : "Couldn't publish."); setSaving(false); }
   }
   return <section className={"social-stream con-community-page "+(compact?"social-compact":"")}>
-    {compact && user && <div className="con-compact-submit"><button type="button" onClick={() => setShowPost(true)}>+ Submit a post</button></div>}
+    {compact && <div className="con-compact-submit con-home-toolbar">
+       {user&&<button type="button" onClick={() => setShowPost(true)}>+ Submit post</button>}
+       <span className="con-home-announcement-space" aria-label="Featured announcements"></span>
+       <nav aria-label="Feed order">
+         <button className={feedMode==="following"?"active":""} onClick={()=>setFeedMode("following")}>Following</button>
+         <button className={feedMode==="top"?"active":""} onClick={()=>setFeedMode("top")}>Top</button>
+         <button className={feedMode==="new"?"active":""} onClick={()=>setFeedMode("new")}>New</button>
+       </nav>
+     </div>}
     {!compact && <>
       <div className="con-community-heading">
         <div>
@@ -711,10 +735,7 @@ export function StreamPage({ compact = false, communitySlug }: { compact?: boole
         </form>
       </dialog>
     {error && <p role="alert" className="social-error">{error} <button onClick={()=>void load()}>Retry</button></p>}
-    {compact && <div className="con-home-feed-heading">
-      <div><span className="con-community-kicker">COMMUNITY DISCUSSIONS</span><h2>Latest posts</h2></div>
-      <a href="/community">Browse subcons →</a>
-    </div>}
+
     <div className="con-feed-list" aria-label="Recent posts">
       {posts.map((p,i)=><FeedRow key={p.id} post={p} rank={i+1}/>)}
     </div>
@@ -1225,10 +1246,17 @@ export function ProfilePage({ id }: { id: string }) {
     [editing, setEditing] = useState(false),
     [composing, setComposing] = useState(false),
     [tab, setTab] = useState("posts");
+  const [savedPosts,setSavedPosts]=useState<SocialPost[]>([]);
+  const [savedPublic,setSavedPublic]=useState(false);
+  const [followed,setFollowed]=useState(false);
+  const [profileNotice,setProfileNotice]=useState("");
   async function load() {
     try {
       const result = await socialApi<{profile: Profile; posts: SocialPost[]; projects: {id: string; published: {title:string;body:string;image_url:string}}[]; own:boolean; can_blog:boolean}>("profile&id=" + encodeURIComponent(id));
       setData(result);
+      setFollowed(Boolean(result.profile.viewer_following));
+      void socialApi<{posts:SocialPost[];public:boolean}>("saved&id="+encodeURIComponent(result.profile.public_slug||id))
+        .then(d=>{setSavedPosts(d.posts);setSavedPublic(d.public)}).catch(()=>{});
       if(result.profile.public_slug && window.location.pathname.startsWith("/members/"))
         window.history.replaceState(null,"","/c/"+result.profile.public_slug+window.location.search);
       setTab(previous => previous === "posts" && result.profile.portfolio?.length ? "portfolio" : previous);
@@ -1275,6 +1303,9 @@ export function ProfilePage({ id }: { id: string }) {
           <div className="social-profile-info">
             <Avatar name={p.name} url={p.avatar_url} />
             <h1>{p.name}</h1>
+            {!data.own&&<button type="button" className="con-profile-follow" onClick={async()=>{try{await socialApi("follow","PUT",{id:p.user_id,following:!followed});setFollowed(!followed);setProfileNotice("");}catch(e){setProfileNotice((e as Error).message)}}}>{followed?"Following":"Subscribe"}</button>}
+            <p className="social-handle">{p.subscriber_count||0} subscribers</p>
+            {profileNotice&&<p role="status">{profileNotice}</p>}
             {p.username && p.show_discord_name && <p className="social-handle">@{p.username}</p>}{p.codename && p.name!==p.codename && <p className="social-handle">{p.codename}</p>}
             <div className="con-reputation-row"><span>{p.points||0} reward points</span><span>{p.reputation||0} reputation</span></div>
             <h2>{p.headline}</h2>
@@ -1318,6 +1349,7 @@ export function ProfilePage({ id }: { id: string }) {
             Projects
           </button>
         )}
+        {(data.own||savedPublic)&&<button aria-pressed={tab==="saved"} onClick={()=>setTab("saved")}>Saved posts</button>}
         {data.own && <a href="/my-projects">Manage projects →</a>}
       </nav>
       {tab === "portfolio" ? (
@@ -1336,6 +1368,12 @@ export function ProfilePage({ id }: { id: string }) {
             </article>
           ))}
         </div>
+      ) : tab === "saved" ? (
+        <section className="con-profile-saved">
+          {data.own && <label><input type="checkbox" checked={savedPublic} onChange={async e=>{try{await socialApi("saved_visibility","PUT",{public:e.target.checked});setSavedPublic(e.target.checked);}catch(err){setProfileNotice((err as Error).message)}}}/> Make saved posts visible to everyone</label>}
+          {savedPosts.map(post=><div key={post.id} className="con-profile-saved-row"><a href={"/posts/"+post.id}>{post.title||post.body.slice(0,100)}</a>{data.own&&<button onClick={async()=>{await socialApi("save","PUT",{id:post.id,saved:false});setSavedPosts(prev=>prev.filter(p=>p.id!==post.id));}}>Remove</button>}</div>)}
+          {!savedPosts.length&&<p>No saved posts to display.</p>}
+        </section>
       ) : tab === "posts" ? (
         <>
           {data.own && (

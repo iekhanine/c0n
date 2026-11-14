@@ -2,6 +2,26 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/featured/manage",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/archive",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/archive/manage",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facility",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facility/control",
+      "destination": "/index.html"
+    },
+    {
       "source": "/membership",
       "destination": "/index.html"
     },

@@ -3,6 +3,9 @@ import { ArrowRight, ChevronDown, LogOut, UserRound, Settings, Bell } from "luci
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
+import FacilityPage from "./FacilityPage";
+import ArchivePage from "./ArchivePage";
+import FeaturedStrip from "./FeaturedStrip";
 import { MembershipPage } from "./Membership";
 import {
   CopyRegion,
@@ -107,7 +110,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
+  const page = path === "/featured/manage" ? "featured-manage" : path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -146,10 +149,10 @@ export default function App() {
           </div>
           <nav aria-label="Community">
             {[
-              ["/", "nav.explore"],
+              ["/archive", "nav.archive"],
+              ["/", "nav.compound"],
               ["/projects", "nav.projects"],
-              ["/members", "nav.members"],
-              ["/community", "nav.community"],
+              ["/members", "nav.militia"],
             ].map(([href, id]) => (
               <CopyRegion ids={[id]} key={id}>
                 <div className="nav-entry">
@@ -209,6 +212,7 @@ export default function App() {
                   <a href={`/c/${memberSlug || account.user.id}?edit=1`}><Settings size={16}/> Edit profile</a>
                   <a href="/inbox">Inbox · Replies</a>
                   <a href="/membership">Membership & invitations</a>
+                  <a href="/facility">Facility Control · Supply requests</a>
                   <a href="/merch">Member supply</a>
                   <a href="/my-projects">My projects</a>
                   <button type="button" disabled={signingOut} onClick={() => void signOut()}>
@@ -228,7 +232,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "membership" ? (
+          {page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "membership" ? (
             <MembershipPage />
           ) : page === "merch" ? (
             <MembershipPage merch />

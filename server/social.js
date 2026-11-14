@@ -17,6 +17,13 @@ export const socialSchema = [
   "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS show_discord_name boolean NOT NULL DEFAULT false",
   "CREATE TABLE IF NOT EXISTS con.reputation_ledger (id uuid PRIMARY KEY, user_id text NOT NULL, post_id uuid NOT NULL, voter_id text NOT NULL, points integer NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
   "CREATE INDEX IF NOT EXISTS con_rep_user ON con.reputation_ledger(user_id)",
+  "CREATE TABLE IF NOT EXISTS con.saved_posts(user_id text NOT NULL,post_id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,post_id))",
+  "CREATE TABLE IF NOT EXISTS con.member_follows(follower_id text NOT NULL,followed_id text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(follower_id,followed_id))",
+  "ALTER TABLE con.profiles ADD COLUMN IF NOT EXISTS saved_public boolean NOT NULL DEFAULT false",
+  "CREATE INDEX IF NOT EXISTS con_followed_member ON con.member_follows(followed_id)",
+  "ALTER TABLE con.saved_posts ENABLE ROW LEVEL SECURITY",
+  "ALTER TABLE con.member_follows ENABLE ROW LEVEL SECURITY",
+  "REVOKE ALL ON con.saved_posts,con.member_follows FROM PUBLIC,anon,authenticated",
   "ALTER TABLE con.reputation_ledger ENABLE ROW LEVEL SECURITY",
   "REVOKE ALL ON con.reputation_ledger FROM PUBLIC,anon,authenticated",
   "CREATE INDEX IF NOT EXISTS con_member_posts_user ON con.member_posts(user_id,created_at DESC)",
@@ -179,6 +186,8 @@ async function decorate(db, posts, viewer) {
     "SELECT post_id,coalesce(sum(value),0)::int AS score,coalesce(max(CASE WHEN user_id=$2 THEN value END),0)::int AS vote FROM con.post_votes WHERE post_id=ANY($1::uuid[]) GROUP BY post_id",
     [ids, viewer || ""],
   )).rows;
+  const saved=(await db.query("SELECT post_id FROM con.saved_posts WHERE user_id=$1 AND post_id=ANY($2::uuid[])",[viewer||"",ids])).rows;
+  const savedIds=new Set(saved.map(r=>r.post_id));
   const avatars = await authorAvatars(db, posts.map(p => p.author_id));
   return posts.map((p) => ({
     ...p,
@@ -187,6 +196,7 @@ async function decorate(db, posts, viewer) {
     liked: likes.find((l) => l.post_id === p.id)?.liked || false,
     replies: replies.find((r) => r.post_id === p.id)?.n || 0,
     score: votes.find((v) => v.post_id === p.id)?.score || 0,
+    saved:savedIds.has(p.id),
     vote: votes.find((v) => v.post_id === p.id)?.vote || 0,
     community_slug: p.community_slug || "community",
     can_edit: p.kind === "member" && viewer === p.author_id,
@@ -247,6 +257,44 @@ export async function socialHandler(req, res, dbFactory = database) {
         201,
         await uploadImage(db, { ...b, name: "Member image" }, { user }, false),
       );
+    if (action === "save" && req.method === "PUT") {
+      const postId=id(b.id);
+      if (b.saved !== true && b.saved !== false) throw new AppError(400,"Invalid save state.");
+      const exists=(await db.query("SELECT 1 FROM con.member_posts WHERE id=$1",[postId])).rows.length;
+      if (!exists)throw new AppError(404,"Post not found.");
+      if(b.saved)await db.query("INSERT INTO con.saved_posts(user_id,post_id)VALUES($1,$2) ON CONFLICT DO NOTHING",[user.id,postId]);
+      else await db.query("DELETE FROM con.saved_posts WHERE user_id=$1 AND post_id=$2",[user.id,postId]);
+      return json(res,200,{saved:b.saved});
+    }
+    if (action === "saved_visibility" && req.method === "PUT") {
+      if(typeof b.public!=="boolean")throw new AppError(400,"Choose public or private.");
+      await db.query("UPDATE con.profiles SET saved_public=$2,updated_at=now() WHERE user_id=$1",[user.id,b.public]);
+      return json(res,200,{public:b.public});
+    }
+    if (action === "saved" && req.method === "GET") {
+      const target=url.searchParams.get("id")||user.id;
+      const member=target.includes("-")?(await db.query("SELECT user_id FROM con.memberships WHERE public_slug=$1",[target])).rows[0]?.user_id:target;
+      const profile=(await db.query("SELECT saved_public FROM con.profiles WHERE user_id=$1",[member])).rows[0];
+      if(!profile)throw new AppError(404,"Profile not found.");
+      const own=member===user.id;
+      if(!own&&!profile.saved_public)return json(res,200,{posts:[],public:false,own:false});
+      const posts=(await db.query(memberSelect+" JOIN con.saved_posts sp ON sp.post_id=m.id WHERE sp.user_id=$1 ORDER BY sp.created_at DESC LIMIT 100",[member])).rows;
+      return json(res,200,{posts:await decorate(db,posts,user.id),public:profile.saved_public,own});
+    }
+    if (action === "follow" && req.method === "PUT") {
+      const followed=userId(b.id);
+      if(followed===user.id)throw new AppError(400,"Cannot follow yourself.");
+      const active=(await db.query("SELECT 1 FROM con.memberships WHERE user_id=$1 AND active=true",[followed])).rows.length;
+      if(!active)throw new AppError(404,"Member not found.");
+      if(b.following===true)await db.query("INSERT INTO con.member_follows(follower_id,followed_id)VALUES($1,$2) ON CONFLICT DO NOTHING",[user.id,followed]);
+      else if(b.following===false)await db.query("DELETE FROM con.member_follows WHERE follower_id=$1 AND followed_id=$2",[user.id,followed]);
+      else throw new AppError(400,"Invalid following state.");
+      return json(res,200,{following:b.following});
+    }
+    if (action === "follow_list" && req.method === "GET") {
+      const followees=(await db.query("SELECT mf.followed_id,COALESCE(NULLIF(p.public_display_name,''),m.codename,p.name) AS name,m.public_slug FROM con.member_follows mf JOIN con.memberships m ON m.user_id=mf.followed_id JOIN con.profiles p ON p.user_id=m.user_id WHERE mf.follower_id=$1 AND m.active=true ORDER BY mf.created_at DESC",[user.id])).rows;
+      return json(res,200,{following:followees});
+    }
     if (action === "inbox_count" && req.method === "GET") {
       if (!user) throw new AppError(401, "Sign in to see your inbox.");
       const result = await db.query(
@@ -363,7 +411,9 @@ export async function socialHandler(req, res, dbFactory = database) {
       }
       const identity=(await db.query("SELECT codename,public_slug FROM con.memberships WHERE user_id=$1",[uid])).rows[0];
       const earned=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[uid])).rows[0]?.points||0;
-      profile={...profile,public_slug:identity?.public_slug || "",codename:identity?.codename || "",points:earned,reputation:Math.floor(Math.max(0,earned)/5),
+      const followInfo=(await db.query("SELECT count(*)::int AS subscribers FROM con.member_follows WHERE followed_id=$1",[uid])).rows[0];
+      const viewerFollows=Boolean(user&&uid!==user.id&&(await db.query("SELECT 1 FROM con.member_follows WHERE follower_id=$1 AND followed_id=$2",[user.id,uid])).rows.length>0);
+      profile={...profile,subscriber_count:followInfo.subscribers,viewer_following:viewerFollows,public_slug:identity?.public_slug || "",codename:identity?.codename || "",points:earned,reputation:Math.floor(Math.max(0,earned)/5),
         name:profile.public_display_name || identity?.codename || profile.name || "Member",
         username:profile.show_discord_name ? profile.username : ""};
       const projects = profile.show_projects
@@ -441,7 +491,8 @@ export async function socialHandler(req, res, dbFactory = database) {
         const exists = await db.query("SELECT 1 FROM con.communities WHERE slug=$1", [slug]);
         if (!exists.rows.length) throw new AppError(404, "Community not found.");
       }
-      const updates = slug && slug !== "community" ? [] : (
+      const followingOnly=url.searchParams.get("following")==="1";
+      const updates = followingOnly || (slug && slug !== "community") ? [] : (
         await db.query(
           "SELECT id,author_id,published_snapshot,published_at FROM con.posts WHERE kind='update' AND published_at IS NOT NULL AND published_snapshot IS NOT NULL AND published_at < $1::timestamptz ORDER BY published_at DESC LIMIT 51",
           [before || "infinity"],
