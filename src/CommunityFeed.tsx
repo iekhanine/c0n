@@ -1,5 +1,6 @@
 import ProjectCardMenu from "./ProjectCardMenu";
 import DiscordSidebar from "./DiscordSidebar";
+import FeaturedStrip from "./FeaturedStrip";
 import { StreamPage } from "./Social";
 import { VoteButton, type Project } from "./ProjectPages";
 import { Editable, Copy, useSiteCopy } from "./SiteText";
@@ -120,7 +121,7 @@ export default function CommunityFeed({
     page === "explore"
       ? ranked.filter((p) => !p.homepage_hidden).slice(0, 15)
       : ranked;
-  if(String(page)==="explore")return <div className="reference-layout con-reddit-home"><div className="reference-main"><StreamPage compact /></div><DiscordSidebar/></div>;
+  if(String(page)==="explore")return <div className="reference-layout con-reddit-home"><div className="reference-main"><FeaturedStrip/><StreamPage compact /></div><DiscordSidebar/></div>;
   return (
     <>
       <section className="page-introduction">
