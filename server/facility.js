@@ -59,7 +59,7 @@ async function snapshot(db,id){
 async function tx(db,fn){const c=await db.connect();try{await c.query("BEGIN");const out=await fn(c);await c.query("COMMIT");return out;}catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}}
 async function lock(c,id){await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[id]);}
 function validId(value){if(typeof value!=="string"||!/^[0-9a-f-]{36}$/i.test(value))fail(400,"Invalid identifier");return value;}
-export async function facilityHandler(req,res){
+export async function facilityHandler(req,res,dbFactory=database){
  try{
   const user=(await readSession(req))?.user;
   if(!user?.id)fail(401,"Sign in required");
@@ -67,7 +67,7 @@ export async function facilityHandler(req,res){
   if(!action.startsWith("facility_"))fail(404,"Unknown operation");
   const owner=ownerIDs().has(user.id);
   if(req.method!=="GET"&&req.headers.origin!==ORIGIN)fail(403,"Invalid origin");
-  const db=database();await setup(db);
+  const db=dbFactory();await setup(db);
   if(action==="facility_state"){method(req,"GET");return json(res,200,await snapshot(db,user.id));}
   if(action==="facility_control"){method(req,"GET");if(!owner)fail(403,"Forbidden");const [requests,assignments]=await Promise.all([
     db.query("SELECT r.id,r.member_id,m.codename AS member_name,r.sku,r.cost,r.status,r.note,r.review,r.created_at FROM con.facility_requests r LEFT JOIN con.memberships m ON m.user_id=r.member_id ORDER BY r.created_at DESC LIMIT 250"),
