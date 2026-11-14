@@ -412,7 +412,7 @@ export async function socialHandler(req, res, dbFactory = database) {
       const identity=(await db.query("SELECT codename,public_slug FROM con.memberships WHERE user_id=$1",[uid])).rows[0];
       const earned=(await db.query("SELECT coalesce(sum(points),0)::int AS points FROM con.reputation_ledger WHERE user_id=$1",[uid])).rows[0]?.points||0;
       const followInfo=(await db.query("SELECT count(*)::int AS subscribers FROM con.member_follows WHERE followed_id=$1",[uid])).rows[0];
-      const viewerFollows=uid!==user.id&&(await db.query("SELECT 1 FROM con.member_follows WHERE follower_id=$1 AND followed_id=$2",[user.id,uid])).rows.length>0;
+      const viewerFollows=Boolean(user&&uid!==user.id&&(await db.query("SELECT 1 FROM con.member_follows WHERE follower_id=$1 AND followed_id=$2",[user.id,uid])).rows.length>0);
       profile={...profile,subscriber_count:followInfo.subscribers,viewer_following:viewerFollows,public_slug:identity?.public_slug || "",codename:identity?.codename || "",points:earned,reputation:Math.floor(Math.max(0,earned)/5),
         name:profile.public_display_name || identity?.codename || profile.name || "Member",
         username:profile.show_discord_name ? profile.username : ""};
