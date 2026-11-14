@@ -7,6 +7,9 @@ const schema=[
 "CREATE TABLE IF NOT EXISTS con.archive_records(id uuid PRIMARY KEY,collection text NOT NULL CHECK(collection IN ('index','remnants')),title text NOT NULL,subtitle text NOT NULL DEFAULT '',body text NOT NULL DEFAULT '',position integer NOT NULL DEFAULT 0,published boolean NOT NULL DEFAULT false,audio_id uuid,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())",
 "CREATE TABLE IF NOT EXISTS con.archive_audio(id uuid PRIMARY KEY,content_type text NOT NULL,data bytea NOT NULL,original_name text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())",
 "CREATE INDEX IF NOT EXISTS con_archive_records_sort ON con.archive_records(collection,position,created_at)",
+"CREATE TABLE IF NOT EXISTS con.archive_meta(key text PRIMARY KEY)",
+"ALTER TABLE con.archive_meta ENABLE ROW LEVEL SECURITY",
+"REVOKE ALL ON con.archive_meta FROM PUBLIC,anon,authenticated",
 "ALTER TABLE con.archive_records ENABLE ROW LEVEL SECURITY",
 "ALTER TABLE con.archive_audio ENABLE ROW LEVEL SECURITY",
 "REVOKE ALL ON con.archive_records,con.archive_audio FROM PUBLIC,anon,authenticated"
@@ -19,7 +22,8 @@ const defaultRecords=[
 ];
 const init=new WeakMap();
 async function setup(db){if(!init.has(db))init.set(db,(async()=>{for(const sql of schema)await db.query(sql);
-for(const record of defaultRecords)await db.query("INSERT INTO con.archive_records(id,collection,title,subtitle,body,position,published) VALUES($1,$2,$3,$4,$5,$6,true) ON CONFLICT(id) DO NOTHING",record);})().catch(e=>{init.delete(db);throw e;}));await init.get(db);}
+const first=(await db.query("INSERT INTO con.archive_meta(key) VALUES('original-records-v1') ON CONFLICT DO NOTHING RETURNING key")).rows.length>0;
+if(first)for(const record of defaultRecords)await db.query("INSERT INTO con.archive_records(id,collection,title,subtitle,body,position,published) VALUES($1,$2,$3,$4,$5,$6,true) ON CONFLICT(id) DO NOTHING",record);})().catch(e=>{init.delete(db);throw e;}));await init.get(db);}
 const clean=(v,n)=>typeof v==="string"?v.trim().slice(0,n):"";
 function fail(status,error){const e=Error(error);e.status=status;throw e;}
 function validId(value){if(typeof value!=="string"||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(value))fail(400,"Invalid record");return value;}
