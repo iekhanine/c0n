@@ -24,11 +24,11 @@ const clean=(v,n)=>typeof v==="string"?v.trim().slice(0,n):"";
 function fail(status,error){const e=Error(error);e.status=status;throw e;}
 function validId(value){if(typeof value!=="string"||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(value))fail(400,"Invalid record");return value;}
 function body(req){const b=typeof req.body==="string"?JSON.parse(req.body):req.body;if(!b||typeof b!=="object"||Array.isArray(b))fail(400,"Invalid request");return b;}
-export async function archiveHandler(req,res){
+export async function archiveHandler(req,res,dbFactory=database){
  try{
   const user=(await readSession(req))?.user;if(!user?.id)fail(401,"Sign in required");
   const owner=founders().has(user.id),url=new URL(req.url,ORIGIN),action=url.searchParams.get("action");
-  const db=database();await setup(db);
+  const db=dbFactory();await setup(db);
   if(action==="archive_list"){
    if(req.method!=="GET")fail(405,"Use GET");
    const rows=(await db.query("SELECT id,collection,title,subtitle,body,position,published,audio_id,updated_at FROM con.archive_records "+(owner?"":"WHERE published=true ")+"ORDER BY collection,position,created_at")).rows;
