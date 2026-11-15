@@ -48,6 +48,14 @@ async function snapshot(pool,discordId,owner){
    pool.query("select id,title,profession_id,completion_type,duration_minutes,character_xp,profession_xp,pay_credits,stamina_cost,status from con.game_task_templates order by updated_at desc limit 200")
   ]);
   result.overseer={treasury:treasury.rows[0]?.balance,taskTemplates:allTasks.rows};
+  const [awards,members,employment]=await Promise.all([
+   pool.query("select a.id,c.name recipient,a.xp,a.credits,a.items,s.campaign_id from con.game_dm_awards a join con.game_characters c on c.id=a.character_id join con.game_sessions s on s.id=a.session_id where a.status='pending' order by a.created_at limit 100"),
+   pool.query("select discord_id,name,profession_id from con.game_characters order by created_at desc limit 250"),
+   pool.query("select e.id,c.discord_id,c.name,e.salary_weekly,e.required_units,e.compensation_type,e.active from con.game_employment e join con.game_characters c on c.id=e.character_id where e.active=true")
+  ]);
+  result.overseer.pendingAwards=awards.rows;
+  result.overseer.members=members.rows;
+  result.overseer.employment=employment.rows;
  }
  return result;
 }
