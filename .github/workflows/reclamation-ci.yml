@@ -5,6 +5,9 @@ on:
       - 'game/**'
       - 'bot/dice.js'
       - 'bot/dice.test.js'
+      - 'bot/workshop-jobs.js'
+      - 'bot/workshop-jobs.test.js'
+      - 'server/workshop-jobs.js'
       - 'bot/index.js'
       - 'bot/Dockerfile'
       - 'server/reclamation.js'
@@ -51,4 +54,6 @@ jobs:
         run: |
           node --check bot/index.js
           node --check bot/dice.js
-          node --test bot/dice.test.js
+          node --check bot/workshop-jobs.js
+          node --check server/workshop-jobs.js
+          node --test bot/dice.test.js bot/workshop-jobs.test.js
