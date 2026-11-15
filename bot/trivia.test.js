@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { QUESTION_BANK, drawQuestions, scorePlayers } from "./trivia.js";
+import { QUESTION_BANK, drawQuestions, scorePlayers, triviaConfig } from "./trivia.js";
 
 test("TVM game bank contains exactly 100 unique, well-formed questions",()=>{
   assert.equal(QUESTION_BANK.length,100);
@@ -51,4 +51,15 @@ test("no correct answers gives no winner bonus",()=>{
   const [score]=scorePlayers([{correct:2}],[new Map([["1",{choice:1,name:"A"}]])]);
   assert.equal(score.xp,0);
   assert.equal(score.winner,false);
+});
+
+test("trivia defaults and optional command settings",()=>{
+  assert.deepEqual(triviaConfig(),{questions:10,seconds:20});
+  assert.deepEqual(triviaConfig(5,10),{questions:5,seconds:10});
+  assert.deepEqual(triviaConfig(100,120),{questions:100,seconds:120});
+  assert.throws(()=>triviaConfig(0,10),/Questions/);
+  assert.throws(()=>triviaConfig(101,10),/Questions/);
+  assert.throws(()=>triviaConfig(5,4),/Seconds/);
+  assert.throws(()=>triviaConfig(5,121),/Seconds/);
+  assert.equal(drawQuestions(QUESTION_BANK,5).length,5);
 });
