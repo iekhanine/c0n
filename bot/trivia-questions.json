@@ -1,0 +1,1206 @@
+{
+  "version": 1,
+  "source": "TVM TriviaQA candidates",
+  "questions": [
+    {
+      "id": "tc_107",
+      "category": "year",
+      "question": "In what year were US ground troops first dispatched to Vietnam?",
+      "options": [
+        "1969",
+        "1965",
+        "1956",
+        "1967"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_258",
+      "category": "year",
+      "question": "In which year was CNN founded?",
+      "options": [
+        "1980",
+        "1991",
+        "1977",
+        "1975"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_301",
+      "category": "year",
+      "question": "In which year was Bloody Sunday in Londonderry?",
+      "options": [
+        "1963",
+        "1967",
+        "1969",
+        "1972"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_574",
+      "category": "year",
+      "question": "In which year did Alcock and Brown make their Atlantic crossing?",
+      "options": [
+        "1919",
+        "1923",
+        "1930",
+        "1914"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_696",
+      "category": "year",
+      "question": "When was the Scrabble World championship first held?",
+      "options": [
+        "1998",
+        "1991",
+        "1982",
+        "2002"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_701",
+      "category": "year",
+      "question": "What year was the centenary of Arkansas joining the Union?",
+      "options": [
+        "1938",
+        "1947",
+        "1936",
+        "1940"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_749",
+      "category": "year",
+      "question": "In which year was the talkie The Jazz Singer released?",
+      "options": [
+        "1924",
+        "1938",
+        "1922",
+        "1927"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_772",
+      "category": "year",
+      "question": "In what year was Oliver Stone born?",
+      "options": [
+        "1946",
+        "1953",
+        "1941",
+        "1948"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_788",
+      "category": "year",
+      "question": "In which year was Nigel Mansell Indy Car Champion?",
+      "options": [
+        "1997",
+        "1990",
+        "1993",
+        "1995"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_790",
+      "category": "year",
+      "question": "Which year was the first after 1927 that the USA lost the Ryder Cup on home soil?",
+      "options": [
+        "1987",
+        "1998",
+        "1989",
+        "1994"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_835",
+      "category": "year",
+      "question": "In what year was the first performance of Copland's ballet Rodeo?",
+      "options": [
+        "1937",
+        "1933",
+        "1946",
+        "1942"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_868",
+      "category": "year",
+      "question": "In what year did Saddam Hussein become President of Iraq?",
+      "options": [
+        "1970",
+        "1974",
+        "1979",
+        "1983"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_950",
+      "category": "year",
+      "question": "In which year did Tanganyika and Zanzibar merge to form Tanzania?",
+      "options": [
+        "1955",
+        "1964",
+        "1961",
+        "1966"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_960",
+      "category": "year",
+      "question": "When did field hockey become an Olympic event for men?",
+      "options": [
+        "1908",
+        "1915",
+        "1903",
+        "1919"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_982",
+      "category": "year",
+      "question": "What year was the centenary of Illinois joining the Union?",
+      "options": [
+        "1909",
+        "1929",
+        "1922",
+        "1918"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_997",
+      "category": "year",
+      "question": "In which year did Count Basie die?",
+      "options": [
+        "1975",
+        "1986",
+        "1984",
+        "1995"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1049",
+      "category": "year",
+      "question": "In which year was the University of Alaska Anchorage founded?",
+      "options": [
+        "1951",
+        "1954",
+        "1965",
+        "1958"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_1075",
+      "category": "year",
+      "question": "In what year of the 1990s was baseball's World Series canceled?",
+      "options": [
+        "1994",
+        "1996",
+        "1991",
+        "1989"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1311",
+      "category": "year",
+      "question": "In what year was the Kellogg Company set up to manufacture cornflakes?",
+      "options": [
+        "1910",
+        "1917",
+        "1903",
+        "1906"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1409",
+      "category": "year",
+      "question": "In what year did regular Boeing 707 flights begin across he Atlantic?",
+      "options": [
+        "1958",
+        "1960",
+        "1949",
+        "1965"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1788",
+      "category": "year",
+      "question": "What year was the centenary of California joining the Union?",
+      "options": [
+        "1941",
+        "1950",
+        "1947",
+        "1961"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_1815",
+      "category": "year",
+      "question": "In what year was indoor handball introduced as an Olympic event for men?",
+      "options": [
+        "1974",
+        "1976",
+        "1972",
+        "1967"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1824",
+      "category": "year",
+      "question": "What year was the centenary of Colorado joining the Union?",
+      "options": [
+        "1967",
+        "1973",
+        "1971",
+        "1976"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_2058",
+      "category": "year",
+      "question": "When did Euro Disney, now Disneyland Paris, open?",
+      "options": [
+        "1992",
+        "2003",
+        "1999",
+        "1987"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_2415",
+      "category": "year",
+      "question": "In which year did Britain's lease on Hong Kong officially expire?",
+      "options": [
+        "2001",
+        "2004",
+        "1997",
+        "2008"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_2538",
+      "category": "year",
+      "question": "In which year were East and West Germany unified?",
+      "options": [
+        "1990",
+        "1994",
+        "1992",
+        "1987"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_2577",
+      "category": "year",
+      "question": "What year saw the nationalization of British Railways?",
+      "options": [
+        "1943",
+        "1959",
+        "1952",
+        "1948"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_2587",
+      "category": "year",
+      "question": "In which year did the Japanese attack Pearl Harbor?",
+      "options": [
+        "1948",
+        "1936",
+        "1941",
+        "1945"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_2604",
+      "category": "year",
+      "question": "In which year did the Korean War break out?",
+      "options": [
+        "1941",
+        "1950",
+        "1952",
+        "1947"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_2628",
+      "category": "year",
+      "question": "In what year did the Representation of the People Act give the vote to all women over 21?",
+      "options": [
+        "1928",
+        "1930",
+        "1923",
+        "1935"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_2673",
+      "category": "year",
+      "question": "In which year did Mikhail Gorbachev resign as Soviet president?",
+      "options": [
+        "1988",
+        "1995",
+        "1982",
+        "1991"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_3111",
+      "category": "year",
+      "question": "When was the first Pioneer space probe launched?",
+      "options": [
+        "1958",
+        "1953",
+        "1949",
+        "1960"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_45",
+      "category": "director",
+      "question": "Who directed the movie La Dolce Vita?",
+      "options": [
+        "David Lean",
+        "Federico Fellini",
+        "Stanley Kubrick",
+        "Robert Wise"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_47",
+      "category": "director",
+      "question": "Who directed 2001: A Space Odyssey?",
+      "options": [
+        "Ben Stiller",
+        "Michael Cimino",
+        "Stanley Kubrick",
+        "Elia Kazan"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_637",
+      "category": "director",
+      "question": "Who directed Good Morning Vietnam?",
+      "options": [
+        "David Lean",
+        "Elia Kazan",
+        "Robert Zemeckis",
+        "Barry Levinson"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_730",
+      "category": "director",
+      "question": "Who directed Back To The Future?",
+      "options": [
+        "Robert Zemeckis",
+        "Howard Hawks",
+        "Frank Capra",
+        "Stanley Kubrick"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_748",
+      "category": "director",
+      "question": "Who directed The Big Sleep and Gentlemen Prefer Blondes?",
+      "options": [
+        "Barry Levinson",
+        "Frank Capra",
+        "Howard Hawks",
+        "Robert Zemeckis"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_821",
+      "category": "director",
+      "question": "Who directed A Passage To India?",
+      "options": [
+        "David Lean",
+        "Stanley Kubrick",
+        "Barry Levinson",
+        "Frank Capra"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_994",
+      "category": "director",
+      "question": "Who directed the movie East of Eden?",
+      "options": [
+        "Frank Capra",
+        "Robert Wise",
+        "Federico Fellini",
+        "Elia Kazan"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1235",
+      "category": "director",
+      "question": "Who directed The Cable Guy?",
+      "options": [
+        "Frank Capra",
+        "Robert Zemeckis",
+        "Ben Stiller",
+        "Stanley Kubrick"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1581",
+      "category": "director",
+      "question": "Who directed the movie The Blues Brothers?",
+      "options": [
+        "Federico Fellini",
+        "John Landis",
+        "Frank Capra",
+        "Barry Levinson"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_1808",
+      "category": "director",
+      "question": "Who directed the 1951 classic movie The Day The Earth Stood Still?",
+      "options": [
+        "Robert Wise",
+        "Robert Zemeckis",
+        "Barry Levinson",
+        "Michael Cimino"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1856",
+      "category": "director",
+      "question": "Who directed The Deer Hunter?",
+      "options": [
+        "Howard Hawks",
+        "John Landis",
+        "David Lean",
+        "Michael Cimino"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_2351",
+      "category": "director",
+      "question": "Which director's autobiography was called The Name Above the Title?",
+      "options": [
+        "Frank Capra",
+        "Robert Wise",
+        "John Landis",
+        "Stanley Kubrick"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_38",
+      "category": "author",
+      "question": "Who wrote the novel Evening Class?",
+      "options": [
+        "Mario Puzo",
+        "Maeve Binchy",
+        "Ursula Le Guin",
+        "Richard Adams"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_138",
+      "category": "author",
+      "question": "Who wrote The Turn Of The Screw in the 19th century and The Ambassadors in the 20th?",
+      "options": [
+        "Lewis Carroll",
+        "Alan Paton",
+        "Henry James",
+        "Larry David"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_229",
+      "category": "author",
+      "question": "Who wrote the novel Cry, the Beloved Country about South Africa?",
+      "options": [
+        "Prince Charles",
+        "Alice Thomas Ellis",
+        "Graham Greene",
+        "Alan Paton"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_269",
+      "category": "author",
+      "question": "Who wrote the novel The Go Between?",
+      "options": [
+        "L. P. Hartley",
+        "Harold Robbins",
+        "Oscar Wilde",
+        "Henry James"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_521",
+      "category": "author",
+      "question": "Who wrote The Picture Of Dorian Gray?",
+      "options": [
+        "Richard Adams",
+        "Prince Charles",
+        "Oscar Wilde",
+        "Mario Puzo"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_744",
+      "category": "author",
+      "question": "Who wrote Riders of the Purple Sage?",
+      "options": [
+        "Zane Gray",
+        "Richard Adams",
+        "Ursula Le Guin",
+        "Alan Paton"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_802",
+      "category": "author",
+      "question": "Who wrote the novel Delta Connection?",
+      "options": [
+        "John Buchan",
+        "Prince Charles",
+        "Graham Greene",
+        "Hammond Innes"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_872",
+      "category": "author",
+      "question": "Mao wrote a Red Book; who wrote a Green Book?",
+      "options": [
+        "L. P. Hartley",
+        "Irving Berlin",
+        "Colonel Gaddafi",
+        "Henry James"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_952",
+      "category": "author",
+      "question": "Who wrote the novel Love Solves The Problem?",
+      "options": [
+        "Mario Puzo",
+        "Barbara Cartland",
+        "Maeve Binchy",
+        "Hammond Innes"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_1013",
+      "category": "author",
+      "question": "Who wrote the novel Watership Down?",
+      "options": [
+        "Richard Adams",
+        "Prince Charles",
+        "Hammond Innes",
+        "Irving Berlin"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1018",
+      "category": "author",
+      "question": "Who wrote God Bless America?",
+      "options": [
+        "Prince Charles",
+        "C. S. Lewis",
+        "Larry David",
+        "Irving Berlin"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1032",
+      "category": "author",
+      "question": "Who wrote the novel The Godfather?",
+      "options": [
+        "Mario Puzo",
+        "Harold Robbins",
+        "Zane Gray",
+        "Ursula Le Guin"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1084",
+      "category": "author",
+      "question": "Who wrote the novel Gentlemen Prefer Blondes?",
+      "options": [
+        "L. P. Hartley",
+        "Anita Loos",
+        "Maeve Binchy",
+        "Barbara Cartland"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_1300",
+      "category": "author",
+      "question": "Who wrote the novel Fairy Tale?",
+      "options": [
+        "L. P. Hartley",
+        "Larry David",
+        "Alice Thomas Ellis",
+        "Ursula Le Guin"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1604",
+      "category": "author",
+      "question": "Who wrote the novel Tycoon in 1996?",
+      "options": [
+        "Graham Greene",
+        "Alice Thomas Ellis",
+        "Hammond Innes",
+        "Harold Robbins"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1810",
+      "category": "author",
+      "question": "Who wrote the novel The Left Hand Of Darkness?",
+      "options": [
+        "Ursula Le Guin",
+        "Zane Gray",
+        "Mario Puzo",
+        "Henry James"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1970",
+      "category": "author",
+      "question": "Who wrote the words for My Fair Lady and Camelot?",
+      "options": [
+        "Oscar Wilde",
+        "Larry David",
+        "Alan Jay Lerner",
+        "Prince Charles"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_2185",
+      "category": "author",
+      "question": "Who wrote the novel The Power and The Glory?",
+      "options": [
+        "Graham Greene",
+        "Mario Puzo",
+        "Prince Charles",
+        "Irving Berlin"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_2357",
+      "category": "author",
+      "question": "Who wrote the children's classic The Lion, The Witch and The Wardrobe?",
+      "options": [
+        "Hammond Innes",
+        "Harold Robbins",
+        "Maeve Binchy",
+        "C. S. Lewis"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_2388",
+      "category": "author",
+      "question": "Who wrote the very last episode of Seinfeld?",
+      "options": [
+        "Maeve Binchy",
+        "L. P. Hartley",
+        "Larry David",
+        "Henry James"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_2680",
+      "category": "author",
+      "question": "Which author had the real name Charles Dodgson?",
+      "options": [
+        "Alan Paton",
+        "Lewis Carroll",
+        "Oscar Wilde",
+        "Mario Puzo"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "qz_41",
+      "category": "author",
+      "question": "Who wrote the novel The 39 Steps?",
+      "options": [
+        "John Buchan",
+        "Alan Paton",
+        "Colonel Gaddafi",
+        "L. P. Hartley"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_72",
+      "category": "actor",
+      "question": "Which actor had a Doberman Pinscher called Kirk?",
+      "options": [
+        "Elmo Lincoln",
+        "Ken Howard",
+        "Ewan McGregor",
+        "William Shatner"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_228",
+      "category": "actor",
+      "question": "Which actor won an Academy Award for his performance in The African Queen?",
+      "options": [
+        "Humphrey Bogart",
+        "Marlon Brando",
+        "Michelle Pfeiffer",
+        "Whoopi Goldberg"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_273",
+      "category": "actor",
+      "question": "Which actor played Maxwell Smart?",
+      "options": [
+        "Charlie Sheen",
+        "Don Adams",
+        "Anne Heche",
+        "Bea Arthur"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_296",
+      "category": "actor",
+      "question": "Which actor bought the island of Tetiaroa?",
+      "options": [
+        "Gwyneth Paltrow",
+        "William Shatner",
+        "Marlon Brando",
+        "Don Adams"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_709",
+      "category": "actor",
+      "question": "Which actor paid $93,500 for the baseball which rolled between Bill Buckner's legs in game six of the 1986 World Series?",
+      "options": [
+        "Bea Arthur",
+        "Humphrey Bogart",
+        "Ken Howard",
+        "Charlie Sheen"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_781",
+      "category": "actor",
+      "question": "Which actor paid $19,500 for a flowered headband worn by Jimi Hendrix in 1969",
+      "options": [
+        "Eddie Murphy",
+        "Don Adams",
+        "Charlie Sheen",
+        "William Shatner"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_900",
+      "category": "actor",
+      "question": "Which actress links Dorothy in The Golden Girls and Maude Findlay in Maude?",
+      "options": [
+        "Michael Troughton",
+        "Humphrey Bogart",
+        "Bea Arthur",
+        "Eddie Murphy"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1000",
+      "category": "actor",
+      "question": "Which actress retold the story of Alice in Wonderland set in New Jersey and New York City?",
+      "options": [
+        "Whoopi Goldberg",
+        "Ken Howard",
+        "Marlon Brando",
+        "Bea Arthur"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1097",
+      "category": "actor",
+      "question": "Who played Rick Deckard in Blade Runner?",
+      "options": [
+        "Eddie Murphy",
+        "Marlon Brando",
+        "Ted Neely",
+        "Harrison Ford"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1116",
+      "category": "actor",
+      "question": "Who played the title role in Emma?",
+      "options": [
+        "Michael Troughton",
+        "Ewan McGregor",
+        "Gwyneth Paltrow",
+        "Don Adams"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1117",
+      "category": "actor",
+      "question": "Who played Batman immediately before George Clooney?",
+      "options": [
+        "Doris Belack",
+        "Val Kilmer",
+        "Marlon Brando",
+        "Robert Downey Jr"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_1118",
+      "category": "actor",
+      "question": "Who played the young Obi-Wan Kenobi in the Star Wars prequel?",
+      "options": [
+        "Ewan McGregor",
+        "Robert Downey Jr",
+        "Harrison Ford",
+        "Charlie Sheen"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1119",
+      "category": "actor",
+      "question": "Who played Drew Barrymore's stepmother in Ever After?",
+      "options": [
+        "Ted Danson",
+        "Marlon Brando",
+        "Daniel Day-Lewis",
+        "Angelica Houston"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1180",
+      "category": "actor",
+      "question": "Who played Charlie Chaplin in Richard Attenborough's 1992 film?",
+      "options": [
+        "Robert Downey Jr",
+        "Gwyneth Paltrow",
+        "Don Adams",
+        "Val Kilmer"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1227",
+      "category": "actor",
+      "question": "Who played the title role in the film version of Jesus Christ Superstar?",
+      "options": [
+        "Michael Troughton",
+        "Ted Neely",
+        "Harrison Ford",
+        "Ken Howard"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_1293",
+      "category": "actor",
+      "question": "Which actress was voted Miss Burbank 1948?",
+      "options": [
+        "Charlie Sheen",
+        "Don Adams",
+        "Debbie Reynolds",
+        "William Shatner"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1618",
+      "category": "actor",
+      "question": "In the pilot show of Fish, who played Bernice?",
+      "options": [
+        "Humphrey Bogart",
+        "Gwyneth Paltrow",
+        "Gene Anthony Ray",
+        "Doris Belack"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1628",
+      "category": "actor",
+      "question": "In the TV sitcom Adam's Rib, who played the Spencer Tracy Film role?",
+      "options": [
+        "Ken Howard",
+        "Gwyneth Paltrow",
+        "William Shatner",
+        "Ted Neely"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_1640",
+      "category": "actor",
+      "question": "Who played Leroy Johnson in the movie Fame and on TV?",
+      "options": [
+        "Eddie Murphy",
+        "Jane Seymour",
+        "Gene Anthony Ray",
+        "Angelica Houston"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_2065",
+      "category": "actor",
+      "question": "Which actress is ex-beauty queen Miss Orange County 1976?",
+      "options": [
+        "Michelle Pfeiffer",
+        "Bea Arthur",
+        "Ted Danson",
+        "Don Adams"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_2066",
+      "category": "actor",
+      "question": "Which actor became playwright Arthur Miller's son-in-law in 1997?",
+      "options": [
+        "Marlon Brando",
+        "Don Adams",
+        "Ken Howard",
+        "Daniel Day-Lewis"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_2067",
+      "category": "actor",
+      "question": "Which actress perished in the shower in the remake of Psycho?",
+      "options": [
+        "Doris Belack",
+        "Bea Arthur",
+        "Anne Heche",
+        "William Shatner"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_2072",
+      "category": "actor",
+      "question": "Who played Tarzan in the first two Tarzan films?",
+      "options": [
+        "Ken Howard",
+        "Elmo Lincoln",
+        "Humphrey Bogart",
+        "Danny Kaye"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_2107",
+      "category": "actor",
+      "question": "Which actress was Roger Moor's first Bond girl?",
+      "options": [
+        "Jane Seymour",
+        "Charlie Sheen",
+        "William Shatner",
+        "Bea Arthur"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_2176",
+      "category": "actor",
+      "question": "Which actor founded the American Ocean's campaign in 1987?",
+      "options": [
+        "Humphrey Bogart",
+        "Michelle Pfeiffer",
+        "Marlon Brando",
+        "Ted Danson"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_0",
+      "category": "politician",
+      "question": "Who was President when the first Peanuts cartoon was published?",
+      "options": [
+        "Harry Truman",
+        "Frank Carlucci",
+        "Mikhail Gorbachev",
+        "William Howard Taft"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_259",
+      "category": "politician",
+      "question": "Who was President Reagan's Secretary for Defense from 1987 to 1989?",
+      "options": [
+        "John F. Kennedy",
+        "Frank Carlucci",
+        "Harry Truman",
+        "Edward Heath"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_506",
+      "category": "politician",
+      "question": "Who succeeded Theodore Roosevelt as President?",
+      "options": [
+        "William Taft",
+        "John F. Kennedy",
+        "William Howard Taft",
+        "Frank Carlucci"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_1401",
+      "category": "politician",
+      "question": "Which President wrote Why England Slept about the rise of Fascism?",
+      "options": [
+        "William Howard Taft",
+        "Harry Truman",
+        "Mikhail Gorbachev",
+        "John F. Kennedy"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_1665",
+      "category": "politician",
+      "question": "Which president decided to build a naval station at Pearl Harbor?",
+      "options": [
+        "William Taft",
+        "Edward Heath",
+        "John F. Kennedy",
+        "Frank Carlucci"
+      ],
+      "correct": 0
+    },
+    {
+      "id": "tc_332",
+      "category": "singer",
+      "question": "Who sang the Bond theme form From Russia With Love?",
+      "options": [
+        "Dinah Shore",
+        "Matt Monro",
+        "William DeVries",
+        "Petula Clark"
+      ],
+      "correct": 1
+    },
+    {
+      "id": "tc_522",
+      "category": "singer",
+      "question": "Who sang the title song for the Bond film You Only Live Twice?",
+      "options": [
+        "Joni Mitchell",
+        "Matt Monro",
+        "Nancy Sinatra",
+        "Gladys Knight"
+      ],
+      "correct": 2
+    },
+    {
+      "id": "tc_527",
+      "category": "singer",
+      "question": "Who sang with Crosby, Stills and Young?",
+      "options": [
+        "Johnny Horton",
+        "Nancy Sinatra",
+        "Petula Clark",
+        "Graham Nash"
+      ],
+      "correct": 3
+    },
+    {
+      "id": "tc_573",
+      "category": "inventor",
+      "question": "Who discovered the layer of electrically charged particles in the upper atmosphere which now bears his name?",
+      "options": [
+        "Edward Appleton",
+        "Robert H. Goddard",
+        "Edwin Herbert Land",
+        "Herman Hollerith"
+      ],
+      "correct": 0
+    }
+  ]
+}
