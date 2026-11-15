@@ -5,6 +5,12 @@ const data=JSON.parse(readFileSync(new URL("./trivia-questions.json", import.met
 export const QUESTION_BANK=data.questions;
 export const GAMES_CATEGORY_ID="1570509079040884957";
 const ANSWER_SECONDS=20, BETWEEN_ROUNDS_MS=4000, ROUND_COUNT=10;
+export const TRIVIA_LIMITS={minQuestions:1,maxQuestions:100,minSeconds:5,maxSeconds:120};
+export function triviaConfig(questions=ROUND_COUNT,seconds=ANSWER_SECONDS){
+  if(!Number.isInteger(questions)||questions<TRIVIA_LIMITS.minQuestions||questions>TRIVIA_LIMITS.maxQuestions)throw Error('Questions must be from 1 to 100');
+  if(!Number.isInteger(seconds)||seconds<TRIVIA_LIMITS.minSeconds||seconds>TRIVIA_LIMITS.maxSeconds)throw Error('Seconds must be from 5 to 120');
+  return {questions,seconds};
+}
 function assertBank(bank) {
   if(bank.length!==100)throw Error("Trivia question bank must contain exactly 100 questions");
   const ids=new Set();
@@ -61,7 +67,7 @@ function content(session,reveal=false){
     "**"+q.question+"**",
     "",
     "Choose one answer using the buttons below.",
-    "⏱️ "+ANSWER_SECONDS+" seconds · "+answers.size+" answer(s) recorded",
+    "⏱️ "+session.answerSeconds+" seconds · "+answers.size+" answer(s) recorded",
   ];
   if(reveal)lines.push("\n✅ **Correct answer: "+q.options[q.correct]+"**");
   return lines.join("\n");
@@ -107,23 +113,23 @@ async function advance(session,send){
 async function postRound(s,send){
   const q=s.rounds[s.round];
   q._matchId=s.id;q._round=s.round;
-  s.deadline=Date.now()+ANSWER_SECONDS*1000;
+  s.deadline=Date.now()+s.answerSeconds*1000;
   const body={content:content(s),components:[row(q)],allowedMentions:{parse:[]}};
   if(!s.message)s.message=await s.channel.send(body);else await s.message.edit(body);
-  s.timer=setTimeout(()=>{void advance(s,send).catch(e=>{console.error("Trivia timer failed",{code:e.code||"unknown"});stopSession(s);});},ANSWER_SECONDS*1000);
+  s.timer=setTimeout(()=>{void advance(s,send).catch(e=>{console.error("Trivia timer failed",{code:e.code||"unknown"});stopSession(s);});},s.answerSeconds*1000);
 }
 export async function handleTrivia(i,send){
   if(!i.guildId)return false;
   if(i.isChatInputCommand()&&i.commandName==="trivia"){
-    if(i.options.getSubcommand(false)!=="start")return true;
     if(i.channel?.parentId!==GAMES_CATEGORY_ID)return replySafe(i,"Start trivia in a channel under [ THE GAMES ].").then(()=>true);
     if(!i.channel?.send)return replySafe(i,"This channel cannot host trivia.").then(()=>true);
     if(byChannel.has(i.channelId))return replySafe(i,"A trivia game is already running here.").then(()=>true);
-    const id=randomUUID(),rounds=drawQuestions();
+    const config=triviaConfig(i.options.getInteger("questions")??ROUND_COUNT,i.options.getInteger("seconds")??ANSWER_SECONDS);
+    const id=randomUUID(),rounds=drawQuestions(QUESTION_BANK,config.questions);
     const s={id,guildId:i.guildId,channelId:i.channelId,channel:i.channel,rounds,
-      answers:rounds.map(()=>new Map()),round:0,active:true,message:null,timer:null,deadline:0};
+      answers:rounds.map(()=>new Map()),round:0,active:true,message:null,timer:null,deadline:0,answerSeconds:config.seconds};
     sessions.set(id,s);byChannel.set(s.channelId,s);
-    await replySafe(i,"Trivia started! 10 questions, 20 seconds each. Every member can participate.");
+    await replySafe(i,"Trivia started! "+config.questions+" question(s), "+config.seconds+" seconds per question. Every member can participate.");
     try{await postRound(s,send);}catch(e){stopSession(s);console.error("Trivia session start failed",{code:e.code||"unknown"});}
     return true;
   }
@@ -156,7 +162,10 @@ export async function handleTrivia(i,send){
 }
 export async function registerTrivia(guild){
   await guild.commands.create({name:"trivia",description:"Play The Compound trivia",
-    options:[{name:"start",description:"Start a 10-question trivia match in The Games",type:1}]});
+    options:[
+      {name:"questions",description:"Number of questions (default 10)",type:4,required:false,min_value:1,max_value:100},
+      {name:"seconds",description:"Time to answer each question in seconds (default 20)",type:4,required:false,min_value:5,max_value:120},
+    ]});
 }
 
 export async function ensureTriviaChannel(guild){
