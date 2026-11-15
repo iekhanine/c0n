@@ -2,11 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {isWorkshopClaimMessage,formatWorkshopAssignment,formatWorkshopReminder,reminderButtons} from "./workshop-assignments.js";
 const id="d22ea3c1-551c-45bf-b01e-e5ac5db50a82";
-test("Only standalone [x] marks a claim, never ordinary roleplay",()=>{
- assert.equal(isWorkshopClaimMessage({content:"[x]",author:{bot:false}}),true);
- assert.equal(isWorkshopClaimMessage({content:" [X] ",author:{bot:false}}),true);
- assert.equal(isWorkshopClaimMessage({content:"I collected [x]",author:{bot:false}}),false);
- assert.equal(isWorkshopClaimMessage({content:"[x]",author:{bot:true}}),false);
+test("Only standalone accept marks a claim, never ordinary roleplay",()=>{
+ assert.equal(isWorkshopClaimMessage({content:"accept",author:{bot:false}}),true);
+ assert.equal(isWorkshopClaimMessage({content:" ACCEPT ",author:{bot:false}}),true);
+ assert.equal(isWorkshopClaimMessage({content:"I accepted the job",author:{bot:false}}),false);
+ assert.equal(isWorkshopClaimMessage({content:"accept",author:{bot:true}}),false);
 });
 test("Claim instructions identify member, warehouse goods, lore, location, and salary",()=>{
  const message=formatWorkshopAssignment({user_id:"999999999999999994",title:"Carpentry / Objective 1",
