@@ -16,6 +16,10 @@ test("unhoused resident embeds all seven stats, no false verification and a dire
  assert.match(embed.description,/UNVERIFIED/);
  assert.equal(embed.fields[0].name,"⬡  LEVEL 2");
  assert.match(embed.fields[0].value,/480 XP/);
+ assert.match(embed.fields[0].value,/230 \/ 250/);
+ assert.equal(embed.fields.find(x=>x.name.includes("HEALTH")).value,"**82 / 100**");
+ assert.equal(embed.fields.find(x=>x.name.includes("CHARISMA")).value,"**11 / 100**");
+ assert.doesNotMatch(JSON.stringify(embed),/[▰▱]/);
  for(const label of ["HEALTH","STAMINA","SKILL","CHARISMA","INTELLECT","LUCK"]){
   assert.ok(embed.fields.some(x=>x.name.includes(label)),label+" missing");
  }
@@ -44,7 +48,8 @@ test("preview uses the actual Discord identity without inventing XP or character
  assert.match(embed.description,/PROFILE PREVIEW/);
  assert.match(embed.description,/Pending database connection/);
  assert.equal(embed.fields.length,7);
- for(const field of embed.fields)assert.match(field.value,/—/);
+ for(const field of embed.fields)assert.match(field.value,/Not available/);
+ assert.doesNotMatch(JSON.stringify(embed),/[▰▱]/);
  assert.doesNotMatch(embed.description,/VERIFIED MEMBER/);
  assert.equal(preview.components[0].toJSON().components[0].url,"https://thecompound.cultofnixon.com/u/"+member);
 });
