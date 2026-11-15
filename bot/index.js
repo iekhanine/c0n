@@ -569,9 +569,14 @@ async function main() {
     if(m.guildId===guildId && !m.author.bot && m.mentions.has(client.user) &&
        /^\s*<@!?\d+>\s+profile\s*[.!?]?\s*$/i.test(m.content||"")){
       run(async()=>{
-        const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:m.author.id});
-        if(profile.not_found)return m.reply({content:"No active Compound resident profile was found.",allowedMentions:{parse:[],repliedUser:false}});
-        return m.reply({...buildProfileCard(profile),allowedMentions:{parse:[],repliedUser:false}});
+        try {
+          const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:m.author.id});
+          if(profile.not_found)return m.reply({content:"No active Compound resident profile was found.",allowedMentions:{parse:[],repliedUser:false}});
+          return m.reply({...buildProfileCard(profile),allowedMentions:{parse:[],repliedUser:false}});
+        }catch(e){
+          console.warn("Compound profile lookup unavailable",{code:e.status||e.code||"unknown"});
+          return m.reply({content:"The Compound profile service is temporarily unavailable.",allowedMentions:{parse:[],repliedUser:false}});
+        }
       });
     }
     const record = activityRecord(m, allowedIds, publicIds, guildId);
@@ -584,10 +589,15 @@ async function main() {
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="profile"){
       run(async()=>{
         await i.deferReply({flags:MessageFlags.Ephemeral});
-        const userId=i.options.getUser("member")?.id||i.user.id;
-        const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:userId});
-        if(profile.not_found)return i.editReply({content:"No active Compound resident profile was found."});
-        return i.editReply(buildProfileCard(profile));
+        try {
+          const userId=i.options.getUser("member")?.id||i.user.id;
+          const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:userId});
+          if(profile.not_found)return i.editReply({content:"No active Compound resident profile was found."});
+          return i.editReply(buildProfileCard(profile));
+        }catch(e){
+          console.warn("Compound profile lookup unavailable",{code:e.status||e.code||"unknown"});
+          return i.editReply({content:"The Compound profile service is temporarily unavailable."});
+        }
       });
       return;
     }
