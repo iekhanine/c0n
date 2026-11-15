@@ -1,16 +1,17 @@
 # Project Reclamation backend / setup guide
 
-Status: **branch-only foundation, not live or playable yet**. Do not deploy or apply until the real C0N database and Discord permissions are verified.
+Status: **database foundation installed in C0N, application code is branch-only and not playable yet**. Do not deploy or apply until Discord permissions and application integration are verified.
 
 ## Scope
-- `sql/001_reclamation_foundation.sql`: private `game` schema, characters, 6 attributes, six professions, work templates, inventory storage, apartments, construction locations, campaigns, rolls, treasury and ledger, audit trail.
+- `sql/001_reclamation_foundation.sql`: new `con.game_*` tables in the existing ONETIMELABS `con` schema, characters, 6 attributes, six professions, work templates, inventory storage, apartments, construction locations, campaigns, rolls, treasury and ledger, audit trail.
+- `sql/002_reclamation_starter_content.sql`: 18 configurable starter work orders (12 published, 6 draft), salvage items, three reclamation construction projects.
 - `server/engine.js`: transaction-based create-character, publish-task, accept-timer-work, complete-timer-work, and dice primitives.
 - `discord/setup-channels.js`: idempotent channel setup (dry-run unless APPLY=1).
 - Treasury is seeded with **37,000,000,000 fictional CC** only if no treasury account exists. Never apply against an unrelated Supabase project.
 
 ## Operations
-1. Confirm database ownership: Railway's `CON_PROFILE_DATABASE_URL` points at C0N; current Supabase connector may be a different account. Take a backup and apply SQL to the confirmed C0N database, not ROFFLE or ONETIMELABS.
-2. Verify `select count(*) from game.professions`, `select balance from game.accounts where account_type='treasury'`, and that the `game` schema is **not** on Supabase's public Data API exposed-schema list.
+1. Confirmed: the C0N database is the ONETIMELABS Supabase project (`vzbopyksyfognxfubncf`), schema `con`. The foundation and starter-content migrations have been successfully applied there. Do not apply them elsewhere.
+2. Verified: six professions, a 37-billion-credit treasury, and RLS on all new `con.game_*` tables. No public access grants were given. Confirm the `con` schema's Data API exposure and existing application access before wiring clients.
 3. Dry-run channel creation from a secure environment with `DISCORD_BOT_TOKEN` and `CON_GUILD_ID`, `node game/discord/setup-channels.js`. With validated permissions and names, run with `APPLY=1` to create missing categories/channels. Do not run as an automatic startup hook.
 4. Wire authenticated server routes and Discord slash commands to the engine. All Overseer/DM actions must be authorized against **server-side Discord guild roles** or a trusted membership table, not client-submitted flags. Don't expose PG credentials.
 5. Before enabling paid work: implement inventory reservation/crafting, server scheduling for pending work, payroll/tax checks, project contribution/room unlocking, and tests for concurrency, cooldowns, duplicate completion and worker role permissions.
