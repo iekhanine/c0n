@@ -152,6 +152,7 @@ export async function reconcileCompoundProgress(db,userId) {
     amount,charisma_reward,jsonb_build_object('channel_id',channel_id,'event_id',event_id),occurred_at
    FROM eligible ON CONFLICT(source_key) DO NOTHING`,[userId]);
  } catch(e){if(e.code!=="42P01")throw e;}
+ await db.query("INSERT INTO con.compound_progress_events(source_key,discord_id,source,description,xp_delta,details) SELECT 'legacy:staff-xp:'||discord_id,discord_id,'admin','Prior staff XP adjustment',manual_xp,jsonb_build_object('previous',true) FROM con.compound_profiles WHERE discord_id=$1 AND manual_xp<>0 ON CONFLICT(source_key) DO NOTHING",[userId]);
  await db.query(`INSERT INTO con.compound_progress_events
  (source_key,discord_id,source,description,xp_delta,intellect_delta,details,occurred_at)
  SELECT 'trivia:'||r.match_id||':'||r.discord_id,r.discord_id,'trivia',
@@ -377,10 +378,18 @@ export default async function compoundHandler(req,res) {
       const max=body.field==="xp"?1000000:100;
       if(body.value<0||body.value>max)bad(400,"Attribute outside allowed range.");
       const field=body.field;
+      const oldValue=(await client.query("SELECT "+field+" AS value FROM con.compound_profiles WHERE discord_id=$1 FOR UPDATE",[body.discord_id])).rows[0];
+      if(!oldValue)bad(404,"Member not found.");
       const {rowCount}=field==="xp"
         ? await client.query("UPDATE con.compound_profiles SET manual_xp=$2-activity_xp-trivia_xp,xp=$2,updated_at=now() WHERE discord_id=$1",[body.discord_id,body.value])
         : await client.query("UPDATE con.compound_profiles SET "+field+"=$2,updated_at=now() WHERE discord_id=$1",[body.discord_id,body.value]);
       if(!rowCount)bad(404,"Member not found.");
+      const delta=body.value-Number(oldValue.value);
+      await client.query("INSERT INTO con.compound_progress_events(source_key,discord_id,source,description,xp_delta,charisma_delta,intellect_delta,details) VALUES($1,$2,'admin',$3,$4,$5,$6,$7)",[
+       "admin:"+randomUUID(),body.discord_id,"Staff adjustment: "+field.toUpperCase(),
+       field==="xp"?delta:0,field==="charisma"?delta:0,field==="intellect"?delta:0,
+       JSON.stringify({field,previous:Number(oldValue.value),current:body.value,actor_id:session.user.id})
+      ]);
       await audit(client,session.user.id,"profile.adjusted",body.discord_id,{field,value:body.value});
     }
     await client.query("COMMIT");
