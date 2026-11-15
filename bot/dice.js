@@ -52,8 +52,7 @@ export async function handleDice(interaction){
   const output=[
     "🎲 **THE COMPOUND / TABLETOP**",
     "**"+displayName+"** · "+reason,
-    "`"+formula+"` → ["+roll.faces.join(", ")+"] "+(modifier?" "+(modifier>0?"+":"")+modifier:"")+" = **"+roll.total+"**",
-    "_Discord roll only. Campaign rewards require DM and Overseer approval._"
+    "`"+formula+"` → ["+roll.faces.join(", ")+"] "+(modifier?" "+(modifier>0?"+":"")+modifier:"")+" = **"+roll.total+"**"
   ].join("\n");
   await interaction.reply({content:output,allowedMentions:{parse:[]}});
  }catch(e){
