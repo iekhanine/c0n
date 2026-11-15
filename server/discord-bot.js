@@ -11,6 +11,7 @@ import { discordMigration } from "./discord-schema.js";
 import { ensureCompoundSchema, applyTriviaResults, publicCompoundProfile } from "./compound.js";
 import { verifyBridge, canonicalJson } from "../shared/discord-signing.js";
 import {workshopPoll,workshopPosted,workshopStart,workshopComplete} from "./workshop-jobs.js";
+import {claimExclusiveWorkshop,dueWorkshopReminders,recordWorkshopReminder,answerWorkshopReminder} from "./workshop-assignments.js";
 import {
   ensureControl,
   controlRequest,
@@ -218,6 +219,10 @@ async function acceptSync(db, s, b, headers) {
       "workshop_jobs_posted",
       "workshop_job_start",
       "workshop_job_complete",
+      "workshop_exclusive_claim",
+      "workshop_due_reminders",
+      "workshop_reminder_sent",
+      "workshop_answer",
     ].includes(b.kind)
   )
     fail(400, "Unknown worker event.");
@@ -250,6 +255,15 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    if (b.kind==="workshop_exclusive_claim" || b.kind==="workshop_due_reminders" ||
+        b.kind==="workshop_reminder_sent" || b.kind==="workshop_answer") {
+      const result=b.kind==="workshop_exclusive_claim"?await claimExclusiveWorkshop(client,b,s.guild_id)
+       :b.kind==="workshop_due_reminders"?await dueWorkshopReminders(client)
+       :b.kind==="workshop_reminder_sent"?await recordWorkshopReminder(client,b)
+       :await answerWorkshopReminder(client,b,s.guild_id);
+      await client.query("COMMIT");
+      return {...result,guild_id:s.guild_id};
     }
     if (b.kind.startsWith("workshop_")) {
       const result=b.kind==="workshop_jobs_poll" ? await workshopPoll(client)
