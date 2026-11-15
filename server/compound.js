@@ -174,12 +174,38 @@ export default async function compoundHandler(req,res) {
   }
   const body=typeof req.body==="string"?JSON.parse(req.body||"{}"):req.body||{};
   if(JSON.stringify(body).length>5000)bad(413,"Request too large.");
-  if(action==="claim" || action==="request" || action==="consent" || action==="decision" || action==="adjust" || action==="rules"){
+  if(action==="claim" || action==="request" || action==="consent" || action==="decision" || action==="adjust" || action==="rules" || action==="apartment" || action==="place" || action==="unassign"){
    const client=await db.connect();
    try {
     await client.query("BEGIN");
     let result={ok:true};
-    if(action==="rules"){
+    if(action==="apartment"){
+      if(!isAdmin)bad(403,"Staff access required.");
+      if(!unit(body.apartment_id)||typeof body.locked!=="boolean"||!Number.isInteger(body.capacity)||body.capacity<1||body.capacity>8)bad(400,"Invalid apartment settings.");
+      const {rows:[a]}=await client.query("SELECT * FROM con.compound_apartments WHERE id=$1 FOR UPDATE",[body.apartment_id]);
+      if(!a)bad(404,"Apartment not found.");
+      const people=await occupants(client,body.apartment_id);
+      if(people.length>body.capacity)bad(409,"Capacity cannot be smaller than current occupancy.");
+      await client.query("UPDATE con.compound_apartments SET capacity=$2,locked=$3 WHERE id=$1",[body.apartment_id,body.capacity,body.locked]);
+      await audit(client,session.user.id,"apartment.updated",null,{apartment_id:body.apartment_id,capacity:body.capacity,locked:body.locked});
+    } else if(action==="place"){
+      if(!isAdmin)bad(403,"Staff access required.");
+      if(!unit(body.apartment_id)||!snowflake(body.discord_id))bad(400,"Invalid resident or apartment.");
+      const {rows:[a]}=await client.query("SELECT * FROM con.compound_apartments WHERE id=$1 FOR UPDATE",[body.apartment_id]);
+      if(!a||a.locked)bad(409,"Apartment unavailable.");
+      const people=await occupants(client,body.apartment_id);
+      if(people.length)bad(409,"Occupied apartments require unanimous roommate approval. Use a housing request.");
+      const exists=await client.query("SELECT 1 FROM con.compound_profiles WHERE discord_id=$1",[body.discord_id]);
+      if(!exists.rowCount)bad(404,"Resident not found.");
+      await client.query("INSERT INTO con.compound_residency(discord_id,apartment_id) VALUES($1,$2) ON CONFLICT(discord_id) DO UPDATE SET apartment_id=EXCLUDED.apartment_id,assigned_at=now()",[body.discord_id,body.apartment_id]);
+      await audit(client,session.user.id,"housing.staff_assigned",body.discord_id,{apartment_id:body.apartment_id});
+    } else if(action==="unassign"){
+      if(!isAdmin)bad(403,"Staff access required.");
+      if(!snowflake(body.discord_id))bad(400,"Invalid resident.");
+      const old=await client.query("DELETE FROM con.compound_residency WHERE discord_id=$1 RETURNING apartment_id",[body.discord_id]);
+      if(!old.rowCount)bad(404,"Resident has no apartment.");
+      await audit(client,session.user.id,"housing.unassigned",body.discord_id,{apartment_id:old.rows[0].apartment_id});
+    } else     if(action==="rules"){
       if(!isAdmin)bad(403,"Staff access required.");
       const fields=["message_xp","reaction_xp","daily_message_cap","daily_reaction_cap"];
       for(const field of fields)if(!Number.isInteger(body[field])||body[field]<0||body[field]>(field.includes("cap")?500:100))bad(400,"Invalid XP rule.");
