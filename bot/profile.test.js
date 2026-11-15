@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {buildProfileCard} from "./profile.js";
+import {buildProfileCard,buildPreviewCard} from "./profile.js";
 
 const member="123456789012345678";
 const sample={
@@ -35,4 +35,16 @@ test("verified members show their actual member number and apartment",()=>{
 test("missing server data never creates invented characters or URLs",()=>{
  assert.throws(()=>buildProfileCard(null));
  assert.throws(()=>buildProfileCard({member:{id:"not-a-discord-id"},stats:{}}));
+});
+
+test("preview uses the actual Discord identity without inventing XP or character stats",()=>{
+ const preview=buildPreviewCard({id:member,displayName:"Test Resident"});
+ const embed=preview.embeds[0].toJSON();
+ assert.match(embed.title,/Test Resident/);
+ assert.match(embed.description,/PROFILE PREVIEW/);
+ assert.match(embed.description,/Pending database connection/);
+ assert.equal(embed.fields.length,7);
+ for(const field of embed.fields)assert.match(field.value,/—/);
+ assert.doesNotMatch(embed.description,/VERIFIED MEMBER/);
+ assert.equal(preview.components[0].toJSON().components[0].url,"https://thecompound.cultofnixon.com/u/"+member);
 });
