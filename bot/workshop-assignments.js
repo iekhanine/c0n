@@ -58,7 +58,7 @@ export async function pollWorkshopReminders(guild,send){
  if(!uid(a.post_id))throw Error("Invalid workshop reminder");
  const channel=await guild.channels.fetch(a.channel_id);
  if(!channel?.isTextBased()||!channel.send)throw Error("Workshop reminder channel unavailable");
- const marker="workshop-reminder:"+a.post_id;
+ const marker="workshop-reminder:"+a.post_id+":"+Math.floor(new Date(a.due_at).getTime()/1000);
  let msg=(await channel.messages.fetch({limit:50})).find(m=>m.author.id===guild.client.user.id&&m.content.includes(marker))||null;
  if(!msg)msg=await channel.send({content:formatWorkshopReminder(a),
   components:reminderButtons(a.post_id),allowedMentions:{users:[a.discord_id],parse:[]}});
