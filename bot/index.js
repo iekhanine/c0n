@@ -88,6 +88,7 @@ async function main() {
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
       GatewayIntentBits.GuildMessageReactions,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
@@ -615,7 +616,7 @@ async function main() {
     return buildPreviewCard(user);
   }
   client.on(Events.MessageCreate, (m) => {
-    if(m.guildId===guildId&&!m.author.bot&&/^\\s*\\[x\\]\\s*$/i.test(m.content||"")&&
+    if(m.guildId===guildId&&!m.author.bot&&/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(m.content||"")&&
        ["1571523929208651928","1571523950033248266","1571523971344765108","1571523993230385203",
         "1571524012801130546","1571524033768456337","1571524055063068762","1571524075765899464"].includes(m.channelId)){
       run(()=>acceptWorkshopClaim(m,send));
