@@ -1,6 +1,9 @@
 import { readSession, accessFor, json, ORIGIN } from "./auth.js";
 import { database } from "./db.js";
 import { createCharacter, acceptTask, completeTimerTask, publishTask, rollDice } from "../game/server/engine.js";
+import { transferItem,startCraft,completeCraft } from "../game/server/storage.js";
+import { createCampaign,changeCampaignState,joinCampaign,startSession,joinSession,rollForSession,proposeAward,applyAward,setDungeonMaster } from "../game/server/campaigns.js";
+import { setCompensation,setTaxes,transferCredits,runPayroll,payOverseerStipend } from "../game/server/economy.js";
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:code})};
 const uuid=v=>typeof v==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 async function payload(req) {
