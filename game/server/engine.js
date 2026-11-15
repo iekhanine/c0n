@@ -116,15 +116,29 @@ export async function ledgerTransfer(db,{from,to,amount,key,actor,reason}) {
  await db.query("insert into con.game_entries(transaction_id,account_id,amount) values($1,$2,$3),($1,$4,$5)",[tx.rows[0].id,from,-amount,to,amount]);
  return tx.rows[0].id;
 }
-export async function completeTimerTask(pool,orderId) {
+export async function submitWorkForReview(pool,discordId,orderId,note=""){
+ id(discordId);
+ if(!/^[0-9a-f-]{36}$/i.test(String(orderId)))throw Error("Invalid work order");
+ if(typeof note!=="string"||note.length>1000)throw Error("Note too long");
+ return withTransaction(pool,async db=>{
+  const o=(await db.query("select w.* from con.game_work_orders w join con.game_characters c on c.id=w.character_id where w.id=$1 and c.discord_id=$2 for update of w",[orderId,discordId])).rows[0];
+  if(!o||o.status!=="in_progress")throw Error("Not an active work order");
+  if(o.template_snapshot.completion_type==="timer")throw Error("Timed jobs complete automatically");
+  if(new Date(o.due_at)>new Date())throw Error("Work duration has not elapsed");
+  return (await db.query("update con.game_work_orders set status='pending_approval',moderator_note=$2 where id=$1 returning id,status",[orderId,note.trim()])).rows[0];
+ });
+}
+export async function completeTimerTask(pool,orderId,{approvedBy=null}={}) {
  return withTransaction(pool,async db=>{
   const order=await db.query("select * from con.game_work_orders where id=$1 for update",[orderId]);
   if(!order.rowCount)throw Error("Unknown order");
   const o=order.rows[0];
   if(o.status==="completed")return {status:"already_completed"};
-  if(o.status!=="in_progress"||new Date(o.due_at)>new Date())throw Error("Task not ready");
   const t=o.template_snapshot;
-  if(t.completion_type!=="timer")throw Error("DM or challenge verification required");
+  if(new Date(o.due_at)>new Date())throw Error("Task not ready");
+  if(approvedBy){
+   if(o.status!=="pending_approval"||t.completion_type==="timer")throw Error("Not awaiting manual approval");
+  }else if(o.status!=="in_progress"||t.completion_type!=="timer")throw Error("Manual review required");
   const worker=await db.query("select * from con.game_characters where id=$1 for update",[o.character_id]);
   const c=worker.rows[0];
   const fee=await db.query("select value from con.game_settings where key='rules'");
@@ -164,7 +178,7 @@ export async function completeTimerTask(pool,orderId) {
    const project=await db.query("select id from con.game_projects where id=$1 and state='active' for update",[t.project_id]);
    if(project.rowCount)await db.query(`update con.game_projects set progress=jsonb_set(progress,'{work_units}',to_jsonb(coalesce((progress->>'work_units')::bigint,0)+$2::bigint),true) where id=$1`,[t.project_id,units]);
   }
-  await db.query("update con.game_work_orders set status='completed',completed_at=now() where id=$1",[o.id]);
+  await db.query("update con.game_work_orders set status='completed',completed_at=now(),approved_by=$2 where id=$1",[o.id,approvedBy]);
   await db.query("insert into con.game_audit(actor,action,entity,entity_id,after_state) values('game-engine','work.complete','work_order',$1,$2)",[o.id,JSON.stringify({character:c.id,xp:t.character_xp,skillXp:t.profession_xp,netPay:salaried.rowCount?0:net,transactionId})]);
   return {status:"completed",xp:t.character_xp,professionXp:t.profession_xp,paid:salaried.rowCount?0:net};
  });
