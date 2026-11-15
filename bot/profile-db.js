@@ -43,3 +43,31 @@ export async function fetchReadOnlyProfile(id){
   );
   return mapProfileRow(rows[0]);
 }
+
+
+/**
+ * The Discord worker keeps SELECT-only access to public profiles. Workshop
+ * mutations are possible exclusively through four audited, tightly scoped
+ * SECURITY DEFINER functions granted only to con_bot_profile_reader.
+ */
+export async function workshopDatabaseCall(kind,args){
+  const db=database();
+  if(!db)throw Error("Workshop database connection unavailable");
+  let sql,values;
+  const g=args.guild_id;
+  if(kind==="claim"){
+    sql="select con.bot_workshop_claim($1,$2,$3,$4) as payload";
+    values=[g,args.user_id,args.channel_id,args.message_id];
+  }else if(kind==="due"){
+    sql="select con.bot_workshop_due($1) as payload";
+    values=[g];
+  }else if(kind==="reminder"){
+    sql="select con.bot_workshop_reminder_sent($1,$2::uuid,$3,$4,$5) as payload";
+    values=[g,args.job_id,args.user_id,args.channel_id,args.message_id];
+  }else if(kind==="answer"){
+    sql="select con.bot_workshop_answer($1,$2::uuid,$3,$4) as payload";
+    values=[g,args.job_id,args.user_id,args.answer];
+  }else throw Error("Unsupported Workshop database action");
+  const result=await db.query(sql,values);
+  return result.rows[0]?.payload;
+}
