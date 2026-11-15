@@ -19,6 +19,7 @@ import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
 import { handleDice, registerDice } from "./dice.js";
 import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
+import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./workshop-assignments.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
 import { fetchReadOnlyProfile } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
@@ -311,6 +312,14 @@ async function main() {
       heartbeatBusy = false;
     }
   }
+  let workshopReminderBusy=false;
+  async function checkWorkshopReminders(){
+    if(state!=="ready"||!guild||workshopReminderBusy)return;
+    workshopReminderBusy=true;
+    try{await pollWorkshopReminders(guild,send);}
+    catch(e){console.warn("Workshop reminder poll unavailable",{code:e.status||e.code||"reminders"});}
+    finally{workshopReminderBusy=false;}
+  }
   let workshopBusy=false,workshopApiBackoffUntil=0;
   async function rotateWorkshop(){
     if(state!=="ready"||!guild||workshopBusy||Date.now()<workshopApiBackoffUntil)return;
@@ -521,6 +530,7 @@ async function main() {
       });
       state = "ready";
       run(rotateWorkshop);
+      run(checkWorkshopReminders);
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
       run(reconcileWelcomeReactions);
       run(checkProgress);
@@ -605,6 +615,12 @@ async function main() {
     return buildPreviewCard(user);
   }
   client.on(Events.MessageCreate, (m) => {
+    if(m.guildId===guildId&&!m.author.bot&&/^\\s*\\[x\\]\\s*$/i.test(m.content||"")&&
+       ["1571523929208651928","1571523950033248266","1571523971344765108","1571523993230385203",
+        "1571524012801130546","1571524033768456337","1571524055063068762","1571524075765899464"].includes(m.channelId)){
+      run(()=>acceptWorkshopClaim(m,send));
+    }
+
     if (m.guildId === guildId && !m.author.bot && !m.webhookId)
       recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
     if(m.guildId===guildId&&!m.author.bot&&m.mentions.has(client.user)&&
@@ -625,6 +641,10 @@ async function main() {
     }
   });
   client.on(Events.InteractionCreate, (i) => {
+    if(i.guildId===guildId&&i.isButton()&&i.customId.startsWith("workshopconfirm:")){
+      run(()=>answerWorkshop(i,send));return;
+    }
+
     if(i.guildId===guildId&&(i.isButton()||i.isModalSubmit())&&i.customId.startsWith("workshop:")){
       run(()=>handleWorkshopInteraction(i,send));return;
     }
@@ -724,11 +744,13 @@ async function main() {
     membershipTimer = setInterval(() => run(syncMembershipRoles), 60000),
     controlTimer = setInterval(() => run(commands), 5000),
     workshopTimer = setInterval(() => run(rotateWorkshop), 12000),
+    workshopReminderTimer = setInterval(() => run(checkWorkshopReminders), 15000),
     statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId}))); }, 15 * 60 * 1000);
   const shutdown = async () => {
     state = "stopping";
     clearInterval(controlTimer);
     clearInterval(workshopTimer);
+    clearInterval(workshopReminderTimer);
     clearInterval(statsTimer);
     clearInterval(progressTimer);
     clearInterval(membershipTimer);
