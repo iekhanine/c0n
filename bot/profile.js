@@ -40,7 +40,7 @@ export function buildProfileCard(payload) {
     .setColor(DEFAULT_COLOR)
     .setAuthor({name:"CULT OF NIX0N  /  THE COMPOUND",iconURL:LOGO})
     .setTitle("✦  "+title)
-    .setDescription(memberText+"\n🏠  **"+home+"**")
+    .setDescription(memberText+"\n  **"+home+"**")
     .addFields(
       {name:"⬡  LEVEL "+point(level),value:"**"+point(xp)+" XP**  ·  **"+point(toward)+" / 250** toward next level",inline:false},
       stat("HEALTH",p.health,"♥"),
@@ -79,7 +79,7 @@ export function buildPreviewCard(user) {
   .setAuthor({name:"CULT OF NIX0N  /  THE COMPOUND",iconURL:LOGO})
   .setTitle("✦  "+title)
   .setThumbnail(icon)
-  .setDescription("**PROFILE PREVIEW**  ·  Live character data not connected yet\n🏠  **Apartment:** Pending database connection\nMembership: Pending database connection")
+  .setDescription("**PROFILE PREVIEW**  ·  Live character data not connected yet\n  **Apartment:** Pending database connection\nMembership: Pending database connection")
   .addFields(
    {name:"⬡  LEVEL",value:"**XP: Not available**",inline:false},
    ...["♥  HEALTH","⚡  STAMINA","⚔  SKILL","✦  CHARISMA","◈  INTELLECT","✧  LUCK"].map(name=>({name,value:"**Not available**",inline:true}))
