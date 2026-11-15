@@ -76,6 +76,12 @@ export async function acceptTask(pool,discordId,templateId) {
   const cr=await db.query("select * from con.game_characters where discord_id=$1 for update",[discordId]);
   if(!cr.rowCount)throw Error("Create a character first");
   const c=cr.rows[0];
+  const regenRule=await db.query("select value from con.game_settings where key='stamina'");
+  const rate=Math.min(100,Math.max(0,Number(regenRule.rows[0]?.value?.regeneration_per_hour??12)));
+  const elapsed=Math.max(0,(Date.now()-new Date(c.stamina_updated_at).getTime())/3600000);
+  const restored=Math.min(100,c.stamina+Math.floor(elapsed*rate));
+  if(restored!==c.stamina)await db.query("update con.game_characters set stamina=$2,stamina_updated_at=now() where id=$1",[c.id,restored]);
+  c.stamina=restored;
   const tr=await db.query("select * from con.game_task_templates where id=$1 and status='published'",[templateId]);
   if(!tr.rowCount)throw Error("Task unavailable");
   const t=tr.rows[0];
@@ -91,7 +97,7 @@ export async function acceptTask(pool,discordId,templateId) {
   }
   // Material reservation and inventory deduction must be implemented before paid jobs are enabled.
   if(Object.keys(t.materials||{}).length)throw Error("Material-requiring tasks are not enabled yet");
-  await db.query("update con.game_characters set stamina=stamina-$2 where id=$1",[c.id,t.stamina_cost]);
+  await db.query("update con.game_characters set stamina=stamina-$2,stamina_updated_at=now() where id=$1",[c.id,t.stamina_cost]);
   const o=await db.query("insert into con.game_work_orders(template_id,character_id,template_snapshot,status,due_at) values($1,$2,$3::jsonb,'in_progress',now()+($4 * interval '1 minute')) returning *",[t.id,c.id,JSON.stringify(t),t.duration_minutes]);
   return o.rows[0];
  });
