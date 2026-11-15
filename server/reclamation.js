@@ -42,6 +42,8 @@ async function snapshot(pool,discordId,owner){
  result.campaigns=campaigns.rows;
  result.dungeonMaster=owner||dm.rows[0]?.enabled===true;
  result.worldEvents=world.rows;
+ const sessions=await pool.query("select s.id,s.campaign_id,s.started_at,s.ended_at from con.game_sessions s join con.game_campaigns c on c.id=s.campaign_id where c.state='active' and s.started_at is not null and s.ended_at is null order by s.started_at desc limit 30");
+ result.sessions=sessions.rows;
  if(owner){
   const [treasury,allTasks]=await Promise.all([
    pool.query("select balance from con.game_accounts where account_type='treasury'"),
