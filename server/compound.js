@@ -121,31 +121,58 @@ export async function applyTriviaResults(db,client,b){
 async function audit(db, actor, action, subject, details={}) {
  await db.query("INSERT INTO con.compound_audit(id,actor_id,action,subject_id,details) VALUES ($1,$2,$3,$4,$5)",[randomUUID(),actor,action,subject,JSON.stringify(details)]);
 }
+// Backfill credits from events the bot recorded even before first website sign-in.
+export async function reconcileCompoundProgress(db,userId) {
+ if(!snowflake(userId))bad(400,"Invalid Discord ID.");
+ try {
+  await db.query(`WITH ordered AS (
+    SELECT e.guild_id,e.event_id,e.event_type,e.channel_id,e.user_id,e.occurred_at,
+    row_number() OVER (
+      PARTITION BY e.user_id,e.event_type,(e.occurred_at AT TIME ZONE 'UTC')::date
+      ORDER BY e.occurred_at,e.event_id
+    ) AS daily_rank
+    FROM con.discord_participation_events e
+    WHERE e.user_id=$1 AND e.onboarding=false
+    AND e.guild_id=(SELECT guild_id FROM con.discord_settings WHERE id=true)
+   ), eligible AS (
+    SELECT e.*,CASE WHEN event_type='message' THEN r.message_xp ELSE r.reaction_xp END AS amount,
+      CASE WHEN event_type='message' AND daily_rank IN (10,20) THEN 1 ELSE 0 END AS charisma_reward
+    FROM ordered e CROSS JOIN con.compound_rules r
+    WHERE r.id=true
+      AND ((e.event_type='message' AND e.daily_rank<=r.daily_message_cap)
+        OR (e.event_type='reaction' AND e.daily_rank<=r.daily_reaction_cap))
+   )
+   INSERT INTO con.compound_progress_events
+    (source_key,discord_id,source,description,xp_delta,charisma_delta,details,occurred_at)
+   SELECT 'discord:'||guild_id||':'||event_type||':'||event_id||':'||user_id,
+    user_id,event_type,
+    CASE WHEN event_type='message' THEN 'Discord message' ELSE 'Discord reaction' END,
+    amount,charisma_reward,jsonb_build_object('channel_id',channel_id,'event_id',event_id),occurred_at
+   FROM eligible ON CONFLICT(source_key) DO NOTHING`,[userId]);
+ } catch(e){if(e.code!=="42P01")throw e;}
+ await db.query(`INSERT INTO con.compound_progress_events
+ (source_key,discord_id,source,description,xp_delta,intellect_delta,details,occurred_at)
+ SELECT 'trivia:'||r.match_id||':'||r.discord_id,r.discord_id,'trivia',
+ 'Trivia: '||r.correct||' correct',r.xp_awarded,r.intellect_awarded,
+ jsonb_build_object('match_id',r.match_id,'correct',r.correct,'max_streak',r.max_streak),
+ m.created_at FROM con.compound_trivia_results r JOIN con.compound_trivia_matches m ON m.id=r.match_id
+ WHERE r.discord_id=$1 ON CONFLICT(source_key) DO NOTHING`,[userId]);
+ return (await db.query(`SELECT
+ COALESCE(sum(xp_delta) FILTER(WHERE source IN ('message','reaction')),0)::integer AS activity_xp,
+ COALESCE(sum(charisma_delta) FILTER(WHERE source IN ('message','reaction')),0)::integer AS charisma_earned
+ FROM con.compound_progress_events WHERE discord_id=$1`,[userId])).rows[0];
+}
 async function profile(db,user) {
  await db.query("INSERT INTO con.compound_profiles(discord_id,display_name) VALUES($1,$2) ON CONFLICT(discord_id) DO UPDATE SET display_name=EXCLUDED.display_name",
   [user.id,simple(user.name||user.username)]);
- let earned=0;
- try {
-  const {rows}=await db.query(`WITH rules AS (SELECT * FROM con.compound_rules WHERE id=true),
-  daily AS (SELECT date_trunc('day',e.occurred_at) AS day,
-  LEAST(count(*) FILTER(WHERE e.event_type='message'),max(r.daily_message_cap))::integer AS messages,
-  LEAST(count(*) FILTER(WHERE e.event_type='reaction'),max(r.daily_reaction_cap))::integer AS reactions,
-  max(r.message_xp)::integer AS mxp,max(r.reaction_xp)::integer AS rxp
-  FROM con.discord_participation_events e CROSS JOIN rules r
-  WHERE e.user_id=$1 AND e.onboarding=false
-  AND e.guild_id=(SELECT guild_id FROM con.discord_settings WHERE id=true)
-  GROUP BY date_trunc('day',e.occurred_at))
-  SELECT coalesce(sum(messages*mxp+reactions*rxp),0)::integer AS earned FROM daily`,[user.id]);
-  earned=Math.max(0,Number(rows[0]?.earned)||0);
- } catch(e) {
-  if(e.code!=="42P01")throw e;
-  // Bot participation tables not initialized yet; keep previously earned XP.
-  const prev=await db.query("SELECT activity_xp FROM con.compound_profiles WHERE discord_id=$1",[user.id]);
-  earned=Number(prev.rows[0]?.activity_xp)||0;
- }
+ const totals=await reconcileCompoundProgress(db,user.id);
+ const earned=Math.max(0,Number(totals.activity_xp)||0);
+ const charismaEarned=Math.max(0,Number(totals.charisma_earned)||0);
  const {rows}=await db.query(`UPDATE con.compound_profiles SET activity_xp=$2,
- xp=GREATEST(0,LEAST(1000000,$2+manual_xp+trivia_xp)),updated_at=now() WHERE discord_id=$1
- RETURNING *, 1+floor(xp/250.0)::integer AS level`,[user.id,earned]);
+ xp=GREATEST(0,LEAST(1000000,$2+manual_xp+trivia_xp)),
+ charisma=GREATEST(0,LEAST(100,charisma+$3-charisma_activity_awarded)),
+ charisma_activity_awarded=$3,updated_at=now() WHERE discord_id=$1
+ RETURNING *, 1+floor(xp/250.0)::integer AS level`,[user.id,earned,charismaEarned]);
  return rows[0];
 }
 async function occupants(db,apt) {
