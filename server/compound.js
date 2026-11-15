@@ -24,6 +24,7 @@ async function schema(db) {
  ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS activity_xp integer NOT NULL DEFAULT 0;
  ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS manual_xp integer NOT NULL DEFAULT 0;
  ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS trivia_xp integer NOT NULL DEFAULT 0;
+ ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS charisma_activity_awarded integer NOT NULL DEFAULT 0;
  CREATE TABLE IF NOT EXISTS con.compound_rules (
  id boolean PRIMARY KEY DEFAULT true CHECK(id), message_xp integer NOT NULL DEFAULT 5 CHECK(message_xp BETWEEN 0 AND 100),
  reaction_xp integer NOT NULL DEFAULT 1 CHECK(reaction_xp BETWEEN 0 AND 100),
@@ -51,6 +52,15 @@ async function schema(db) {
  CREATE TABLE IF NOT EXISTS con.compound_audit (
  id uuid PRIMARY KEY, actor_id text NOT NULL, action text NOT NULL, subject_id text,
  details jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
+ CREATE TABLE IF NOT EXISTS con.compound_progress_events (
+ source_key text PRIMARY KEY, discord_id text NOT NULL REFERENCES con.compound_profiles(discord_id),
+ source text NOT NULL, description text NOT NULL,
+ xp_delta integer NOT NULL DEFAULT 0, charisma_delta integer NOT NULL DEFAULT 0,
+ intellect_delta integer NOT NULL DEFAULT 0,
+ details jsonb NOT NULL DEFAULT '{}'::jsonb,
+ occurred_at timestamptz NOT NULL DEFAULT now(),
+ recorded_at timestamptz NOT NULL DEFAULT now());
+ CREATE INDEX IF NOT EXISTS compound_progress_history ON con.compound_progress_events(discord_id,occurred_at DESC);
  CREATE TABLE IF NOT EXISTS con.compound_trivia_matches (
  id uuid PRIMARY KEY, guild_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
  CREATE TABLE IF NOT EXISTS con.compound_trivia_results (
@@ -67,6 +77,7 @@ async function schema(db) {
  ALTER TABLE con.compound_residency ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_requests ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_audit ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_progress_events ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_correct_check;
  ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_max_streak_check;
  ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_xp_awarded_check;
@@ -77,7 +88,7 @@ async function schema(db) {
  ALTER TABLE con.compound_trivia_results ADD CONSTRAINT compound_trivia_results_intellect_awarded_check CHECK(intellect_awarded BETWEEN 0 AND 33);
  ALTER TABLE con.compound_trivia_matches ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_trivia_results ENABLE ROW LEVEL SECURITY;
- REVOKE ALL ON con.compound_profiles,con.compound_rules,con.compound_apartments,con.compound_residency,con.compound_requests,con.compound_audit,con.compound_trivia_matches,con.compound_trivia_results FROM PUBLIC, anon, authenticated;
+ REVOKE ALL ON con.compound_profiles,con.compound_rules,con.compound_apartments,con.compound_residency,con.compound_requests,con.compound_audit,con.compound_progress_events,con.compound_trivia_matches,con.compound_trivia_results FROM PUBLIC, anon, authenticated;
 `);
  await db.query("INSERT INTO con.compound_apartments(id,floor,unit) SELECT 'F'||f||'-0'||n,f,n FROM generate_series(1,4) AS f CROSS JOIN generate_series(1,8) AS n ON CONFLICT DO NOTHING");
 }
@@ -103,6 +114,8 @@ export async function applyTriviaResults(db,client,b){
   const intellect=Math.floor(r.max_streak/3);
   await client.query("INSERT INTO con.compound_profiles(discord_id,display_name)VALUES($1,$2) ON CONFLICT(discord_id) DO UPDATE SET display_name=EXCLUDED.display_name",[r.id,r.name.trim()]);
   await client.query("INSERT INTO con.compound_trivia_results(match_id,discord_id,correct,max_streak,xp_awarded,intellect_awarded)VALUES($1,$2,$3,$4,$5,$6)",[b.match_id,r.id,r.correct,r.max_streak,xp,intellect]);
+  await client.query("INSERT INTO con.compound_progress_events(source_key,discord_id,source,description,xp_delta,intellect_delta,details) VALUES($1,$2,'trivia',$3,$4,$5,$6) ON CONFLICT(source_key) DO NOTHING",
+   ["trivia:"+b.match_id+":"+r.id,r.id,"Trivia: "+r.correct+" correct",xp,intellect,JSON.stringify({match_id:b.match_id,correct:r.correct,max_streak:r.max_streak})]);
   await client.query("UPDATE con.compound_profiles SET trivia_xp=LEAST(1000000,trivia_xp+$2), xp=LEAST(1000000,GREATEST(0,activity_xp+manual_xp+trivia_xp+$2)),intellect=LEAST(100,intellect+$3),updated_at=now() WHERE discord_id=$1",[r.id,xp,intellect]);
  }
  return {ok:true,awarded:b.results.length,match_id:b.match_id};
@@ -110,31 +123,62 @@ export async function applyTriviaResults(db,client,b){
 async function audit(db, actor, action, subject, details={}) {
  await db.query("INSERT INTO con.compound_audit(id,actor_id,action,subject_id,details) VALUES ($1,$2,$3,$4,$5)",[randomUUID(),actor,action,subject,JSON.stringify(details)]);
 }
+// Backfill credits from events the bot recorded even before first website sign-in.
+export async function reconcileCompoundProgress(db,userId) {
+ if(!snowflake(userId))bad(400,"Invalid Discord ID.");
+ try {
+  await db.query(`WITH ordered AS (
+    SELECT e.guild_id,e.event_id,e.event_type,e.channel_id,e.user_id,e.occurred_at,
+    row_number() OVER (
+      PARTITION BY e.user_id,e.event_type,(e.occurred_at AT TIME ZONE 'UTC')::date
+      ORDER BY e.occurred_at,e.event_id
+    ) AS daily_rank
+    FROM con.discord_participation_events e
+    WHERE e.user_id=$1 AND e.onboarding=false
+    AND e.guild_id=(SELECT guild_id FROM con.discord_settings WHERE id=true)
+   ), eligible AS (
+    SELECT e.*,CASE WHEN event_type='message' THEN r.message_xp ELSE r.reaction_xp END AS amount
+    FROM ordered e CROSS JOIN con.compound_rules r
+    WHERE r.id=true
+      AND ((e.event_type='message' AND e.daily_rank<=r.daily_message_cap)
+        OR (e.event_type='reaction' AND e.daily_rank<=r.daily_reaction_cap))
+   ), credited AS (
+    SELECT e.*,row_number() OVER (PARTITION BY user_id,event_type ORDER BY occurred_at,event_id) AS lifetime_rank
+    FROM eligible e
+   )
+   INSERT INTO con.compound_progress_events
+    (source_key,discord_id,source,description,xp_delta,charisma_delta,details,occurred_at)
+   SELECT 'discord:'||guild_id||':'||event_type||':'||event_id||':'||user_id,
+    user_id,event_type,
+    CASE WHEN event_type='message' THEN 'Discord message' ELSE 'Discord reaction' END,
+    amount,CASE WHEN event_type='message' AND lifetime_rank % 10=0 THEN 1 ELSE 0 END,
+    jsonb_build_object('channel_id',channel_id,'event_id',event_id),occurred_at
+   FROM credited ON CONFLICT(source_key) DO NOTHING`,[userId]);
+ } catch(e){if(e.code!=="42P01")throw e;}
+ await db.query("INSERT INTO con.compound_progress_events(source_key,discord_id,source,description,xp_delta,details) SELECT 'legacy:staff-xp:'||discord_id,discord_id,'admin','Prior staff XP adjustment',manual_xp,jsonb_build_object('previous',true) FROM con.compound_profiles WHERE discord_id=$1 AND manual_xp<>0 ON CONFLICT(source_key) DO NOTHING",[userId]);
+ await db.query(`INSERT INTO con.compound_progress_events
+ (source_key,discord_id,source,description,xp_delta,intellect_delta,details,occurred_at)
+ SELECT 'trivia:'||r.match_id||':'||r.discord_id,r.discord_id,'trivia',
+ 'Trivia: '||r.correct||' correct',r.xp_awarded,r.intellect_awarded,
+ jsonb_build_object('match_id',r.match_id,'correct',r.correct,'max_streak',r.max_streak),
+ m.created_at FROM con.compound_trivia_results r JOIN con.compound_trivia_matches m ON m.id=r.match_id
+ WHERE r.discord_id=$1 ON CONFLICT(source_key) DO NOTHING`,[userId]);
+ return (await db.query(`SELECT
+ COALESCE(sum(xp_delta) FILTER(WHERE source IN ('message','reaction')),0)::integer AS activity_xp,
+ COALESCE(sum(charisma_delta) FILTER(WHERE source IN ('message','reaction')),0)::integer AS charisma_earned
+ FROM con.compound_progress_events WHERE discord_id=$1`,[userId])).rows[0];
+}
 async function profile(db,user) {
  await db.query("INSERT INTO con.compound_profiles(discord_id,display_name) VALUES($1,$2) ON CONFLICT(discord_id) DO UPDATE SET display_name=EXCLUDED.display_name",
   [user.id,simple(user.name||user.username)]);
- let earned=0;
- try {
-  const {rows}=await db.query(`WITH rules AS (SELECT * FROM con.compound_rules WHERE id=true),
-  daily AS (SELECT date_trunc('day',e.occurred_at) AS day,
-  LEAST(count(*) FILTER(WHERE e.event_type='message'),max(r.daily_message_cap))::integer AS messages,
-  LEAST(count(*) FILTER(WHERE e.event_type='reaction'),max(r.daily_reaction_cap))::integer AS reactions,
-  max(r.message_xp)::integer AS mxp,max(r.reaction_xp)::integer AS rxp
-  FROM con.discord_participation_events e CROSS JOIN rules r
-  WHERE e.user_id=$1 AND e.onboarding=false
-  AND e.guild_id=(SELECT guild_id FROM con.discord_settings WHERE id=true)
-  GROUP BY date_trunc('day',e.occurred_at))
-  SELECT coalesce(sum(messages*mxp+reactions*rxp),0)::integer AS earned FROM daily`,[user.id]);
-  earned=Math.max(0,Number(rows[0]?.earned)||0);
- } catch(e) {
-  if(e.code!=="42P01")throw e;
-  // Bot participation tables not initialized yet; keep previously earned XP.
-  const prev=await db.query("SELECT activity_xp FROM con.compound_profiles WHERE discord_id=$1",[user.id]);
-  earned=Number(prev.rows[0]?.activity_xp)||0;
- }
+ const totals=await reconcileCompoundProgress(db,user.id);
+ const earned=Math.max(0,Number(totals.activity_xp)||0);
+ const charismaEarned=Math.max(0,Number(totals.charisma_earned)||0);
  const {rows}=await db.query(`UPDATE con.compound_profiles SET activity_xp=$2,
- xp=GREATEST(0,LEAST(1000000,$2+manual_xp+trivia_xp)),updated_at=now() WHERE discord_id=$1
- RETURNING *, 1+floor(xp/250.0)::integer AS level`,[user.id,earned]);
+ xp=GREATEST(0,LEAST(1000000,$2+manual_xp+trivia_xp)),
+ charisma=GREATEST(0,LEAST(100,charisma+$3-charisma_activity_awarded)),
+ charisma_activity_awarded=$3,updated_at=now() WHERE discord_id=$1
+ RETURNING *, 1+floor(xp/250.0)::integer AS level`,[user.id,earned,charismaEarned]);
  return rows[0];
 }
 async function occupants(db,apt) {
@@ -153,6 +197,24 @@ async function finalize(db,request,actor) {
  await audit(db,actor,"housing.approved",request.requester_id,{request_id:request.id,apartment_id:request.apartment_id});
  return true;
 }
+export async function publicCompoundProfile(db,id) {
+ const {rows:[member]}=await db.query(`SELECT dm.discord_id,dm.name,dm.avatar,dm.joined_at FROM con.discord_members dm
+ JOIN con.discord_settings ds ON ds.guild_id=dm.guild_id AND ds.id=true
+ WHERE dm.discord_id=$1 AND dm.active=true AND dm.is_bot=false`,[id]);
+ if(!member)bad(404,"Resident not found.");
+ const stats=await profile(db,{id,name:member.name});
+ const {rows:[residence]}=await db.query("SELECT apartment_id FROM con.compound_residency WHERE discord_id=$1",[id]);
+ let membership=null;
+ if((await db.query("SELECT to_regclass('con.memberships') IS NOT NULL AS exists")).rows[0]?.exists){
+  membership=(await db.query("SELECT member_no,codename,joined_at,active FROM con.memberships WHERE user_id=$1 AND active=true",[id])).rows[0]||null;
+ }
+ return {member:{
+  id,display_name:member.name,avatar:member.avatar,
+  joined_at:member.joined_at,apartment:residence?.apartment_id||"The Unhoused",
+  membership:membership?{member_no:String(membership.member_no).padStart(6,"0"),codename:membership.codename,joined_at:membership.joined_at,verified:true}:null
+ },stats:{xp:stats.xp,level:stats.level,health:stats.health,stamina:stats.stamina,
+  skill:stats.skill,charisma:stats.charisma,intellect:stats.intellect,luck:stats.luck}};
+}
 export default async function compoundHandler(req,res) {
  const origin=req.headers.origin;
  res.setHeader("Vary","Origin, Cookie");
@@ -166,6 +228,15 @@ export default async function compoundHandler(req,res) {
  if(req.method==="OPTIONS"){res.statusCode=origin===GAME_ORIGIN?204:403;return res.end();}
  if(!["GET","POST"].includes(req.method))return json(res,405,{error:"Unsupported method."});
  if(req.method==="POST" && origin!==GAME_ORIGIN)return json(res,403,{error:"Invalid request origin."});
+ const rawAction=new URL(req.url,"https://cultofnixon.com").searchParams.get("action")||"compound_me";
+ if(rawAction==="compound_public_profile" && req.method==="GET"){
+  try {
+   const id=new URL(req.url,"https://cultofnixon.com").searchParams.get("id");
+   if(!snowflake(id))return json(res,400,{error:"Invalid resident."});
+   const db=database();await ensureCompoundSchema(db);
+   return json(res,200,await publicCompoundProfile(db,id));
+  }catch(e){return json(res,e instanceof Fault?e.status:503,{error:e instanceof Fault?e.message:"Profile temporarily unavailable."});}
+ }
  const session=await readSession(req);
  if(!session)return json(res,401,{error:"Sign in with Discord first.",login_url:"https://cultofnixon.com/api/auth/discord/login?next=compound"});
  try {
@@ -184,6 +255,10 @@ export default async function compoundHandler(req,res) {
    if(action==="me"){
     const {rows:[home]}=await db.query("SELECT apartment_id,assigned_at FROM con.compound_residency WHERE discord_id=$1",[session.user.id]);
     return json(res,200,{user:session.user,profile:current,home:home||null,is_admin:isAdmin});
+   }
+   if(action==="history"){
+    const {rows}=await db.query("SELECT source,description,xp_delta,charisma_delta,intellect_delta,details,occurred_at FROM con.compound_progress_events WHERE discord_id=$1 ORDER BY occurred_at DESC,source_key DESC LIMIT 100",[session.user.id]);
+    return json(res,200,{events:rows});
    }
    if(action==="apartments"){
     const {rows}=await db.query(`SELECT a.*,COALESCE(json_agg(json_build_object('id',p.discord_id,'name',p.display_name,'xp',p.xp)) FILTER(WHERE p.discord_id IS NOT NULL),'[]'::json) AS occupants
@@ -306,10 +381,18 @@ export default async function compoundHandler(req,res) {
       const max=body.field==="xp"?1000000:100;
       if(body.value<0||body.value>max)bad(400,"Attribute outside allowed range.");
       const field=body.field;
+      const oldValue=(await client.query("SELECT "+field+" AS value FROM con.compound_profiles WHERE discord_id=$1 FOR UPDATE",[body.discord_id])).rows[0];
+      if(!oldValue)bad(404,"Member not found.");
       const {rowCount}=field==="xp"
         ? await client.query("UPDATE con.compound_profiles SET manual_xp=$2-activity_xp-trivia_xp,xp=$2,updated_at=now() WHERE discord_id=$1",[body.discord_id,body.value])
         : await client.query("UPDATE con.compound_profiles SET "+field+"=$2,updated_at=now() WHERE discord_id=$1",[body.discord_id,body.value]);
       if(!rowCount)bad(404,"Member not found.");
+      const delta=body.value-Number(oldValue.value);
+      await client.query("INSERT INTO con.compound_progress_events(source_key,discord_id,source,description,xp_delta,charisma_delta,intellect_delta,details) VALUES($1,$2,'admin',$3,$4,$5,$6,$7)",[
+       "admin:"+randomUUID(),body.discord_id,"Staff adjustment: "+field.toUpperCase(),
+       field==="xp"?delta:0,field==="charisma"?delta:0,field==="intellect"?delta:0,
+       JSON.stringify({field,previous:Number(oldValue.value),current:body.value,actor_id:session.user.id})
+      ]);
       await audit(client,session.user.id,"profile.adjusted",body.discord_id,{field,value:body.value});
     }
     await client.query("COMMIT");
