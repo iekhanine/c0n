@@ -18,16 +18,8 @@ function database() {
   }
   return pool;
 }
-export async function fetchReadOnlyProfile(id){
-  if(!/^\d{17,20}$/.test(String(id)))throw Error("Invalid Discord ID");
-  const db=database();
-  if(!db) return null;
-  const {rows}=await db.query(
-    "SELECT discord_id,display_name,avatar,apartment,member_no,codename,member_joined_at,xp,level,health,stamina,skill,charisma,intellect,luck FROM con.bot_public_profiles WHERE discord_id=$1",
-    [String(id)]
-  );
-  if(!rows.length)return {not_found:true};
-  const r=rows[0];
+export function mapProfileRow(r){
+  if(!r)return {not_found:true};
   return {member:{
     id:r.discord_id,display_name:r.display_name,avatar:r.avatar,
     apartment:r.apartment||"The Unhoused",
@@ -40,4 +32,14 @@ export async function fetchReadOnlyProfile(id){
     xp:r.xp,level:r.level,health:r.health,stamina:r.stamina,
     skill:r.skill,charisma:r.charisma,intellect:r.intellect,luck:r.luck
   }};
+}
+export async function fetchReadOnlyProfile(id){
+  if(!/^\d{17,20}$/.test(String(id)))throw Error("Invalid Discord ID");
+  const db=database();
+  if(!db) return null;
+  const {rows}=await db.query(
+    "SELECT discord_id,display_name,avatar,apartment,member_no,codename,member_joined_at,xp,level,health,stamina,skill,charisma,intellect,luck FROM con.bot_public_profiles WHERE discord_id=$1",
+    [String(id)]
+  );
+  return mapProfileRow(rows[0]);
 }
