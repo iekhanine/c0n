@@ -16,7 +16,7 @@ import { assignNewMemberStatus, applyParticipationProgress, participationEvent }
 import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js";
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 import { updateStatsMessage } from "./server-stats.js";
-import { handleTrivia, registerTrivia, ensureTriviaChannel } from "./trivia.js";
+import { handleTrivia, registerTrivia } from "./trivia.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -490,7 +490,7 @@ async function main() {
         }],
       });
       await registerTrivia(guild);
-      run(()=>ensureTriviaChannel(guild));
+      // Trivia channels are managed by staff; do not auto-create on restart.
       client.user.setActivity("cultofnixon.com", {
         type: ActivityType.Watching,
       });
