@@ -33,7 +33,7 @@ export async function claimExclusiveWorkshop(db,b,guild){
  const m=await member(db,guild,b.user_id);
  const job=(await db.query(`select p.*,r.label from con.workshop_job_posts p
  join con.workshop_job_rotations r on r.channel_id=p.channel_id
- where p.channel_id=$1 and p.message_id=$2 and p.state='posted' for update of p`,[b.channel_id,b.message_id])).rows[0];
+ where p.channel_id=$1 and p.state='posted' for update of p`,[b.channel_id])).rows[0];
  if(!job)bad(409,"Only the latest active pinned Workshop objective can be claimed.");
  if(job.assigned_discord_id)bad(409,"This objective is already assigned to <@"+job.assigned_discord_id+">.");
  const occupied=await db.query("select post_id from con.workshop_assignments where discord_id=$1 and state in ('working','awaiting_confirmation') limit 1",[b.user_id]);
