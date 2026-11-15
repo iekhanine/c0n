@@ -178,8 +178,8 @@ create table if not exists con.game_audit (
 -- Tables are server-only by default, with RLS as an additional boundary.
 do $$ declare t record; begin
  for t in select tablename from pg_tables where schemaname='con' and tablename like 'game_%' loop
-  execute format('alter table con.game_%I enable row level security',t.tablename);
-  execute format('revoke all on con.game_%I from public,anon,authenticated',t.tablename);
+  execute format('alter table con.%I enable row level security',t.tablename);
+  execute format('revoke all on con.%I from public,anon,authenticated',t.tablename);
  end loop;
 end $$;
 insert into con.game_settings(key,value) values
