@@ -1,5 +1,6 @@
 import { useEffect,useState,type FormEvent } from "react";
 import { Dices, BriefcaseBusiness, Hammer, Wallet, Shield, RefreshCw } from "lucide-react";
+import ReclamationSystems from "./ReclamationSystems";
 type Task={id:string;title:string;description:string;profession_id:string|null;completion_type:string;duration_minutes:number;character_xp:number;profession_xp:number;pay_credits:string|number;stamina_cost:number;materials:Record<string,number>};
 type Order={id:string;status:string;title:string;due_at:string|null};
 type Character={id:string;name:string;profession_id:string;level:number;xp:string|number;health:number;stamina:number;attributes:Record<string,number>;skills:Record<string,number>};
@@ -74,6 +75,7 @@ export default function ReclamationPage(){
     {([["minutes","Duration (minutes)"],["xp","Character XP"],["skillXp","Profession XP"],["pay","Payment (CC)"]] as const).map(([k,label])=><label key={k}>{label} <input type="number" min={0} max={k==="minutes"?10080:k==="pay"?1000000000:100000} value={task[k]} onChange={e=>setTask({...task,[k]:Number(e.target.value)})}/></label>)}
     <button type="submit">Publish new task</button>
    </form></section>}
+   <ReclamationSystems game={game} run={run}/>
   </>}
  </div>;
 }
