@@ -1,6 +1,6 @@
 import { readSession, accessFor, json, ORIGIN } from "./auth.js";
 import { database } from "./db.js";
-import { createCharacter, acceptTask, completeTimerTask, publishTask, updateTask, rollDice } from "../game/server/engine.js";
+import { createCharacter, acceptTask, completeTimerTask, submitWorkForReview, publishTask, updateTask, rollDice } from "../game/server/engine.js";
 import { transferItem,startCraft,completeCraft } from "../game/server/storage.js";
 import {donateMaterial,finalizeProject} from "../game/server/projects.js";
 import { createCampaign,changeCampaignState,joinCampaign,startSession,joinSession,rollForSession,proposeAward,applyAward,setDungeonMaster } from "../game/server/campaigns.js";
@@ -43,6 +43,10 @@ async function snapshot(pool,discordId,owner){
  result.campaigns=campaigns.rows;
  result.dungeonMaster=owner||dm.rows[0]?.enabled===true;
  result.worldEvents=world.rows;
+ if(result.dungeonMaster){
+  const review=await pool.query("select w.id,w.moderator_note,w.template_snapshot->>'title' title,c.name as member_name,w.accepted_at from con.game_work_orders w join con.game_characters c on c.id=w.character_id where w.status='pending_approval' order by w.accepted_at limit 100");
+  result.reviewQueue=review.rows;
+ }
  const sessions=await pool.query("select s.id,s.campaign_id,s.started_at,s.ended_at from con.game_sessions s join con.game_campaigns c on c.id=s.campaign_id where c.state='active' and s.started_at is not null and s.ended_at is null order by s.started_at desc limit 30");
  result.sessions=sessions.rows;
  if(owner){
@@ -90,6 +94,14 @@ export async function reclamationHandler(req,res,poolFactory=database){
    const owned=await pool.query(`select 1 from con.game_work_orders w join con.game_characters c on c.id=w.character_id where w.id=$1 and c.discord_id=$2`,[data.id,session.user.id]);
    if(!owned.rowCount)fail(403,"Not your work order");
    result=await completeTimerTask(pool,data.id);
+  }else if(action==="task.review.request"){
+   if(!uuid(data.id))fail(400,"Invalid work order ID");
+   result=await submitWorkForReview(pool,session.user.id,data.id,data.note??"");
+  }else if(action==="task.review.approve"){
+   if(!uuid(data.id))fail(400,"Invalid work order ID");
+   const allowed=owner||(await pool.query("select 1 from con.game_dungeon_masters where discord_id=$1 and enabled=true",[session.user.id])).rowCount>0;
+   if(!allowed)fail(403,"Dungeon Master or Overseer approval required");
+   result=await completeTimerTask(pool,data.id,{approvedBy:session.user.id});
   }else if(action==="task.publish"){
    if(!owner)fail(403,"Overseer only");
    result=await publishTask(pool,session.user.id,data);
