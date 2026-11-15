@@ -91,7 +91,8 @@ export default async function compoundHandler(req,res) {
   if (!schemaReady) schemaReady = schema(db).catch(e=>{schemaReady=null; throw e;});
   await schemaReady;
   const current=await profile(db,session.user);
-  const action=new URL(req.url,"https://cultofnixon.com").searchParams.get("action")||"me";
+  const rawAction=new URL(req.url,"https://cultofnixon.com").searchParams.get("action")||"compound_me";
+  const action=rawAction.startsWith("compound_")?rawAction.slice(9):rawAction;
   if(req.method==="GET") {
    if(action==="me"){
     const {rows:[home]}=await db.query("SELECT apartment_id,assigned_at FROM con.compound_residency WHERE discord_id=$1",[session.user.id]);
