@@ -137,20 +137,23 @@ export async function reconcileCompoundProgress(db,userId) {
     WHERE e.user_id=$1 AND e.onboarding=false
     AND e.guild_id=(SELECT guild_id FROM con.discord_settings WHERE id=true)
    ), eligible AS (
-    SELECT e.*,CASE WHEN event_type='message' THEN r.message_xp ELSE r.reaction_xp END AS amount,
-      CASE WHEN event_type='message' AND daily_rank IN (10,20) THEN 1 ELSE 0 END AS charisma_reward
+    SELECT e.*,CASE WHEN event_type='message' THEN r.message_xp ELSE r.reaction_xp END AS amount
     FROM ordered e CROSS JOIN con.compound_rules r
     WHERE r.id=true
       AND ((e.event_type='message' AND e.daily_rank<=r.daily_message_cap)
         OR (e.event_type='reaction' AND e.daily_rank<=r.daily_reaction_cap))
+   ), credited AS (
+    SELECT e.*,row_number() OVER (PARTITION BY user_id,event_type ORDER BY occurred_at,event_id) AS lifetime_rank
+    FROM eligible e
    )
    INSERT INTO con.compound_progress_events
     (source_key,discord_id,source,description,xp_delta,charisma_delta,details,occurred_at)
    SELECT 'discord:'||guild_id||':'||event_type||':'||event_id||':'||user_id,
     user_id,event_type,
     CASE WHEN event_type='message' THEN 'Discord message' ELSE 'Discord reaction' END,
-    amount,charisma_reward,jsonb_build_object('channel_id',channel_id,'event_id',event_id),occurred_at
-   FROM eligible ON CONFLICT(source_key) DO NOTHING`,[userId]);
+    amount,CASE WHEN event_type='message' AND lifetime_rank % 10=0 THEN 1 ELSE 0 END,
+    jsonb_build_object('channel_id',channel_id,'event_id',event_id),occurred_at
+   FROM credited ON CONFLICT(source_key) DO NOTHING`,[userId]);
  } catch(e){if(e.code!=="42P01")throw e;}
  await db.query("INSERT INTO con.compound_progress_events(source_key,discord_id,source,description,xp_delta,details) SELECT 'legacy:staff-xp:'||discord_id,discord_id,'admin','Prior staff XP adjustment',manual_xp,jsonb_build_object('previous',true) FROM con.compound_profiles WHERE discord_id=$1 AND manual_xp<>0 ON CONFLICT(source_key) DO NOTHING",[userId]);
  await db.query(`INSERT INTO con.compound_progress_events
