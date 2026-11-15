@@ -1,7 +1,7 @@
 import {workshopDatabaseCall} from "./profile-db.js";
 import {ActionRowBuilder,ButtonBuilder,ButtonStyle,MessageFlags} from "discord.js";
 const uid=x=>typeof x==="string"&&/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(x);
-export const isWorkshopClaimMessage=message=>!message.author?.bot&&/^\s*\[x\]\s*$/i.test(message.content||"");
+export const isWorkshopClaimMessage=message=>!message.author?.bot&&/^\s*accept\s*$/i.test(message.content||"");
 const itemLabel={toolkit:"tool kit",lumber:"lumber",scrap:"scrap metal",medical_supplies:"medical supplies",
  seeds:"seed packets",electrical_parts:"electrical components",food:"food rations",steel_bracket:"steel brackets"};
 export function formatWorkshopAssignment(a){
