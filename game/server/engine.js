@@ -71,7 +71,7 @@ export async function acceptTask(pool,discordId,templateId) {
   return o.rows[0];
  });
 }
-async function ledgerTransfer(db,{from,to,amount,key,actor,reason}) {
+export async function ledgerTransfer(db,{from,to,amount,key,actor,reason}) {
  asInt(amount,1,1000000000,"transfer");
  const accounts=await db.query("select id,balance from con.game_accounts where id=any($1::uuid[]) order by id for update",[[from,to]]);
  if(from===to||accounts.rowCount!==2)throw Error("Invalid accounts");
