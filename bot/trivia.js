@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { randomInt, randomUUID } from "node:crypto";
-import { MessageFlags } from "discord.js";
+import { MessageFlags, ChannelType } from "discord.js";
 const data=JSON.parse(readFileSync(new URL("./trivia-questions.json", import.meta.url),"utf8"));
 export const QUESTION_BANK=data.questions;
 export const GAMES_CATEGORY_ID="1570509079040884957";
@@ -146,4 +146,28 @@ export async function handleTrivia(i,send){
 export async function registerTrivia(guild){
   await guild.commands.create({name:"trivia",description:"Play The Compound trivia",
     options:[{name:"start",description:"Start a 10-question trivia match in The Games",type:1}]});
+}
+
+export async function ensureTriviaChannel(guild){
+  const category=await guild.channels.fetch(GAMES_CATEGORY_ID).catch(()=>null);
+  if(!category||category.type!==ChannelType.GuildCategory){
+    console.warn("Trivia setup: The Games category was not accessible.");
+    return null;
+  }
+  await guild.channels.fetch();
+  const existing=[...guild.channels.cache.values()].find(c=>c.parentId===category.id &&
+    c.type===ChannelType.GuildText && c.name.toLowerCase()==="trivia");
+  if(existing)return existing;
+  const member=await guild.members.fetchMe();
+  if(!category.permissionsFor(member)?.has("ManageChannels")){
+    console.warn("Trivia setup: bot cannot create #trivia in The Games.");
+    return null;
+  }
+  const channel=await guild.channels.create({
+    name:"trivia",type:ChannelType.GuildText,parent:category.id,
+    topic:"C0N Trivia. Use /trivia start for a ten-question match. Character rewards are recorded in The Compound.",
+    reason:"Owner-approved C0N trivia deployment",
+  });
+  console.info("C0N trivia channel created",{channel_id:channel.id});
+  return channel;
 }
