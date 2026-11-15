@@ -24,6 +24,7 @@ async function schema(db) {
  ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS activity_xp integer NOT NULL DEFAULT 0;
  ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS manual_xp integer NOT NULL DEFAULT 0;
  ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS trivia_xp integer NOT NULL DEFAULT 0;
+ ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS charisma_activity_awarded integer NOT NULL DEFAULT 0;
  CREATE TABLE IF NOT EXISTS con.compound_rules (
  id boolean PRIMARY KEY DEFAULT true CHECK(id), message_xp integer NOT NULL DEFAULT 5 CHECK(message_xp BETWEEN 0 AND 100),
  reaction_xp integer NOT NULL DEFAULT 1 CHECK(reaction_xp BETWEEN 0 AND 100),
@@ -51,6 +52,15 @@ async function schema(db) {
  CREATE TABLE IF NOT EXISTS con.compound_audit (
  id uuid PRIMARY KEY, actor_id text NOT NULL, action text NOT NULL, subject_id text,
  details jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
+ CREATE TABLE IF NOT EXISTS con.compound_progress_events (
+ source_key text PRIMARY KEY, discord_id text NOT NULL REFERENCES con.compound_profiles(discord_id),
+ source text NOT NULL, description text NOT NULL,
+ xp_delta integer NOT NULL DEFAULT 0, charisma_delta integer NOT NULL DEFAULT 0,
+ intellect_delta integer NOT NULL DEFAULT 0,
+ details jsonb NOT NULL DEFAULT '{}'::jsonb,
+ occurred_at timestamptz NOT NULL DEFAULT now(),
+ recorded_at timestamptz NOT NULL DEFAULT now());
+ CREATE INDEX IF NOT EXISTS compound_progress_history ON con.compound_progress_events(discord_id,occurred_at DESC);
  CREATE TABLE IF NOT EXISTS con.compound_trivia_matches (
  id uuid PRIMARY KEY, guild_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
  CREATE TABLE IF NOT EXISTS con.compound_trivia_results (
@@ -67,6 +77,7 @@ async function schema(db) {
  ALTER TABLE con.compound_residency ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_requests ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_audit ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_progress_events ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_correct_check;
  ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_max_streak_check;
  ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_xp_awarded_check;
@@ -77,7 +88,7 @@ async function schema(db) {
  ALTER TABLE con.compound_trivia_results ADD CONSTRAINT compound_trivia_results_intellect_awarded_check CHECK(intellect_awarded BETWEEN 0 AND 33);
  ALTER TABLE con.compound_trivia_matches ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_trivia_results ENABLE ROW LEVEL SECURITY;
- REVOKE ALL ON con.compound_profiles,con.compound_rules,con.compound_apartments,con.compound_residency,con.compound_requests,con.compound_audit,con.compound_trivia_matches,con.compound_trivia_results FROM PUBLIC, anon, authenticated;
+ REVOKE ALL ON con.compound_profiles,con.compound_rules,con.compound_apartments,con.compound_residency,con.compound_requests,con.compound_audit,con.compound_progress_events,con.compound_trivia_matches,con.compound_trivia_results FROM PUBLIC, anon, authenticated;
 `);
  await db.query("INSERT INTO con.compound_apartments(id,floor,unit) SELECT 'F'||f||'-0'||n,f,n FROM generate_series(1,4) AS f CROSS JOIN generate_series(1,8) AS n ON CONFLICT DO NOTHING");
 }
