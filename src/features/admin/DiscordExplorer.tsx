@@ -169,7 +169,11 @@ const channelType = (type?: number) =>
     15: "Forum",
   })[type || 0] || "Channel";
 export default function DiscordExplorer() {
-  const [page, setPage] = useState<Page>("overview"),
+  const pageFromUrl = (): Page => {
+    const candidate = window.location.pathname.split("/")[3] || "overview";
+    return groups.some(group => group.items.some(([id]) => id === candidate)) ? candidate as Page : "overview";
+  };
+  const [page, setPage] = useState<Page>(pageFromUrl),
     [collapsed, setCollapsed] = useState<string[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null),
     [items, setItems] = useState<Item[]>([]),
@@ -284,10 +288,21 @@ export default function DiscordExplorer() {
     const controller = new AbortController();
     life.current = controller;
     queueMicrotask(() => {
-      if (!controller.signal.aborted) void run(() => load("overview"));
+      if (!controller.signal.aborted) void run(() => load(pageFromUrl()));
     });
     return () => controller.abort();
   }, []); // Navigation owns subsequent refreshes.
+  useEffect(() => {
+    const onBack = () => {
+      const next = pageFromUrl();
+      setPage(next);
+      setSelection(null);
+      setCreating(false);
+      void run(() => load(next));
+    };
+    window.addEventListener("popstate", onBack);
+    return () => window.removeEventListener("popstate", onBack);
+  }, []);
   function navigate(target: Page) {
     if (busy) return;
     if (selection || creating) {
@@ -296,6 +311,7 @@ export default function DiscordExplorer() {
       )
         return;
     }
+    window.history.pushState(null, "", target === "overview" ? "/admin/discord" : "/admin/discord/" + target);
     setPage(target);
     setItems([]);
     setSelection(null);
