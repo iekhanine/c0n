@@ -67,7 +67,7 @@ export async function reclamationHandler(req,res,poolFactory=database){
   const access=await accessFor(session);
   const owner=access.owner===true;
   const url=new URL(req.url,ORIGIN);
-  const action=url.searchParams.get("action")||"state";
+  const action=(url.searchParams.get("action")||"game_state").replace(/^game_/,"");
   const pool=poolFactory();
   if(req.method==="GET"){
    if(action!=="state")fail(404,"Unknown operation");
