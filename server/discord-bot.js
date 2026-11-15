@@ -8,7 +8,7 @@ import { ORIGIN, json, readSession, accessFor } from "./auth.js";
 import { database, initializeDatabase } from "./db.js";
 import { requireMembership } from "./membership.js";
 import { discordMigration } from "./discord-schema.js";
-import { ensureCompoundSchema, applyTriviaResults } from "./compound.js";
+import { ensureCompoundSchema, applyTriviaResults, publicCompoundProfile } from "./compound.js";
 import { verifyBridge, canonicalJson } from "../shared/discord-signing.js";
 import {
   ensureControl,
@@ -212,6 +212,7 @@ async function acceptSync(db, s, b, headers) {
       "server_stats",
       "membership_roles",
       "trivia_result",
+      "profile_lookup",
     ].includes(b.kind)
   )
     fail(400, "Unknown worker event.");
@@ -219,7 +220,7 @@ async function acceptSync(db, s, b, headers) {
     fail(403, "Wrong Discord server.");
   if (b.kind.startsWith("control_")) await ensureControl(db);
   if (b.kind.startsWith("participation") || b.kind === "server_stats") await ensureParticipation(db);
-  if (b.kind === "trivia_result") await ensureCompoundSchema(db);
+  if (b.kind === "trivia_result" || b.kind === "profile_lookup") await ensureCompoundSchema(db);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -244,6 +245,18 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    if (b.kind === "profile_lookup") {
+      if (!snowflake(b.user_id)) fail(400,"Invalid profile lookup.");
+      // Authentication and replay protection are completed before this lookup.
+      // Release the Discord-settings row lock before materializing character data.
+      await client.query("COMMIT");
+      try {
+        return { ...await publicCompoundProfile(db,b.user_id),guild_id:s.guild_id };
+      } catch(e) {
+        if(e.status===404)return {guild_id:s.guild_id,not_found:true};
+        throw e;
+      }
     }
     if (b.kind === "trivia_result") {
       const result = await applyTriviaResults(db,client,b);
