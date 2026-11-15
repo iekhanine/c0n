@@ -197,7 +197,7 @@ async function finalize(db,request,actor) {
  await audit(db,actor,"housing.approved",request.requester_id,{request_id:request.id,apartment_id:request.apartment_id});
  return true;
 }
-async function publicCompoundProfile(db,id) {
+export async function publicCompoundProfile(db,id) {
  const {rows:[member]}=await db.query(`SELECT dm.discord_id,dm.name,dm.avatar,dm.joined_at FROM con.discord_members dm
  JOIN con.discord_settings ds ON ds.guild_id=dm.guild_id AND ds.id=true
  WHERE dm.discord_id=$1 AND dm.active=true AND dm.is_bot=false`,[id]);
