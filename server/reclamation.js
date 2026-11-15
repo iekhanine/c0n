@@ -95,6 +95,40 @@ export async function reclamationHandler(req,res,poolFactory=database){
    const character=await pool.query("select id from con.game_characters where discord_id=$1",[session.user.id]);
    if(!character.rowCount)fail(409,"Create your character first");
    result=await rollDice(pool,{characterId:character.rows[0].id,sides:data.sides,count:data.count,modifier:data.modifier,purpose:String(data.purpose||"").slice(0,200)});
+  }else if(action==="inventory.transfer"){
+   result=await transferItem(pool,session.user.id,owner,data);
+  }else if(action==="craft.start"){
+   result=await startCraft(pool,session.user.id,data.id);
+  }else if(action==="craft.complete"){
+   result=await completeCraft(pool,session.user.id,data.id);
+  }else if(action==="campaign.create"){
+   result=await createCampaign(pool,session.user.id,owner,data);
+  }else if(action==="campaign.state"){
+   result=await changeCampaignState(pool,session.user.id,owner,data.id,data.state);
+  }else if(action==="campaign.join"){
+   result=await joinCampaign(pool,session.user.id,data.id);
+  }else if(action==="session.start"){
+   result=await startSession(pool,session.user.id,owner,data.campaignId);
+  }else if(action==="session.join"){
+   result=await joinSession(pool,session.user.id,data.id);
+  }else if(action==="session.roll"){
+   result=await rollForSession(pool,session.user.id,data.sessionId,data);
+  }else if(action==="award.propose"){
+   result=await proposeAward(pool,session.user.id,owner,data.sessionId,data.recipient,data);
+  }else if(action==="award.approve"){
+   result=await applyAward(pool,session.user.id,owner,data.id);
+  }else if(action==="dm.grant"){
+   result=await setDungeonMaster(pool,session.user.id,owner,data.discordId,data.enabled);
+  }else if(action==="employment.set"){
+   result=await setCompensation(pool,session.user.id,owner,data);
+  }else if(action==="taxes.update"){
+   result=await setTaxes(pool,session.user.id,owner,data);
+  }else if(action==="credits.transfer"){
+   result=await transferCredits(pool,session.user.id,data.recipient,data.amount,data.key);
+  }else if(action==="payroll.run"){
+   result=await runPayroll(pool,session.user.id,owner,data.monday);
+  }else if(action==="overseer.stipend"){
+   result=await payOverseerStipend(pool,session.user.id,owner,data.amount,data.key);
   }else fail(404,"Unknown operation");
   return json(res,200,{result});
  }catch(err){
