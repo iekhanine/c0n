@@ -60,7 +60,7 @@ async function publicProfile(id){
  const identity=m.membership;
  const date=identity?.joined_at?new Date(identity.joined_at):null;
  const memberCode=identity?.codename&&date&&!Number.isNaN(date.getTime())?
-  identity.codename.replace(/\\s+/g,"").toUpperCase()+"-"+String(date.getMonth()+1).padStart(2,"0")+date.getFullYear()+"-"+identity.member_no.slice(-4):null;
+  identity.codename.replace(/\s+/g,"").toUpperCase()+"-"+String(date.getMonth()+1).padStart(2,"0")+date.getFullYear()+"-"+identity.member_no.slice(-4):null;
  document.title=(identity?.codename||m.display_name)+" | The Compound";
  return '<main class="public-sheet" aria-label="Public character profile">'+
  '<section class="public-card" aria-label="Membership card">'+
