@@ -110,6 +110,23 @@ export async function completeTimerTask(pool,orderId) {
   }
   await db.query("update con.game_characters set xp=xp+$2 where id=$1",[c.id,t.character_xp]);
   if(t.profession_id)await db.query("insert into con.game_character_skills(character_id,profession_id,xp) values($1,$2,$3) on conflict(character_id,profession_id) do update set xp=con.game_character_skills.xp+excluded.xp",[c.id,t.profession_id,t.profession_xp]);
+  // Resource drops are owned by the player, not created in a public channel.
+  const drops=Object.entries(t.rewards?.items||{});
+  if(drops.length){
+   const bag=await db.query("select id,capacity from con.game_storage where storage_type='carry' and owner_character_id=$1 for update",[c.id]);
+   if(!bag.rowCount)throw Error("Inventory container missing");
+   const used=await db.query("select coalesce(sum(quantity),0)::bigint as n from con.game_inventory where storage_id=$1",[bag.rows[0].id]);
+   let added=0;
+   for(const [item,quantity] of drops){
+    if(!/^[a-z_]{2,40}$/.test(item)||!Number.isSafeInteger(quantity)||quantity<1||quantity>100)throw Error("Invalid item drop");
+    added+=quantity;
+    const known=await db.query("select id from con.game_items where id=$1",[item]);
+    if(!known.rowCount)throw Error("Unknown item drop");
+   }
+   if(BigInt(used.rows[0].n)+BigInt(added)>BigInt(bag.rows[0].capacity))throw Error("Inventory full: move items to apartment storage");
+   for(const [item,quantity] of drops)
+    await db.query("insert into con.game_inventory(storage_id,item_id,quantity) values($1,$2,$3) on conflict(storage_id,item_id) do update set quantity=con.game_inventory.quantity+excluded.quantity",[bag.rows[0].id,item,quantity]);
+  }
   // Project labor is recorded only once while an active phase is open.
   if(t.project_id && Number(t.rewards?.work_units||0)>0){
    const units=asInt(Number(t.rewards.work_units),1,10000,"work units");
