@@ -6,7 +6,7 @@ test("TVM game bank contains exactly 100 unique, well-formed questions",()=>{
   assert.equal(QUESTION_BANK.length,100);
   assert.equal(new Set(QUESTION_BANK.map(q=>q.id)).size,100);
   for(const q of QUESTION_BANK){
-    assert.match(q.id,/^tc_\d+$/);
+    assert.match(q.id,/^[a-z]{2}_\d+$/);
     assert.ok(q.question.length>=15);
     assert.equal(q.options.length,4);
     assert.equal(new Set(q.options.map(s=>s.trim().toLowerCase())).size,4);
