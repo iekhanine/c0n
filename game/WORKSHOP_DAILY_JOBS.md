@@ -1,53 +1,43 @@
-# Workshop Daily Objectives
+# The Workshop: Exclusive Contracts
 
-## Operational status (2026-11-15)
+## Live gameplay, November 15, 2026
 
-The first set of 8 objectives was successfully published to the live C0N Discord server, guild `903106349850849370`.
+Eight Workshop channels each have exactly one published and pinned objective. The first round launched together, and Supabase `pg_cron` rotates the channel objectives every 24 hours with a 30-minute offset between channels. Each channel has ten rotating objective prompts.
 
-The independent Supabase `pg_cron` job `con-workshop-daily-objectives` checks the rotation every minute and creates exactly one new objective per channel on each of the following schedules (America/Chicago, CST):
+### Claim and complete
 
-| Channel | Daily start after launch | Bonus | Extra stat |
-| --- | --- | --- | --- |
-| Job Board | 10:02 AM | 25 XP | +1 Skill |
-| Carpentry | 10:32 AM | 35 XP | +1 Skill |
-| Metalworking | 11:02 AM | 35 XP | +1 Skill |
-| Medical | 11:32 AM | 35 XP | +1 Intellect |
-| Agriculture | 12:02 PM | 35 XP | +1 Skill |
-| Engineering | 12:32 PM | 40 XP | +1 Intellect |
-| Scavenging | 1:02 PM | 35 XP | +1 Luck |
-| Payroll | 1:32 PM | 25 XP | +1 Charisma |
+1. An active server member types **`[x]`** as a standalone message in the Workshop channel containing a published objective.
+2. The Railway bot calls `con.bot_workshop_claim` using its restricted database login. A row lock ensures only the first claimant wins. A member can have only one active shift at a time.
+3. In the same transaction, the Overseer reserves that profession's tools and consumable supplies from the shared `game_storage` warehouse, records issued items on `workshop_assignments`, and stamps an assignment and due time. If supplies are insufficient, the entire claim rolls back and no job is assigned.
+4. The bot posts a story-flavored dispatch telling the member where in The Compound to complete the job, which items were issued, and the salary/XP reward.
+5. After the minimum shift (currently 10 minutes), the Railway bot posts a reminder and pings the assignee with **Yes, completed** and **Not yet** buttons.
+6. **Not yet** leaves the shift assigned, rescheduling a new reminder for 30 minutes later. **Yes** pays exactly once in a locked database transaction, credits Compound XP and the appropriate stat, and checks reusable tool kits back into the stockroom. Consumed materials stay deducted.
+7. If a member has already created a Reclamation game character, completing a job also credits that character's XP and profession skill XP. Existing regular Compound accounts require no character creation.
 
-The first eight objectives launched together on Sunday, November 15. Future daily editions start Monday, November 16. Rotations are tied to persisted database timestamps, not to the bot process remaining online.
+The user receives **10 × listed XP** in fictional Compound Credits for the completed contract: 250, 350, or 400 credits depending on channel. Salary is debited from the game treasury, moved into the game system clearing account with balanced ledger entries, and reflected in a dedicated `workshop_wallets` balance per Discord member. This is separate from periodic salaried employment payroll.
 
-## How members earn job bonuses
+### Safety, audit and identity
 
-1. Read the latest daily objective in one of the eight Workshop channels.
-2. Post a starting plan or work update in the same channel.
-3. After at least 10 minutes, post a completion update.
-4. The database applies the bonus automatically, once per person per objective. The bonus is saved in `con.compound_profiles.manual_xp`, the XP total, the affected character stat, `con.compound_progress_events`, and `con.workshop_job_claims`.
-5. Ordinary Discord participation XP also applies independently. The activity and bonus systems each have their own idempotency keys.
+- No roleplay message alone awards a Workshop contract bonus. The previous two-message automatic XP trigger has been dropped.
+- Exclusive claims, payout confirmation and warehouse writes are protected by database transactions, unique keys and row locks.
+- Only live, non-bot members of the configured Discord guild can claim and complete jobs.
+- The Discord bot database login is `con_bot_profile_reader`: it retains read-only profile view access and can execute **only four explicitly granted Workshop functions**. All other normal database tables remain inaccessible to the login.
+- `con.game_audit`, `con.compound_progress_events`, `con.game_transactions`, `con.game_entries`, and `con.workshop_salary_receipts` store audit and payout history.
+- A rollback-protected SQL test validated first-claim exclusivity, supply checkout/return, delayed reminder, and payout exactly once.
+- Discord Message Content privileged intent was enabled in the Railway bot and the deployment reached SUCCESS; no live member has yet accepted a job as of the verification.
 
-This is self-reported participation: the database verifies two separate messages and elapsed time; it does **not** inspect message content or confirm real-world labor. The daily objective closes when the next edition is posted. Only non-bot active guild members can earn rewards.
+### Architecture
 
-## Scheduling architecture
+Production execution uses `bot/workshop-assignments.js` and the isolated PostgreSQL functions in `game/sql/017_workshop_bot_functions.sql` for claims, reminders, and salary. These do not require Vercel.
 
-- `con.workshop_job_rotations` stores the channel, objectives, current cycle, and next publication time.
-- `con.workshop_job_posts` stores every edition, its Discord message ID and command receipts.
-- `con.workshop_job_claims` prevents repeat payout per edition/member.
-- `con.workshop_fallback_tick()` posts through the existing bot-controlled webhook bridge, records Discord receipts, and queues pin/unpin commands.
-- `con.workshop_credit_daily_activity()` awards rewards when messages in the correct channel arrive 10+ minutes apart.
-- `pg_cron` invokes the fallback function every minute. Bot, website, or Vercel deployment restarts do not lose the rotation.
-- The signed Workshop API and interactive Discord buttons are committed but still require the C0N Vercel API deployment, which was blocked by the daily free deployment limit. Fallback rotations have `active=false` to prevent competing bot scheduling.
+The existing `server/workshop-assignments.js` contains an equivalent signed-bridge implementation for a future Vercel release, which was blocked by the Vercel Hobby daily deployment quota. Do not enable competing claim/payout implementations without reviewing shared idempotency and migration history.
 
-## Discord pinning needs owner permission
+The daily objective publisher continues using the independent `con.workshop_fallback_tick()` database job and signed Discord control/webhook bridge. The current and future pinned messages were updated to instruct players to type `[x]`.
 
-All 8 webhook messages were delivered successfully. Attempts to pin them failed because the bot's managed `ᴄᴜʟᴛᴏꜰɴɪxᴏɴ` role (`1570435483551404045`) lacks Discord's `Pin Messages` permission (`1 << 51`, `2251799813685248`).
+The starter warehouse originally had zero items. The game was provisioned with fictional supplies: 24 toolkits, 160 lumber, 180 scrap metal, 120 medical supplies, 100 seeds, 110 electrical parts, 120 food, and 80 steel brackets. Stock is finite; do not issue nonexistent inventory.
 
-The bot cannot grant itself a permission it does not already have. Server owner must update the Workshop category (`1570509075630923777`) to allow this role to **Pin Messages**, then sync or explicitly grant the setting to the eight child channels. The database retries failed pins every 30 minutes. New posts will unpin the preceding edition after a successful replacement. Never give `@everyone` that elevated permission just to make this work.
+### Unfinished player-experience features
 
-## Management
-
-- To pause only the fallback scheduler, run `select cron.unschedule('con-workshop-daily-objectives')` in the ONETIMELABS Supabase SQL editor.
-- To pause one channel, set its `next_at` to a later timestamp or pause the cron job.
-- To adjust objective text, edit `con.workshop_job_rotations.objectives` with a valid JSON array of two or more items.
-- Switching to the signed bot's button-based gameplay requires a reviewed Vercel API release, enabling the bot mode, and unscheduling fallback first. Never enable both at once.
+- An Overseer dashboard to view active contracts, stockroom holdings and individual Workshop wallet balances.
+- Job cancellation and reclaiming unreturned supplies for members who leave or fail to complete a shift.
+- Manual Overseer approval for disputed/exceptional tasks.
