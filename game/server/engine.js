@@ -1,0 +1,125 @@
+// C0N Project Reclamation core. Server-side only; never import in browser code.
+import { randomInt } from "node:crypto";
+const ATTRS = ["strength","intelligence","charisma","agility","endurance","perception"];
+const id = value => { if (!/^\d{17,20}$/.test(String(value))) throw Error("Invalid Discord member ID"); return String(value); };
+const asInt = (n,min,max,label) => { if(!Number.isSafeInteger(n)||n<min||n>max) throw Error("Invalid "+label); return n; };
+async function withTransaction(pool, work) {
+ const db=await pool.connect();
+ try { await db.query("BEGIN"); const result=await work(db); await db.query("COMMIT"); return result; }
+ catch(e){await db.query("ROLLBACK");throw e}finally{db.release()}
+}
+export async function createCharacter(pool,{discordId,name,profession,attributes}) {
+ id(discordId);
+ if(typeof name!=="string"||name.trim().length<2||name.trim().length>50)throw Error("Invalid character name");
+ if(!attributes || Object.keys(attributes).sort().join(",")!==[...ATTRS].sort().join(","))throw Error("Exactly six attributes required");
+ const scores=ATTRS.map(a=>asInt(attributes[a],5,10,a));
+ if(scores.reduce((a,b)=>a+b,0)!==50) throw Error("Allocate exactly twenty points");
+ return withTransaction(pool,async db=>{
+  const found=await db.query("select id from game.professions where id=$1 and active=true",[profession]);
+  if(!found.rowCount)throw Error("Unknown profession");
+  const created=await db.query("insert into game.characters(discord_id,name,profession_id) values($1,$2,$3) returning *",[id(discordId),name.trim(),profession]);
+  const c=created.rows[0];
+  for(let i=0;i<ATTRS.length;i++)await db.query("insert into game.character_attributes(character_id,attribute,score) values($1,$2,$3)",[c.id,ATTRS[i],scores[i]]);
+  await db.query("insert into game.character_skills(character_id,profession_id) values($1,$2)",[c.id,profession]);
+  await db.query("insert into game.accounts(account_type,character_id,label) values('resident',$1,$2)",[c.id,c.name]);
+  await db.query("insert into game.storage(storage_type,owner_character_id,capacity) values('carry',$1,20)",[c.id]);
+  await db.query("insert into game.audit(actor,action,entity,entity_id,after_state) values($1,'character.create','character',$2,$3)",[c.discord_id,c.id,JSON.stringify({name:c.name,profession})]);
+  return c;
+ });
+}
+export async function publishTask(pool,overseerId,form) {
+ id(overseerId);
+ if(!form || typeof form.title!=="string"||!form.title.trim())throw Error("Task title required");
+ const allowed=["timer","quiz","dice","collaborative","dm_approval"];
+ if(!allowed.includes(form.completionType))throw Error("Invalid completion type");
+ const minutes=asInt(form.minutes,0,10080,"time");
+ const xp=asInt(form.xp,0,100000,"XP");
+ const skillXp=asInt(form.skillXp,0,100000,"profession XP");
+ const pay=asInt(form.pay,0,1000000000,"pay");
+ return withTransaction(pool,async db=>{
+  const row=await db.query(`insert into game.task_templates
+ (title,profession_id,description,completion_type,duration_minutes,character_xp,profession_xp,pay_credits,materials,rewards,status)
+ values($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,'published') returning *`,
+ [form.title.trim(),form.profession||null,form.description||"",form.completionType,minutes,xp,skillXp,pay,JSON.stringify(form.materials||{}),JSON.stringify(form.rewards||{})]);
+  await db.query("insert into game.audit(actor,action,entity,entity_id,after_state) values($1,'task.publish','task',$2,$3)",[overseerId,row.rows[0].id,JSON.stringify(row.rows[0])]);
+  return row.rows[0];
+ });
+}
+export async function acceptTask(pool,discordId,templateId) {
+ id(discordId);
+ return withTransaction(pool,async db=>{
+  const cr=await db.query("select * from game.characters where discord_id=$1 for update",[discordId]);
+  if(!cr.rowCount)throw Error("Create a character first");
+  const c=cr.rows[0];
+  const tr=await db.query("select * from game.task_templates where id=$1 and status='published'",[templateId]);
+  if(!tr.rowCount)throw Error("Task unavailable");
+  const t=tr.rows[0];
+  if(t.profession_id&&t.profession_id!==c.profession_id)throw Error("Profession does not match");
+  if(c.stamina<t.stamina_cost)throw Error("Not enough stamina");
+  if(t.cooldown_minutes) {
+   const last=await db.query("select accepted_at from game.work_orders where character_id=$1 and template_id=$2 order by accepted_at desc limit 1",[c.id,t.id]);
+   if(last.rowCount && Date.now()-new Date(last.rows[0].accepted_at).getTime()<t.cooldown_minutes*60000)throw Error("Task cooldown");
+  }
+  if(t.daily_limit) {
+   const count=await db.query("select count(*)::int as n from game.work_orders where character_id=$1 and template_id=$2 and accepted_at >= date_trunc('day',now())",[c.id,t.id]);
+   if(count.rows[0].n>=t.daily_limit)throw Error("Daily limit reached");
+  }
+  // Material reservation and inventory deduction must be implemented before paid jobs are enabled.
+  if(Object.keys(t.materials||{}).length)throw Error("Material-requiring tasks are not enabled yet");
+  await db.query("update game.characters set stamina=stamina-$2 where id=$1",[c.id,t.stamina_cost]);
+  const o=await db.query("insert into game.work_orders(template_id,character_id,template_snapshot,status,due_at) values($1,$2,$3::jsonb,'in_progress',now()+($4 * interval '1 minute')) returning *",[t.id,c.id,JSON.stringify(t),t.duration_minutes]);
+  return o.rows[0];
+ });
+}
+async function ledgerTransfer(db,{from,to,amount,key,actor,reason}) {
+ asInt(amount,1,1000000000,"transfer");
+ const accounts=await db.query("select id,balance from game.accounts where id=any($1::uuid[]) order by id for update",[[from,to]]);
+ if(from===to||accounts.rowCount!==2)throw Error("Invalid accounts");
+ const source=accounts.rows.find(a=>a.id===from);
+ if(BigInt(source.balance)<BigInt(amount))throw Error("Treasury insufficient");
+ const prior=await db.query("select id from game.transactions where reference_key=$1",[key]);
+ if(prior.rowCount) return prior.rows[0].id;
+ const tx=await db.query("insert into game.transactions(reference_key,reason,created_by) values($1,$2,$3) returning id",[key,reason,actor]);
+ await db.query("update game.accounts set balance=balance-$2 where id=$1",[from,amount]);
+ await db.query("update game.accounts set balance=balance+$2 where id=$1",[to,amount]);
+ await db.query("insert into game.entries(transaction_id,account_id,amount) values($1,$2,$3),($1,$4,$5)",[tx.rows[0].id,from,-amount,to,amount]);
+ return tx.rows[0].id;
+}
+export async function completeTimerTask(pool,orderId) {
+ return withTransaction(pool,async db=>{
+  const order=await db.query("select * from game.work_orders where id=$1 for update",[orderId]);
+  if(!order.rowCount)throw Error("Unknown order");
+  const o=order.rows[0];
+  if(o.status==="completed")return {status:"already_completed"};
+  if(o.status!=="in_progress"||new Date(o.due_at)>new Date())throw Error("Task not ready");
+  const t=o.template_snapshot;
+  if(t.completion_type!=="timer")throw Error("DM or challenge verification required");
+  const worker=await db.query("select * from game.characters where id=$1 for update",[o.character_id]);
+  const c=worker.rows[0];
+  const fee=await db.query("select value from game.settings where key='rules'");
+  const taxPercent=Number(fee.rows[0]?.value?.income_tax_percent??5);
+  const gross=Number(t.pay_credits), tax=Math.floor(gross*taxPercent/100), net=gross-tax;
+  // Payroll and contract payments are separate: no automatic double-payment for salaried workers.
+  const salaried=await db.query("select 1 from game.employment where character_id=$1 and active and compensation_type='salary' limit 1",[c.id]);
+  let transactionId=null;
+  if(!salaried.rowCount&&net>0){
+   const acc=await db.query("select id,account_type,character_id from game.accounts where account_type='treasury' or character_id=$1",[c.id]);
+   const treasury=acc.rows.find(x=>x.account_type==="treasury"),wallet=acc.rows.find(x=>x.character_id===c.id);
+   transactionId=await ledgerTransfer(db,{from:treasury.id,to:wallet.id,amount:net,key:"work:"+o.id,actor:"game-engine",reason:"Net task compensation"});
+   // Withheld tax stays in treasury; only the net amount is debited.
+  }
+  await db.query("update game.characters set xp=xp+$2 where id=$1",[c.id,t.character_xp]);
+  if(t.profession_id)await db.query("insert into game.character_skills(character_id,profession_id,xp) values($1,$2,$3) on conflict(character_id,profession_id) do update set xp=game.character_skills.xp+excluded.xp",[c.id,t.profession_id,t.profession_xp]);
+  await db.query("update game.work_orders set status='completed',completed_at=now() where id=$1",[o.id]);
+  await db.query("insert into game.audit(actor,action,entity,entity_id,after_state) values('game-engine','work.complete','work_order',$1,$2)",[o.id,JSON.stringify({character:c.id,xp:t.character_xp,skillXp:t.profession_xp,netPay:salaried.rowCount?0:net,transactionId})]);
+  return {status:"completed",xp:t.character_xp,professionXp:t.profession_xp,paid:salaried.rowCount?0:net};
+ });
+}
+export async function rollDice(pool,{sessionId,characterId,sides,count=1,modifier=0,purpose=""}) {
+ if(![4,6,8,10,12,20,100].includes(sides))throw Error("Unsupported die");
+ asInt(count,1,20,"dice count");asInt(modifier,-100,100,"modifier");
+ if(typeof purpose!=="string"||purpose.length>200)throw Error("Invalid purpose");
+ const faces=Array.from({length:count},()=>randomInt(1,sides+1)),total=faces.reduce((s,n)=>s+n,modifier);
+ const r=await pool.query("insert into game.dice_rolls(session_id,character_id,die_sides,number_of_dice,faces,modifier,total,purpose) values($1,$2,$3,$4,$5,$6,$7,$8) returning *",[sessionId||null,characterId||null,sides,count,faces,modifier,total,purpose]);
+ return r.rows[0];
+}
