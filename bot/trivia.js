@@ -136,11 +136,20 @@ export async function handleTrivia(i,send){
       await replySafe(i,"This question has closed.");return true;
     }
     const votes=s.answers[round];
-    // Acknowledge the button without creating an ephemeral confirmation
-    // that players need to dismiss. The shared question message stays in place.
+    // Private, self-clearing acknowledgment. Never change the shared
+    // answer buttons: a yellow/selected button there would mislead everyone.
     if(votes.has(i.user.id)){await i.deferUpdate();return true;}
     votes.set(i.user.id,{choice,name:(i.member?.displayName||i.user.globalName||i.user.username).slice(0,80)});
-    await i.deferUpdate();
+    await i.reply({
+      content:"🟨 **"+["A","B","C","D"][choice]+" locked in**",
+      flags:MessageFlags.Ephemeral,
+    });
+    // A short confirmation is useful, but a dismissible message per question is not.
+    // Do not block the interaction handler on the delay or deletion.
+    const receiptTimer=setTimeout(()=>{
+      void i.deleteReply().catch(e=>console.warn("Trivia receipt cleanup failed",{code:e.code||"unknown"}));
+    },2200);
+    receiptTimer.unref?.();
     return true;
   }
   return false;
