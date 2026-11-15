@@ -56,10 +56,10 @@ async function schema(db) {
  CREATE TABLE IF NOT EXISTS con.compound_trivia_results (
  match_id uuid NOT NULL REFERENCES con.compound_trivia_matches(id),
  discord_id text NOT NULL REFERENCES con.compound_profiles(discord_id),
- correct integer NOT NULL CHECK(correct BETWEEN 0 AND 10),
- max_streak integer NOT NULL CHECK(max_streak BETWEEN 0 AND 10),
- xp_awarded integer NOT NULL CHECK(xp_awarded BETWEEN 0 AND 75),
- intellect_awarded integer NOT NULL CHECK(intellect_awarded BETWEEN 0 AND 3),
+ correct integer NOT NULL CHECK(correct BETWEEN 0 AND 100),
+ max_streak integer NOT NULL CHECK(max_streak BETWEEN 0 AND 100),
+ xp_awarded integer NOT NULL CHECK(xp_awarded BETWEEN 0 AND 525),
+ intellect_awarded integer NOT NULL CHECK(intellect_awarded BETWEEN 0 AND 33),
  PRIMARY KEY(match_id,discord_id));
  ALTER TABLE con.compound_profiles ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_rules ENABLE ROW LEVEL SECURITY;
@@ -67,6 +67,14 @@ async function schema(db) {
  ALTER TABLE con.compound_residency ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_requests ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_audit ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_correct_check;
+ ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_max_streak_check;
+ ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_xp_awarded_check;
+ ALTER TABLE con.compound_trivia_results DROP CONSTRAINT IF EXISTS compound_trivia_results_intellect_awarded_check;
+ ALTER TABLE con.compound_trivia_results ADD CONSTRAINT compound_trivia_results_correct_check CHECK(correct BETWEEN 0 AND 100);
+ ALTER TABLE con.compound_trivia_results ADD CONSTRAINT compound_trivia_results_max_streak_check CHECK(max_streak BETWEEN 0 AND 100);
+ ALTER TABLE con.compound_trivia_results ADD CONSTRAINT compound_trivia_results_xp_awarded_check CHECK(xp_awarded BETWEEN 0 AND 525);
+ ALTER TABLE con.compound_trivia_results ADD CONSTRAINT compound_trivia_results_intellect_awarded_check CHECK(intellect_awarded BETWEEN 0 AND 33);
  ALTER TABLE con.compound_trivia_matches ENABLE ROW LEVEL SECURITY;
  ALTER TABLE con.compound_trivia_results ENABLE ROW LEVEL SECURITY;
  REVOKE ALL ON con.compound_profiles,con.compound_rules,con.compound_apartments,con.compound_residency,con.compound_requests,con.compound_audit,con.compound_trivia_matches,con.compound_trivia_results FROM PUBLIC, anon, authenticated;
@@ -83,7 +91,7 @@ export async function applyTriviaResults(db,client,b){
  if(!Array.isArray(b.results)||b.results.length>100)bad(400,"Invalid trivia results.");
  const ids=new Set();
  for(const r of b.results){
-  if(!snowflake(r.id)||typeof r.name!=="string"||!r.name.trim()||r.name.length>80||!Number.isInteger(r.correct)||r.correct<0||r.correct>10
+  if(!snowflake(r.id)||typeof r.name!=="string"||!r.name.trim()||r.name.length>80||!Number.isInteger(r.correct)||r.correct<0||r.correct>100
     ||!Number.isInteger(r.max_streak)||r.max_streak<0||r.max_streak>r.correct||ids.has(r.id))bad(400,"Invalid trivia player result.");
   ids.add(r.id);
  }
