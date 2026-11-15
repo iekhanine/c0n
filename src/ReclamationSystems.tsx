@@ -10,7 +10,7 @@ type GameView={
  dungeonMaster?:boolean;
  worldEvents?:Array<{id:string;title:string;description:string}>;
  overseer?:{treasury:string;pendingAwards?:Array<{id:string;recipient:string;xp:number;credits:string;items:Record<string,number>}>;members?:Array<{discord_id:string;name:string;profession_id:string}>;employment?:Array<{id:string;name:string;salary_weekly:string}>};
- settings?:{rules?:{income_tax_percent?:number;sales_tax_percent?:number}};
+ settings?:{rules?:{income_tax_percent?:number;sales_tax_percent?:number;allocation_points?:number;starting_attribute?:number;starting_max?:number}};
 };
 const panel={background:"#151b22",border:"1px solid #34404b",borderRadius:8,padding:18,marginBottom:16};
 const label={display:"block",marginBottom:10} as const;
