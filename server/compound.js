@@ -8,6 +8,7 @@ const snowflake = value => typeof value==="string" && /^\d{17,20}$/.test(value);
 const unit = value => typeof value==="string" && /^F[1-4]-0[1-8]$/.test(value);
 const simple = value => String(value||"").slice(0,80);
 const admin = access => access.owner === true || (access.authorized && ["admin","moderator"].includes(access.access));
+let schemaReady;
 async function schema(db) {
  await db.query(`CREATE SCHEMA IF NOT EXISTS con;
  CREATE TABLE IF NOT EXISTS con.compound_profiles (
@@ -40,9 +41,8 @@ async function schema(db) {
  CREATE TABLE IF NOT EXISTS con.compound_audit (
  id uuid PRIMARY KEY, actor_id text NOT NULL, action text NOT NULL, subject_id text,
  details jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
- REVOKE ALL ON ALL TABLES IN SCHEMA con FROM PUBLIC, anon, authenticated;`);
- for(let f=1;f<=4;f++) for(let n=1;n<=8;n++)
-  await db.query("INSERT INTO con.compound_apartments(id,floor,unit) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",["F"+f+"-0"+n,f,n]);
+`);
+ await db.query("INSERT INTO con.compound_apartments(id,floor,unit) SELECT 'F'||f||'-0'||n,f,n FROM generate_series(1,4) AS f CROSS JOIN generate_series(1,8) AS n ON CONFLICT DO NOTHING");
 }
 async function audit(db, actor, action, subject, details={}) {
  await db.query("INSERT INTO con.compound_audit(id,actor_id,action,subject_id,details) VALUES ($1,$2,$3,$4,$5)",[randomUUID(),actor,action,subject,JSON.stringify(details)]);
@@ -88,7 +88,8 @@ export default async function compoundHandler(req,res) {
   const access=await accessFor(session);
   const isAdmin=admin(access);
   const db=database();
-  await schema(db);
+  if (!schemaReady) schemaReady = schema(db).catch(e=>{schemaReady=null; throw e;});
+  await schemaReady;
   const current=await profile(db,session.user);
   const action=new URL(req.url,"https://cultofnixon.com").searchParams.get("action")||"me";
   if(req.method==="GET") {
