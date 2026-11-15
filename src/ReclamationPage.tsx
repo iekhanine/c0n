@@ -2,7 +2,7 @@ import { useEffect,useState,type FormEvent } from "react";
 import { Dices, BriefcaseBusiness, Hammer, Wallet, Shield, RefreshCw } from "lucide-react";
 import ReclamationSystems from "./ReclamationSystems";
 type Task={version?:number;status?:string;id:string;title:string;description:string;profession_id:string|null;completion_type:string;duration_minutes:number;character_xp:number;profession_xp:number;pay_credits:string|number;stamina_cost:number;materials:Record<string,number>};
-type Order={id:string;status:string;title:string;due_at:string|null};
+type Order={id:string;status:string;title:string;completion_type:string;due_at:string|null};
 type Review={id:string;moderator_note:string;title:string;member_name:string};
 type Character={id:string;name:string;profession_id:string;level:number;xp:string|number;health:number;stamina:number;attributes:Record<string,number>;skills:Record<string,number>};
 type Game={character:Character|null;tasks:Task[];projects:{id:string;title:string;phase:number;state:string;requirements:Record<string,number>;progress:Record<string,number>}[];wallet:string;orders:Order[];settings:{rules?:{allocation_points?:number;starting_attribute?:number;starting_max?:number};story?:{stage:string}};overseer?:{treasury:string;taskTemplates:Task[]};reviewQueue?:Review[]};
@@ -62,7 +62,7 @@ export default function ReclamationPage(){
      <span>{o.title} · {o.status} {o.due_at?"· due "+new Date(o.due_at).toLocaleString():""}</span>
      {o.status==="in_progress"&&<>
        <button type="button" disabled={Boolean(o.due_at&&Date.now()<new Date(o.due_at).getTime())}
-        onClick={()=>void run(game.tasks.find(t=>t.title===o.title)?.completion_type==="timer"?"task.complete":"task.review.request",{id:o.id})}>
+        onClick={()=>void run(o.completion_type==="timer"?"task.complete":"task.review.request",{id:o.id})}>
         {game.tasks.find(t=>t.title===o.title)?.completion_type==="timer"?"Complete":"Submit for review"}
        </button>
      </>}
