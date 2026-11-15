@@ -101,6 +101,10 @@ export async function reclamationHandler(req,res,poolFactory=database){
    if(!uuid(data.id))fail(400,"Invalid work order ID");
    const allowed=owner||(await pool.query("select 1 from con.game_dungeon_masters where discord_id=$1 and enabled=true",[session.user.id])).rowCount>0;
    if(!allowed)fail(403,"Dungeon Master or Overseer approval required");
+   if(!owner){
+    const job=await pool.query("select c.discord_id from con.game_work_orders w join con.game_characters c on c.id=w.character_id where w.id=$1",[data.id]);
+    if(job.rows[0]?.discord_id===session.user.id)fail(403,"Dungeon Masters cannot approve their own work");
+   }
    result=await completeTimerTask(pool,data.id,{approvedBy:session.user.id});
   }else if(action==="task.publish"){
    if(!owner)fail(403,"Overseer only");
