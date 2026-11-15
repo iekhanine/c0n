@@ -176,7 +176,7 @@ export async function completeTimerTask(pool,orderId,{approvedBy=null}={}) {
   if(t.project_id && Number(t.rewards?.work_units||0)>0){
    const units=asInt(Number(t.rewards.work_units),1,10000,"work units");
    const project=await db.query("select id from con.game_projects where id=$1 and state='active' for update",[t.project_id]);
-   if(project.rowCount)await db.query(`update con.game_projects set progress=jsonb_set(progress,'{work_units}',to_jsonb(coalesce((progress->>'work_units')::bigint,0)+$2::bigint),true) where id=$1`,[t.project_id,units]);
+   if(project.rowCount)await db.query(`update con.game_projects set progress=jsonb_set(progress,'{work_units}',to_jsonb(least(coalesce((requirements->>'work_units')::bigint,9223372036854775807),coalesce((progress->>'work_units')::bigint,0)+$2::bigint)),true) where id=$1`,[t.project_id,units]);
   }
   await db.query("update con.game_work_orders set status='completed',completed_at=now(),approved_by=$2 where id=$1",[o.id,approvedBy]);
   await db.query("insert into con.game_audit(actor,action,entity,entity_id,after_state) values('game-engine','work.complete','work_order',$1,$2)",[o.id,JSON.stringify({character:c.id,xp:t.character_xp,skillXp:t.profession_xp,netPay:salaried.rowCount?0:net,transactionId})]);
