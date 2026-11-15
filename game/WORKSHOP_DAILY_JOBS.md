@@ -6,7 +6,7 @@ Eight Workshop channels each have exactly one published and pinned objective. Th
 
 ### Claim and complete
 
-1. An active server member types **`[x]`** as a standalone message in the Workshop channel containing a published objective.
+1. An active server member types **`accept`** as a standalone message in the Workshop channel containing a published objective.
 2. The Railway bot calls `con.bot_workshop_claim` using its restricted database login. A row lock ensures only the first claimant wins. A member can have only one active shift at a time.
 3. In the same transaction, the Overseer reserves that profession's tools and consumable supplies from the shared `game_storage` warehouse, records issued items on `workshop_assignments`, and stamps an assignment and due time. If supplies are insufficient, the entire claim rolls back and no job is assigned.
 4. The bot posts a story-flavored dispatch telling the member where in The Compound to complete the job, which items were issued, and the salary/XP reward.
@@ -32,7 +32,7 @@ Production execution uses `bot/workshop-assignments.js` and the isolated Postgre
 
 The existing `server/workshop-assignments.js` contains an equivalent signed-bridge implementation for a future Vercel release, which was blocked by the Vercel Hobby daily deployment quota. Do not enable competing claim/payout implementations without reviewing shared idempotency and migration history.
 
-The daily objective publisher continues using the independent `con.workshop_fallback_tick()` database job and signed Discord control/webhook bridge. The current and future pinned messages were updated to instruct players to type `[x]`.
+The daily objective publisher continues using the independent `con.workshop_fallback_tick()` database job and signed Discord control/webhook bridge. The current and future pinned messages were updated to instruct players to type `accept`.
 
 The starter warehouse originally had zero items. The game was provisioned with fictional supplies: 24 toolkits, 160 lumber, 180 scrap metal, 120 medical supplies, 100 seeds, 110 electrical parts, 120 food, and 80 steel brackets. Stock is finite; do not issue nonexistent inventory.
 
