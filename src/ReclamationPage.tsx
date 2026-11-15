@@ -3,8 +3,9 @@ import { Dices, BriefcaseBusiness, Hammer, Wallet, Shield, RefreshCw } from "luc
 import ReclamationSystems from "./ReclamationSystems";
 type Task={version?:number;status?:string;id:string;title:string;description:string;profession_id:string|null;completion_type:string;duration_minutes:number;character_xp:number;profession_xp:number;pay_credits:string|number;stamina_cost:number;materials:Record<string,number>};
 type Order={id:string;status:string;title:string;due_at:string|null};
+type Review={id:string;moderator_note:string;title:string;member_name:string};
 type Character={id:string;name:string;profession_id:string;level:number;xp:string|number;health:number;stamina:number;attributes:Record<string,number>;skills:Record<string,number>};
-type Game={character:Character|null;tasks:Task[];projects:{id:string;title:string;phase:number;state:string;requirements:Record<string,number>;progress:Record<string,number>}[];wallet:string;orders:Order[];settings:{rules?:{allocation_points?:number;starting_attribute?:number;starting_max?:number};story?:{stage:string}};overseer?:{treasury:string;taskTemplates:Task[]}};
+type Game={character:Character|null;tasks:Task[];projects:{id:string;title:string;phase:number;state:string;requirements:Record<string,number>;progress:Record<string,number>}[];wallet:string;orders:Order[];settings:{rules?:{allocation_points?:number;starting_attribute?:number;starting_max?:number};story?:{stage:string}};overseer?:{treasury:string;taskTemplates:Task[]};reviewQueue?:Review[]};
 const fields=["strength","intelligence","charisma","agility","endurance","perception"] as const;
 const professions=["carpenter","metalworker","medic","farmer","engineer","scavenger"];
 async function request<T>(action:string,method="GET",data?:unknown):Promise<T>{
@@ -59,7 +60,12 @@ export default function ReclamationPage(){
      </div></section>
     <section style={{...style,marginBottom:16}}><h2>My work orders</h2>{game.orders.length===0?<p>No accepted jobs yet.</p>:game.orders.map(o=><div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,borderBottom:"1px solid #34404b",padding:"10px 0"}}>
      <span>{o.title} · {o.status} {o.due_at?"· due "+new Date(o.due_at).toLocaleString():""}</span>
-     {o.status==="in_progress"&&<button type="button" disabled={Boolean(o.due_at&&Date.now()<new Date(o.due_at).getTime())} onClick={()=>void run("task.complete",{id:o.id})}>Complete</button>}
+     {o.status==="in_progress"&&<>
+       <button type="button" disabled={Boolean(o.due_at&&Date.now()<new Date(o.due_at).getTime())}
+        onClick={()=>void run(game.tasks.find(t=>t.title===o.title)?.completion_type==="timer"?"task.complete":"task.review.request",{id:o.id})}>
+        {game.tasks.find(t=>t.title===o.title)?.completion_type==="timer"?"Complete":"Submit for review"}
+       </button>
+     </>}
     </div>)}</section>
     <section style={{...style,marginBottom:16}}><h2><Dices size={20} style={{display:"inline"}}/> Dice terminal</h2><p>Cryptographically generated and permanently recorded on the server.</p>
      <label>Die <select value={dice} onChange={e=>setDice(Number(e.target.value))}>{[4,6,8,10,12,20,100].map(n=><option value={n} key={n}>d{n}</option>)}</select></label>{" "}
@@ -87,6 +93,12 @@ export default function ReclamationPage(){
        <button type="button" onClick={()=>void run("project.finalize",{id:p.id})}>Complete phase and open next sector</button>}
     </article>)}
    </section>
+   {!!game.reviewQueue?.length&&<section style={style}><h2>Work waiting for DM verification</h2>
+    {game.reviewQueue.map(w=><article key={w.id} style={{padding:"9px 0",borderBottom:"1px solid #34404b"}}>
+     <strong>{w.title}</strong> · {w.member_name}<p>{w.moderator_note}</p>
+     <button type="button" onClick={()=>void run("task.review.approve",{id:w.id})}>Approve and award XP / pay</button>
+    </article>)}
+   </section>}
    {game.overseer&&<section style={style}><h2>Overseer: work-order editor</h2><p>Treasury: {format(game.overseer.treasury)} CC</p><label>Existing work orders <select value={editingTask?.id||""} onChange={e=>{const found=(game.overseer?.taskTemplates||[]).find((t:Task&{version?:number;status?:string})=>t.id===e.target.value) as (Task&{version?:number;status?:string})|undefined;if(!found){setEditingTask(null);setTask({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});return;}setEditingTask({id:found.id,version:found.version||1,status:found.status||"published"});setTask({title:found.title,profession:found.profession_id||"carpenter",description:found.description||"",completionType:found.completion_type,minutes:found.duration_minutes,xp:found.character_xp,skillXp:found.profession_xp,pay:Number(found.pay_credits)});}}><option value="">Create new task</option>{(game.overseer.taskTemplates||[]).map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label><form onSubmit={addTask} style={{display:"grid",gap:12,maxWidth:640}}>
     <label>Task title <input required value={task.title} onChange={e=>setTask({...task,title:e.target.value})}/></label>
     <label>Profession <select value={task.profession} onChange={e=>setTask({...task,profession:e.target.value})}>{professions.map(p=><option key={p}>{p}</option>)}</select></label>
