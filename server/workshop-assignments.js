@@ -116,10 +116,29 @@ export async function answerWorkshopReminder(db,b,guild){
  const name=(await member(db,guild,b.user_id)).name;
  await db.query("insert into con.compound_profiles(discord_id,display_name) values($1,$2) on conflict(discord_id) do nothing",[b.user_id,name.slice(0,80)]);
  const profile=(await db.query(`update con.compound_profiles set xp=least(1000000,xp+$2),
- manual_xp=manual_xp+$2,updated_at=now() where discord_id=$1 returning xp`,[b.user_id,a.xp_reward])).rows[0];
- await db.query(`insert into con.compound_progress_events(source_key,discord_id,source,description,xp_delta,details)
- values($1,$2,'workshop',$3,$4,$5::jsonb) on conflict(source_key) do nothing`,
- ['workshop:exclusive:'+a.post_id,b.user_id,p.title,a.xp_reward,JSON.stringify({job_id:a.post_id,credits:a.salary_credits,confirmed_by:b.user_id})]);
+ manual_xp=manual_xp+$2,
+ skill=case when $3='skill' then least(100,skill+$4) else skill end,
+ charisma=case when $3='charisma' then least(100,charisma+$4) else charisma end,
+ intellect=case when $3='intellect' then least(100,intellect+$4) else intellect end,
+ luck=case when $3='luck' then least(100,luck+$4) else luck end,
+ updated_at=now() where discord_id=$1 returning xp`,
+ [b.user_id,a.xp_reward,p.attribute,p.attribute_reward])).rows[0];
+ // Existing Reclamation characters train their chosen profession too; no
+ // character is silently created for residents who have not enrolled yet.
+ const character=(await db.query("select id from con.game_characters where discord_id=$1 for update",[b.user_id])).rows[0];
+ if(character){
+  await db.query("update con.game_characters set xp=xp+$2 where id=$1",[character.id,a.xp_reward]);
+  const profession=(await db.query("select profession_id from con.workshop_job_rotations where channel_id=$1",[p.channel_id])).rows[0]?.profession_id;
+  if(profession)await db.query(`insert into con.game_character_skills(character_id,profession_id,xp)
+  values($1,$2,$3) on conflict(character_id,profession_id)
+  do update set xp=con.game_character_skills.xp+excluded.xp`,[character.id,profession,a.xp_reward]);
+ }
+ await db.query(`insert into con.compound_progress_events
+ (source_key,discord_id,source,description,xp_delta,charisma_delta,intellect_delta,details)
+ values($1,$2,'workshop',$3,$4,$5,$6,$7::jsonb) on conflict(source_key) do nothing`,
+ ['workshop:exclusive:'+a.post_id,b.user_id,p.title,a.xp_reward,
+ p.attribute==='charisma'?p.attribute_reward:0,p.attribute==='intellect'?p.attribute_reward:0,
+ JSON.stringify({job_id:a.post_id,credits:a.salary_credits,attribute:p.attribute,attribute_reward:p.attribute_reward,confirmed_by:b.user_id})]);
  // Tools are checked back in after completion. Consumables remain deducted.
  const stock=(await db.query("select id from con.game_storage where storage_type='warehouse' order by id limit 1 for update")).rows[0];
  for(const [item,qty] of Object.entries(a.issued_items||{})){
@@ -129,5 +148,5 @@ export async function answerWorkshopReminder(db,b,guild){
  await db.query("update con.workshop_assignments set state='completed',completed_at=now(),updated_at=now() where post_id=$1",[a.post_id]);
  await db.query(`insert into con.game_audit(actor,action,entity,entity_id,after_state)
  values($1,'workshop.complete','workshop_job',$2,$3::jsonb)`,[b.user_id,a.post_id,JSON.stringify({credits:a.salary_credits,xp:a.xp_reward})]);
- return {ok:true,completed:true,title:p.title,credits:a.salary_credits,xp:a.xp_reward,total_xp:profile.xp};
+ return {ok:true,completed:true,title:p.title,credits:a.salary_credits,xp:a.xp_reward,attribute:p.attribute,attribute_reward:p.attribute_reward,total_xp:profile.xp};
 }
