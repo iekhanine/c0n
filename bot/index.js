@@ -490,6 +490,10 @@ async function main() {
         }],
       });
       await registerTrivia(guild);
+      await guild.commands.create({
+        name:"profile",description:"View your public Compound membership card and character stats",
+        options:[{name:"member",description:"Optional member to view",type:6,required:false}],
+      });
       // Trivia channels are managed by staff; do not auto-create on restart.
       client.user.setActivity("cultofnixon.com", {
         type: ActivityType.Watching,
@@ -560,6 +564,14 @@ async function main() {
   client.on(Events.MessageCreate, (m) => {
     if (m.guildId === guildId && !m.author.bot && !m.webhookId)
       recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
+    // Mentioning the bot with "profile" returns the user's single-page card.
+    if(m.guildId===guildId && !m.author.bot && m.mentions.has(client.user) &&
+       /^\s*<@!?\d+>\s+profile\s*[.!?]?\s*$/i.test(m.content||"")){
+      run(()=>m.reply({
+        content:"https://thecompound.cultofnixon.com/u/"+m.author.id,
+        allowedMentions:{parse:[],repliedUser:false},
+      }));
+    }
     const record = activityRecord(m, allowedIds, publicIds, guildId);
     if (record) {
       if (pending.size >= 10000) pending.delete(pending.keys().next().value);
@@ -567,6 +579,14 @@ async function main() {
     }
   });
   client.on(Events.InteractionCreate, (i) => {
+    if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="profile"){
+      run(()=>i.reply({
+        content:"https://thecompound.cultofnixon.com/u/"+(i.options.getUser("member")?.id||i.user.id),
+        flags:MessageFlags.Ephemeral,allowedMentions:{parse:[]},
+      }));
+      return;
+    }
+
     if(i.guildId===guildId && ((i.isChatInputCommand()&&i.commandName==="trivia")||
       (i.isButton()&&i.customId.startsWith("trivia:")))){
       run(()=>handleTrivia(i,send));return;
