@@ -17,6 +17,7 @@ import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js"
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
+import { buildProfileCard, buildPreviewCard } from "./profile.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -490,6 +491,11 @@ async function main() {
         }],
       });
       await registerTrivia(guild);
+      await guild.commands.create({
+        name:"profile",
+        description:"View your Compound membership card and character stats",
+        options:[{name:"member",description:"Optional Discord member to view",type:6,required:false}],
+      });
       // Trivia channels are managed by staff; do not auto-create on restart.
       client.user.setActivity("cultofnixon.com", {
         type: ActivityType.Watching,
@@ -557,9 +563,32 @@ async function main() {
     if (reactionConfig)
       run(() => handleRoleReaction(guild, reactionConfig, reaction, user, true));
   });
+  // The production website may not have deployed its signed profile endpoint
+  // yet. Fall back to an unmistakably labeled preview instead of fake stats.
+  async function compoundCard(user) {
+    try {
+      const result=await send({kind:"profile_lookup",guild_id:guildId,user_id:user.id});
+      if (result?.not_found) return {content:"No active Compound resident profile was found.",allowedMentions:{parse:[]}};
+      if (result?.member && result?.stats) return buildProfileCard(result);
+    } catch(e) {
+      console.info("Compound profile database lookup unavailable; showing preview",{code:e.status||e.code||"unavailable"});
+    }
+    return buildPreviewCard(user);
+  }
   client.on(Events.MessageCreate, (m) => {
     if (m.guildId === guildId && !m.author.bot && !m.webhookId)
       recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
+    if(m.guildId===guildId&&!m.author.bot&&m.mentions.has(client.user)&&
+       /^\s*<@!?\d+>\s+profile\s*[.!?]?\s*$/i.test(m.content||"")){
+      run(async()=>{
+        const payload=await compoundCard({
+          id:m.author.id,username:m.author.username,globalName:m.author.globalName,
+          displayName:m.member?.displayName,
+          avatarURL:m.author.displayAvatarURL({extension:"png",size:128}),
+        });
+        return m.reply({...payload,allowedMentions:{parse:[],repliedUser:false}});
+      });
+    }
     const record = activityRecord(m, allowedIds, publicIds, guildId);
     if (record) {
       if (pending.size >= 10000) pending.delete(pending.keys().next().value);
@@ -567,6 +596,21 @@ async function main() {
     }
   });
   client.on(Events.InteractionCreate, (i) => {
+    if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="profile"){
+      run(async()=>{
+        await i.deferReply({flags:MessageFlags.Ephemeral});
+        const selected=i.options.getUser("member")||i.user;
+        const serverMember=i.options.getMember("member")||i.member;
+        const payload=await compoundCard({
+          id:selected.id,username:selected.username,globalName:selected.globalName,
+          displayName:serverMember?.displayName,
+          avatarURL:selected.displayAvatarURL({extension:"png",size:128}),
+        });
+        return i.editReply(payload);
+      });
+      return;
+    }
+
     if(i.guildId===guildId && ((i.isChatInputCommand()&&i.commandName==="trivia")||
       (i.isButton()&&i.customId.startsWith("trivia:")))){
       run(()=>handleTrivia(i,send));return;
