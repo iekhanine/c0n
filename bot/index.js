@@ -17,6 +17,7 @@ import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js"
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
+import { handleDice, registerDice } from "./dice.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
 import { fetchReadOnlyProfile } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
@@ -492,6 +493,7 @@ async function main() {
         }],
       });
       await registerTrivia(guild);
+      await registerDice(guild);
       await guild.commands.create({
         name:"profile",
         description:"View your Compound membership card and character stats",
@@ -606,6 +608,9 @@ async function main() {
     }
   });
   client.on(Events.InteractionCreate, (i) => {
+    if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="roll"){
+      run(()=>handleDice(i));return;
+    }
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="profile"){
       run(async()=>{
         await i.deferReply({flags:MessageFlags.Ephemeral});
