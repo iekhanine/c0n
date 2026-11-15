@@ -16,7 +16,6 @@ import {
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
-import FacilityPage from "../../FacilityPage";
 import {NavigationEditor} from "../../PublicNavigation";
 import DiscordFontTool from "./DiscordFontTool";
 import ProjectApprovals from "./ProjectApprovals";
@@ -31,6 +30,7 @@ import Reports from "./Reports";
 import "./Publishing.css";
 import "./Workflow.css";
 type Tab =
+  | "overview"
   | "update"
   | "project"
   | "webhooks"
@@ -61,7 +61,7 @@ export default function Publishing({
   channelIds: string[];
 }) {
   const allowed = (tab: Tab) =>
-    ({
+    tab === "overview" ? true : ({
       projectReports:
         owner ||
         (permissions.includes("projects.publish") &&
@@ -80,11 +80,17 @@ export default function Publishing({
       reports: permissions.includes("reports.view"),
       database: permissions.includes("database.manage"),
     })[tab];
-  const [tab, setTab] = useState<Tab>(
-    (
-      ["update", "project", "reports", "webhooks", "staff", "database"] as Tab[]
-    ).find((t) => allowed(t)) || "reports",
-  );
+  const initialPage = (): Tab => {
+    const slug = window.location.pathname.replace(/\/$/, "").split("/")[2] || "overview";
+    const match = (["overview", "update", "project", "approvals", "categories", "reports", "projectReports", "webhooks", "staff", "database", "discord", "games", "navigation", "font", "audit"] as Tab[]).find(t => t === slug);
+    return match || "overview";
+  };
+  const [tab, setTab] = useState<Tab>(initialPage);
+  useEffect(() => {
+    const onPop = () => setTab(initialPage());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const [status, setStatus] = useState<StorageStatus | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -105,26 +111,26 @@ export default function Publishing({
   }, []);
   function choose(next: Tab) {
     if (dirty && !window.confirm("Discard unsaved post changes?")) return;
+    window.history.pushState(null, "", next === "overview" ? "/admin" : "/admin/" + next);
     setTab(next);
     setDirty(false);
     setNotice("");
     setError("");
   }
-  const items: [Tab, string, typeof Radio][] = [
-    ["update", "Updates", Radio],
-    ["project", "Featured projects", Terminal],
-    ["approvals", "Project approvals", CheckSquare],
-    ["categories", "Creator categories", Layers],
-    ["reports", "Publishing reports", BarChart3],
-    ["projectReports", "Reported projects", BarChart3],
-    ["webhooks", "Publishing webhooks", Hash],
-    ["staff", "Staff approval", Users],
-    ["database", "Database", Database],
-    ["discord", "Discord bot", Radio],
-    ["games", "Compound games", Gamepad2],
-    ["navigation", "Navigation", ListOrdered],
-    ["font", "Discord text generator", Type],
-    ["audit", "Content audit & restore", History],
+  const groups: { title: string; items: [Tab, string, typeof Radio][] }[] = [
+    { title: "COMMAND CENTER", items: [["overview", "Overview", BarChart3]] },
+    { title: "COMMUNITY WEBSITE", items: [
+      ["update", "Transmissions", Radio], ["project", "Featured projects", Terminal],
+      ["approvals", "Project approvals", CheckSquare], ["categories", "Creator categories", Layers],
+      ["navigation", "Site navigation", ListOrdered], ["audit", "Content history", History],
+      ["projectReports", "Project reports", BarChart3], ["reports", "Publishing reports", BarChart3]
+    ] },
+    { title: "THE COMPOUND", items: [["games", "Game management", Gamepad2]] },
+    { title: "DISCORD BOT", items: [
+      ["discord", "Bot configuration", Radio], ["webhooks", "Publishing channels", Hash],
+      ["font", "Text generator", Type]
+    ] },
+    { title: "SYSTEM & ACCESS", items: [["staff", "Staff permissions", Users], ["database", "Database health", Database]] },
   ];
   async function storage(update = false) {
     setBusy(true);
@@ -150,20 +156,21 @@ export default function Publishing({
       aria-label="Community publishing"
     >
       <nav className="con-tool-tabs" aria-label="Admin tools">
-        <span className="con-sidebar-label">WORKSPACE</span>
-        {items
-          .filter(([key]) => allowed(key))
-          .map(([key, label, Icon]) => (
-            <button
-              title={label}
-              key={key}
-              aria-current={tab === key ? "page" : undefined}
-              onClick={() => choose(key)}
-            >
-              <Icon size={20} />
-              <span>{label}</span>
-            </button>
-          ))}
+        {groups.map((group) => {
+          const visible = group.items.filter(([key]) => allowed(key));
+          if (!visible.length) return null;
+          return <div key={group.title} className="con-nav-group">
+            <span className="con-sidebar-label">{group.title}</span>
+            {visible.map(([key, label, Icon]) => (
+              <a key={key} href={key === "overview" ? "/admin" : "/admin/" + key}
+                aria-current={tab === key ? "page" : undefined}
+                onClick={e => { e.preventDefault(); choose(key); }}
+                title={label}>
+                <Icon size={18} /> <span>{label}</span>
+              </a>
+            ))}
+          </div>;
+        })}
         <div className="con-sidebar-footer">
           <span className="con-online-dot" />
           Community control<small>BUILD. SHARE. SHIP.</small>
@@ -204,7 +211,14 @@ export default function Publishing({
           {notice}
         </p>
       )}
-      {!permissions.length ? (
+      {tab === "overview" ? (
+        <div className="con-admin-overview"><h2>Choose a system to manage</h2><div className="con-admin-systems">
+          <a href="/admin/update"><strong>Community website</strong><span>Posts, projects, navigation, moderation and content history</span></a>
+          <a href="https://thecompound.cultofnixon.com/"><strong>The Compound</strong><span>Resident profiles, apartments, assignments and progression</span></a>
+          <a href="/admin/discord"><strong>Discord bot</strong><span>Bot configuration, channel connections and tools</span></a>
+          <a href="/admin/staff"><strong>System access</strong><span>Staff approvals, permissions and database health</span></a>
+        </div></div>
+      ) : !permissions.length ? (
         <div className="con-surface con-tool-empty">
           Your account is approved, but no tools have been enabled. Ask an
           administrator to update your permissions.
@@ -224,7 +238,7 @@ export default function Publishing({
       ) : tab === "discord" ? (
         <DiscordExplorer />
       ) : tab === "games" ? (
-        <FacilityPage control />
+        <div className="con-database-panel"><h2>The Compound</h2><p>Game administration has a dedicated application and data model.</p><a className="con-primary" href="https://thecompound.cultofnixon.com/">Open Compound administration</a><p>Legacy facility controls remain available at <a href="/facility/control">Facility controls</a>.</p></div>
       ) : tab === "navigation" ? (
         <NavigationEditor />
       ) : tab === "database" || !status?.initialized || status.needs_upgrade ? (
