@@ -6,6 +6,6 @@ import Admin from './features/admin/Admin.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {window.location.pathname.replace(/\/$/, '') === '/admin' ? <Admin /> : <App />}
+    {(window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/')) ? <Admin /> : <App />}
   </StrictMode>,
 )
