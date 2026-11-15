@@ -86,9 +86,10 @@ export async function login(req, res) {
   try {
     const c = client();
     const state = oauth.generateRandomState();
+    const next = new URL(req.url, ORIGIN).searchParams.get("next") === "compound" ? "compound" : "site";
     res.setHeader(
       "Set-Cookie",
-      serialize(STATE, await seal({ state }, 600), { ...options, maxAge: 600 }),
+      serialize(STATE, await seal({ state, next }, 600), { ...options, maxAge: 600 }),
     );
     const url = new URL(as.authorization_endpoint);
     url.search = new URLSearchParams({
@@ -112,7 +113,7 @@ export async function discordCallback(req, res) {
   try {
     const saved = cookies(req)[STATE];
     if (!saved) throw new Error("Missing state cookie");
-    const { state } = await unseal(saved);
+    const { state, next } = await unseal(saved);
     if (typeof state !== "string") throw new Error("Invalid state");
     const c = client();
     const parameters = oauth.validateAuthResponse(
@@ -159,7 +160,7 @@ export async function discordCallback(req, res) {
       serialize(STATE, "", { ...options, maxAge: 0 }),
       serialize(SESSION, session, { ...options, maxAge: seconds }),
     ]);
-    redirect(res, "/");
+    redirect(res, next === "compound" ? "https://thecompound.cultofnixon.com/" : "/");
   } catch {
     // Do not log the callback URL, authorization code, token or cookie.
     console.error("Discord OAuth callback rejected");
