@@ -136,9 +136,11 @@ export async function handleTrivia(i,send){
       await replySafe(i,"This question has closed.");return true;
     }
     const votes=s.answers[round];
-    if(votes.has(i.user.id)){await replySafe(i,"You already answered this question.");return true;}
+    // Acknowledge the button without creating an ephemeral confirmation
+    // that players need to dismiss. The shared question message stays in place.
+    if(votes.has(i.user.id)){await i.deferUpdate();return true;}
     votes.set(i.user.id,{choice,name:(i.member?.displayName||i.user.globalName||i.user.username).slice(0,80)});
-    await replySafe(i,"Answer recorded. Results are revealed when time expires.");
+    await i.deferUpdate();
     return true;
   }
   return false;
