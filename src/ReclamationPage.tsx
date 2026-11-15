@@ -7,7 +7,7 @@ type Game={character:Character|null;tasks:Task[];projects:{id:string;title:strin
 const fields=["strength","intelligence","charisma","agility","endurance","perception"] as const;
 const professions=["carpenter","metalworker","medic","farmer","engineer","scavenger"];
 async function request<T>(action:string,method="GET",data?:unknown):Promise<T>{
- const response=await fetch("/api/reclamation?action="+encodeURIComponent(action),{method,cache:"no-store",headers:data?{"Content-Type":"application/json"}:undefined,body:data?JSON.stringify(data):undefined});
+ const response=await fetch("/api/social?action=game_"+encodeURIComponent(action),{method,cache:"no-store",headers:data?{"Content-Type":"application/json"}:undefined,body:data?JSON.stringify(data):undefined});
  const body=await response.json();if(!response.ok)throw Error(body.error||"Game server unavailable");return body as T;
 }
 const format=(n:number|string)=>Number(n).toLocaleString("en-US");
