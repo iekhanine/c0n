@@ -11,13 +11,9 @@ function val(value) {
   const n=Number(value);
   return Number.isFinite(n) ? Math.max(0,Math.round(n)) : 0;
 }
-function meter(value,maximum=100,segments=10) {
-  const amount=Math.min(segments,Math.max(0,Math.round(val(value)/Math.max(1,maximum)*segments)));
-  return "▰".repeat(amount)+"▱".repeat(segments-amount);
-}
 function point(value) { return val(value).toLocaleString("en-US"); }
 function stat(name,value,icon) {
-  return { name:icon+"  "+name, value:"**"+point(value)+"**\n"+meter(value),inline:true };
+  return { name:icon+"  "+name, value:"**"+point(value)+" / 100**",inline:true };
 }
 function safeUrl(discordId) {
   if(!/^\d{17,20}$/.test(String(discordId)))throw Error("Invalid Discord user.");
@@ -46,7 +42,7 @@ export function buildProfileCard(payload) {
     .setTitle("✦  "+title)
     .setDescription(memberText+"\n🏠  **"+home+"**")
     .addFields(
-      {name:"⬡  LEVEL "+point(level),value:"**"+point(xp)+" XP**  ·  "+meter(toward,milestone)+"  "+point(toward)+"/250",inline:false},
+      {name:"⬡  LEVEL "+point(level),value:"**"+point(xp)+" XP**  ·  **"+point(toward)+" / 250** toward next level",inline:false},
       stat("HEALTH",p.health,"♥"),
       stat("STAMINA",p.stamina,"⚡"),
       stat("SKILL",p.skill,"⚔"),
@@ -85,8 +81,8 @@ export function buildPreviewCard(user) {
   .setThumbnail(icon)
   .setDescription("**PROFILE PREVIEW**  ·  Live character data not connected yet\n🏠  **Apartment:** Pending database connection\nMembership: Pending database connection")
   .addFields(
-   {name:"⬡  LEVEL",value:"**—**\n**— XP**  ·  ▱▱▱▱▱▱▱▱▱▱",inline:false},
-   ...["♥  HEALTH","⚡  STAMINA","⚔  SKILL","✦  CHARISMA","◈  INTELLECT","✧  LUCK"].map(name=>({name,value:"**—**\n▱▱▱▱▱▱▱▱▱▱",inline:true}))
+   {name:"⬡  LEVEL",value:"**XP: Not available**",inline:false},
+   ...["♥  HEALTH","⚡  STAMINA","⚔  SKILL","✦  CHARISMA","◈  INTELLECT","✧  LUCK"].map(name=>({name,value:"**Not available**",inline:true}))
   )
   .setFooter({text:"PREVIEW ONLY  •  Character data will appear after the Compound backend release",iconURL:LOGO});
  const components=[new ActionRowBuilder().addComponents(
