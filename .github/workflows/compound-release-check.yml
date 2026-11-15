@@ -1,0 +1,38 @@
+name: Compound Release Checks
+on:
+  pull_request:
+    paths:
+      - "bot/**"
+      - "server/compound.js"
+      - "server/discord-bot.js"
+      - "compound/**"
+      - "tests/compound-progression.test.js"
+      - ".github/workflows/compound-release-check.yml"
+  workflow_dispatch:
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: node --check index.js && node --check profile.js && node --test trivia.test.js profile.test.js
+  compound:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: node --check server/compound.js && node --check server/discord-bot.js
+      - run: node --test tests/compound-progression.test.js

@@ -17,6 +17,7 @@ import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js"
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
+import { buildProfileCard } from "./profile.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -490,6 +491,10 @@ async function main() {
         }],
       });
       await registerTrivia(guild);
+      await guild.commands.create({
+        name:"profile",description:"View your public Compound membership card and character stats",
+        options:[{name:"member",description:"Optional member to view",type:6,required:false}],
+      });
       // Trivia channels are managed by staff; do not auto-create on restart.
       client.user.setActivity("cultofnixon.com", {
         type: ActivityType.Watching,
@@ -560,6 +565,20 @@ async function main() {
   client.on(Events.MessageCreate, (m) => {
     if (m.guildId === guildId && !m.author.bot && !m.webhookId)
       recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
+    // Mentioning the bot with "profile" returns the user's single-page card.
+    if(m.guildId===guildId && !m.author.bot && m.mentions.has(client.user) &&
+       /^\s*<@!?\d+>\s+profile\s*[.!?]?\s*$/i.test(m.content||"")){
+      run(async()=>{
+        try {
+          const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:m.author.id});
+          if(profile.not_found)return m.reply({content:"No active Compound resident profile was found.",allowedMentions:{parse:[],repliedUser:false}});
+          return m.reply({...buildProfileCard(profile),allowedMentions:{parse:[],repliedUser:false}});
+        }catch(e){
+          console.warn("Compound profile lookup unavailable",{code:e.status||e.code||"unknown"});
+          return m.reply({content:"The Compound profile service is temporarily unavailable.",allowedMentions:{parse:[],repliedUser:false}});
+        }
+      });
+    }
     const record = activityRecord(m, allowedIds, publicIds, guildId);
     if (record) {
       if (pending.size >= 10000) pending.delete(pending.keys().next().value);
@@ -567,6 +586,22 @@ async function main() {
     }
   });
   client.on(Events.InteractionCreate, (i) => {
+    if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="profile"){
+      run(async()=>{
+        await i.deferReply({flags:MessageFlags.Ephemeral});
+        try {
+          const userId=i.options.getUser("member")?.id||i.user.id;
+          const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:userId});
+          if(profile.not_found)return i.editReply({content:"No active Compound resident profile was found."});
+          return i.editReply(buildProfileCard(profile));
+        }catch(e){
+          console.warn("Compound profile lookup unavailable",{code:e.status||e.code||"unknown"});
+          return i.editReply({content:"The Compound profile service is temporarily unavailable."});
+        }
+      });
+      return;
+    }
+
     if(i.guildId===guildId && ((i.isChatInputCommand()&&i.commandName==="trivia")||
       (i.isButton()&&i.customId.startsWith("trivia:")))){
       run(()=>handleTrivia(i,send));return;
