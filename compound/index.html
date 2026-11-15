@@ -32,7 +32,7 @@ document.getElementById("app").className="";
 document.getElementById("app").innerHTML='<div class="login"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div class="eyebrow">CULT OF NIX0N / THE COMPOUND</div><h1>Enter The Compound</h1><p>Sign in with your existing Discord identity. Apartment assignments, characters, and approvals are saved to the real C0N database, not browser storage.</p><a class="btn primary" href="https://cultofnixon.com/api/auth/discord/login?next=compound">Continue with Discord</a><p class="hint">You will authorize through cultofnixon.com and return here automatically. Existing C0N session holders can simply refresh.</p>'+(error?'<p class="notice error">'+esc(error)+'</p>':'')+'</div>';
 }
 function attr(key,value){return '<div class="attribute"><strong>'+num(value)+'</strong><span>'+esc(key)+'</span>'+(key==="XP"?'':'<div class="meter"><i style="width:'+Math.max(0,Math.min(100,Number(value)))+'%"></i></div>')+'</div>'}
-async function overview(){const a=await call("apartments"),r=await call("requests");let home=me.home?.apartment_id||"Unassigned";return head("Welcome to The Compound","Your resident overview, progression and active housing status.")+
+async function overview(){const a=await call("apartments"),r=await call("requests");let home=me.home?.apartment_id||"The Unhoused";return head("Welcome to The Compound","Your resident overview, progression and active housing status.")+
  '<div class="grid"><div class="panel"><div class="eyebrow">YOUR APARTMENT</div><div class="stat">'+esc(home)+'</div><p>Permanent until an approved move</p><a href="/apartments" class="btn">View the building</a></div><div class="panel"><div class="eyebrow">EXPERIENCE POINTS</div><div class="stat">'+num(me.profile.xp)+'</div><p>Level '+num(me.profile.level)+'</p><a href="/profile" class="btn">Character sheet</a></div><div class="panel"><div class="eyebrow">HOUSING REQUESTS</div><div class="stat">'+num(r.requests.filter(x=>x.status==="pending"&&x.requester_id===me.user.id).length)+'</div><p>Requests awaiting decisions</p><a href="/requests" class="btn">View requests</a></div><div class="panel"><div class="eyebrow">OCCUPIED UNITS</div><div class="stat">'+a.apartments.filter(x=>x.occupants.length).length+' / 32</div><p>Real resident assignments</p><a href="/apartments" class="btn">Browse floors</a></div></div>'+
  '<div class="panel space"><h2>Community systems</h2><p>The Compound is distinct from the community website and Discord bot. Each has its own management tools and access rules.</p><div class="row"><a class="btn" href="https://cultofnixon.com/">Community website</a><a class="btn" href="https://cultofnixon.com/admin/discord">Discord bot admin</a></div></div>';
 }
@@ -58,11 +58,14 @@ async function publicProfile(id){
  const data=await response.json();if(!response.ok)throw Error(data.error||"Resident unavailable");
  const m=data.member,p=data.stats;
  const identity=m.membership;
+ const date=identity?.joined_at?new Date(identity.joined_at):null;
+ const memberCode=identity?.codename&&date&&!Number.isNaN(date.getTime())?
+  identity.codename.replace(/\\s+/g,"").toUpperCase()+"-"+String(date.getMonth()+1).padStart(2,"0")+date.getFullYear()+"-"+identity.member_no.slice(-4):null;
  document.title=(identity?.codename||m.display_name)+" | The Compound";
  return '<main class="public-sheet" aria-label="Public character profile">'+
  '<section class="public-card" aria-label="Membership card">'+
  '<div class="public-card-top"><img src="https://cultofnixon.com/con-logo.png" alt="Cult of nix0n"><div>CULT OF NIX0N<div class="muted">THE COMPOUND / MEMBERSHIP</div></div></div>'+
- '<div><h1>'+esc(identity?.codename||m.display_name)+'</h1><div class="muted">'+(identity?'VERIFIED MEMBER · #'+esc(identity.member_no):'COMPOUND RESIDENT · MEMBERSHIP NOT ISSUED')+'</div></div>'+
+ '<div><h1>'+esc(identity?.codename||m.display_name)+'</h1><div class="muted">'+(identity?'VERIFIED MEMBER · '+esc(memberCode||identity.member_no):'COMPOUND RESIDENT · MEMBERSHIP NOT ISSUED')+'</div></div>'+
  '<div class="public-card-bottom"><div><span class="eyebrow">APARTMENT</span><div><strong>'+esc(m.apartment)+'</strong></div></div><div><span class="eyebrow">RESIDENT</span><div><strong>'+esc(m.display_name)+'</strong></div></div></div></section>'+
  '<section class="panel public-stats" aria-label="Character statistics"><div class="row"><h2>Character Stats</h2><span class="tag">LEVEL '+num(p.level)+'</span></div>'+
  '<div class="attributes">'+[["XP",p.xp],["Health",p.health],["Stamina",p.stamina],["Skill",p.skill],["Charisma",p.charisma],["Intellect",p.intellect],["Luck",p.luck]].map(x=>attr(...x)).join("")+'</div></section></main>';
