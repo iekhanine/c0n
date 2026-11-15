@@ -21,7 +21,7 @@ export function drawQuestions(bank=QUESTION_BANK,count=ROUND_COUNT,random= n=>ra
   if(!Number.isInteger(count)||count<1||count>bank.length)throw Error("Invalid question count");
   const copy=[...bank];
   for(let i=copy.length-1;i>0;i--){const j=random(i+1);[copy[i],copy[j]]=[copy[j],copy[i]];}
-  return copy.slice(0,count);
+  return copy.slice(0,count).map(q=>({...q,options:[...q.options]}));
 }
 export function scorePlayers(rounds,answers){
   const participants=new Map();
