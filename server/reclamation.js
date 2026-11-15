@@ -22,7 +22,7 @@ async function snapshot(pool,discordId,owner){
    from con.game_task_templates where status='published' order by profession_id,title limit 150`),
   pool.query("select id,title,phase,state,requirements,progress from con.game_projects order by phase"),
   pool.query(`select a.balance from con.game_accounts a join con.game_characters c on a.character_id=c.id where c.discord_id=$1`,[discordId]),
-  pool.query(`select w.id,w.status,w.accepted_at,w.due_at,w.completed_at,w.template_snapshot->>'title' as title
+  pool.query(`select w.id,w.status,w.accepted_at,w.due_at,w.completed_at,w.template_snapshot->>'title' as title,w.template_snapshot->>'completion_type' as completion_type
    from con.game_work_orders w join con.game_characters c on c.id=w.character_id
    where c.discord_id=$1 order by w.accepted_at desc limit 40`,[discordId]),
   pool.query("select key,value from con.game_settings where key in ('rules','story')")
