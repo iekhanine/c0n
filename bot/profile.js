@@ -63,7 +63,7 @@ export function buildProfileCard(payload) {
     embed.setThumbnail(LOGO);
   }
   const row=new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Open Full Profile").setEmoji("↗").setURL(href)
+    new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Open Full Profile").setEmoji("🔗").setURL(href)
   );
   return {embeds:[embed],components:[row],allowedMentions:{parse:[]}};
 }
