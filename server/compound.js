@@ -254,7 +254,7 @@ export default async function compoundHandler(req,res) {
   if(req.method==="GET") {
    if(action==="me"){
     const {rows:[home]}=await db.query("SELECT apartment_id,assigned_at FROM con.compound_residency WHERE discord_id=$1",[session.user.id]);
-    return json(res,200,{user:session.user,profile:current,home:home||null,is_admin:isAdmin});
+    return json(res,200,{user:session.user,profile:current,home:home||null,is_admin:isAdmin,is_overseer:access.owner===true});
    }
    if(action==="history"){
     const {rows}=await db.query("SELECT source,description,xp_delta,charisma_delta,intellect_delta,details,occurred_at FROM con.compound_progress_events WHERE discord_id=$1 ORDER BY occurred_at DESC,source_key DESC LIMIT 100",[session.user.id]);
@@ -295,7 +295,7 @@ export default async function compoundHandler(req,res) {
   }
   const body=typeof req.body==="string"?JSON.parse(req.body||"{}"):req.body||{};
   if(JSON.stringify(body).length>5000)bad(413,"Request too large.");
-  if(action==="claim" || action==="request" || action==="consent" || action==="decision" || action==="adjust" || action==="rules" || action==="apartment" || action==="place" || action==="unassign"){
+  if(action==="claim" || action==="request" || action==="consent" || action==="decision" || action==="adjust" || action==="stats" || action==="rules" || action==="apartment" || action==="place" || action==="unassign"){
    const client=await db.connect();
    try {
     await client.query("BEGIN");
@@ -373,6 +373,39 @@ export default async function compoundHandler(req,res) {
         if(body.approve!==true){await client.query("UPDATE con.compound_requests SET status='denied',decided_at=now() WHERE id=$1",[q.id]);await audit(client,session.user.id,"housing.denied",q.requester_id,{request_id:q.id});}
         else{await client.query("UPDATE con.compound_requests SET staff_approved=true WHERE id=$1",[q.id]);q.staff_approved=true;result.finalized=await finalize(client,q,session.user.id);}
       }
+    } else if(action==="stats"){
+      // Only the Overseer may replace the complete stat sheet of another resident.
+      if(access.owner!==true)bad(403,"Overseer permission required.");
+      if(!snowflake(body.discord_id))bad(400,"Invalid member ID.");
+      const fields=["xp","health","stamina","skill","charisma","intellect","luck"];
+      const values=body.values;
+      if(!values||typeof values!=="object"||Array.isArray(values)||Object.keys(values).length!==fields.length||fields.some(f=>!Object.prototype.hasOwnProperty.call(values,f)))bad(400,"All seven character statistics are required.");
+      for(const f of fields){
+        const value=values[f],max=f==="xp"?1000000:100;
+        if(!Number.isInteger(value)||value<0||value>max)bad(400,"Invalid "+f+". Values must be between 0 and "+max+".");
+      }
+      const previous=(await client.query("SELECT xp,health,stamina,skill,charisma,intellect,luck,activity_xp,trivia_xp FROM con.compound_profiles WHERE discord_id=$1 FOR UPDATE",[body.discord_id])).rows[0];
+      if(!previous)bad(404,"Resident not found.");
+      const changed=fields.filter(f=>Number(previous[f])!==values[f]);
+      if(changed.length){
+        // Preserve auto-earned XP; manual_xp is the offset needed for the requested total.
+        await client.query(`UPDATE con.compound_profiles SET
+         xp=$2,manual_xp=$2-activity_xp-trivia_xp,
+         health=$3,stamina=$4,skill=$5,charisma=$6,intellect=$7,luck=$8,updated_at=now()
+         WHERE discord_id=$1`,[body.discord_id,...fields.map(f=>values[f])]);
+        for(const field of changed){
+          const delta=values[field]-Number(previous[field]);
+          await client.query(`INSERT INTO con.compound_progress_events
+           (source_key,discord_id,source,description,xp_delta,charisma_delta,intellect_delta,details)
+           VALUES($1,$2,'admin',$3,$4,$5,$6,$7)`,[
+           "admin:"+randomUUID(),body.discord_id,"Overseer set "+field.toUpperCase(),
+           field==="xp"?delta:0,field==="charisma"?delta:0,field==="intellect"?delta:0,
+           JSON.stringify({field,previous:Number(previous[field]),current:values[field],actor_id:session.user.id,mode:"absolute"})
+          ]);
+        }
+        await audit(client,session.user.id,"profile.stats_set",body.discord_id,{before:Object.fromEntries(fields.map(f=>[f,previous[f]])),after:values,changed});
+      }
+      result={ok:true,changed,stats:values,level:1+Math.floor(values.xp/250)};
     } else if(action==="adjust"){
       if(!isAdmin)bad(403,"Staff access required.");
       if(!snowflake(body.discord_id))bad(400,"Invalid member ID.");
