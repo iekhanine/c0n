@@ -8,6 +8,7 @@ import { ORIGIN, json, readSession, accessFor } from "./auth.js";
 import { database, initializeDatabase } from "./db.js";
 import { requireMembership } from "./membership.js";
 import { discordMigration } from "./discord-schema.js";
+import { ensureCompoundSchema, applyTriviaResults } from "./compound.js";
 import { verifyBridge, canonicalJson } from "../shared/discord-signing.js";
 import {
   ensureControl,
@@ -210,6 +211,7 @@ async function acceptSync(db, s, b, headers) {
       "participation_check",
       "server_stats",
       "membership_roles",
+      "trivia_result",
     ].includes(b.kind)
   )
     fail(400, "Unknown worker event.");
@@ -217,6 +219,7 @@ async function acceptSync(db, s, b, headers) {
     fail(403, "Wrong Discord server.");
   if (b.kind.startsWith("control_")) await ensureControl(db);
   if (b.kind.startsWith("participation") || b.kind === "server_stats") await ensureParticipation(db);
+  if (b.kind === "trivia_result") await ensureCompoundSchema(db);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -241,6 +244,11 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    if (b.kind === "trivia_result") {
+      const result = await applyTriviaResults(db,client,b);
+      await client.query("COMMIT");
+      return {...result,guild_id:s.guild_id};
     }
     if (b.kind === "membership_roles") {
       // Never expose invitation codes or private membership metadata to the worker.
