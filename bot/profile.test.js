@@ -45,7 +45,8 @@ test("preview uses the actual Discord identity without inventing XP or character
  const preview=buildPreviewCard({id:member,displayName:"Test Resident"});
  const embed=preview.embeds[0].toJSON();
  assert.match(embed.title,/Test Resident/);
- assert.match(embed.description,/PROFILE PREVIEW/);
+ assert.doesNotMatch(embed.description,/PROFILE PREVIEW|Live character data not connected yet/);
+ assert.doesNotMatch(embed.footer?.text||"",/PREVIEW ONLY|Character data will appear/);
  assert.match(embed.description,/Pending database connection/);
  assert.equal(embed.fields.length,7);
  for(const field of embed.fields)assert.match(field.value,/Not available/);
