@@ -54,17 +54,18 @@ export async function updateTask(pool,overseerId,templateId,form){
  if(!types.includes(form.completionType)||!states.includes(form.status))throw Error("Invalid task type or status");
  const minutes=asInt(form.minutes,0,10080,"time"),xp=asInt(form.xp,0,100000,"XP"),
  skill=asInt(form.skillXp,0,100000,"profession XP"),pay=asInt(form.pay,0,1000000000,"pay");
- const stamina=asInt(form.staminaCost??0,0,100,"stamina");
+ const stamina=form.staminaCost==null?null:asInt(form.staminaCost,0,100,"stamina");
  if(!Number.isSafeInteger(form.version)||form.version<1)throw Error("Task version required");
  return withTransaction(pool,async db=>{
   const previous=await db.query("select * from con.game_task_templates where id=$1 for update",[templateId]);
   if(!previous.rowCount)throw Error("Unknown task");
   if(previous.rows[0].version!==form.version)throw Error("Task changed; refresh before saving");
   const p=previous.rows[0];
+  const staminaForUpdate=stamina===null?p.stamina_cost:stamina;
   const r=await db.query(`update con.game_task_templates
    set title=$2,description=$3,profession_id=$4,completion_type=$5,duration_minutes=$6,
    character_xp=$7,profession_xp=$8,pay_credits=$9,stamina_cost=$10,status=$11,version=version+1,updated_at=now()
-   where id=$1 returning *`,[templateId,form.title.trim(),String(form.description??"").slice(0,3000),form.profession||null,form.completionType,minutes,xp,skill,pay,stamina,form.status]);
+   where id=$1 returning *`,[templateId,form.title.trim(),String(form.description??"").slice(0,3000),form.profession||null,form.completionType,minutes,xp,skill,pay,staminaForUpdate,form.status]);
   await db.query("insert into con.game_audit(actor,action,entity,entity_id,before_state,after_state) values($1,'task.update','task',$2,$3,$4)",[overseerId,templateId,JSON.stringify(p),JSON.stringify(r.rows[0])]);
   return r.rows[0];
  });
