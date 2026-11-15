@@ -1,6 +1,7 @@
 // Tabletop dice for voice-session text chat. No XP or credits issued by /roll.
 import { randomInt } from "node:crypto";
 import { MessageFlags } from "discord.js";
+import { fetchReadOnlyProfile } from "./profile-db.js";
 export const SIDES=[4,6,8,10,12,20,100];
 export function rollTabletop({sides=20,count=1,modifier=0}={}){
  if(!SIDES.includes(sides))throw Error("Unsupported die");
@@ -21,6 +22,10 @@ export async function registerDice(guild){
   ]
  });
 }
+export function rollDisplayName({codename,serverDisplayName,globalName,username}={}){
+ const candidate=[codename,serverDisplayName,globalName,username].find(v=>typeof v==="string"&&v.trim());
+ return String(candidate||"Compound Resident").replace(/[\u0000-\u001f\u007f]/g," ").replace(/[@*_~\x60<>|\\]/g,"").trim().slice(0,70)||"Compound Resident";
+}
 export async function handleDice(interaction){
  if(!interaction.isChatInputCommand()||interaction.commandName!=="roll")return false;
  try{
@@ -29,10 +34,24 @@ export async function handleDice(interaction){
   const modifier=interaction.options.getInteger("modifier")??0;
   const reason=(interaction.options.getString("reason")||"Ability check").replace(/[@*_~`<>|]/g,"").slice(0,140);
   const roll=rollTabletop({sides,count,modifier});
+  // Codename comes from the existing read-only public profile, never from user input.
+  let codename=null;
+  try {
+    const profile=await fetchReadOnlyProfile(interaction.user.id);
+    codename=profile?.member?.membership?.verified===true?profile.member.membership.codename:null;
+  } catch(e) {
+    console.warn("Dice codename unavailable, using server display name",{code:e?.code||"lookup"});
+  }
+  const displayName=rollDisplayName({
+    codename,
+    serverDisplayName:interaction.member?.displayName||interaction.member?.nick,
+    globalName:interaction.user.globalName,
+    username:interaction.user.username
+  });
   const formula=roll.count+"d"+roll.sides+(modifier<0?String(modifier):modifier>0?"+"+modifier:"");
   const output=[
     "🎲 **THE COMPOUND / TABLETOP**",
-    "**"+interaction.user.username.replace(/[\r\n]/g,"").slice(0,50)+"** · "+reason,
+    "**"+displayName+"** · "+reason,
     "`"+formula+"` → ["+roll.faces.join(", ")+"] "+(modifier?" "+(modifier>0?"+":"")+modifier:"")+" = **"+roll.total+"**",
     "_Discord roll only. Campaign rewards require DM and Overseer approval._"
   ].join("\n");
