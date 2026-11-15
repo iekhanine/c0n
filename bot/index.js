@@ -311,12 +311,19 @@ async function main() {
       heartbeatBusy = false;
     }
   }
-  let workshopBusy=false;
+  let workshopBusy=false,workshopApiBackoffUntil=0;
   async function rotateWorkshop(){
-    if(state!=="ready"||!guild||workshopBusy)return;
+    if(state!=="ready"||!guild||workshopBusy||Date.now()<workshopApiBackoffUntil)return;
     workshopBusy=true;
     try{await runWorkshopJobs(guild,send);}
-    catch(e){console.warn("Workshop objective rotation temporarily unavailable",{code:e.status||e.code||"posting"});}
+    catch(e){
+      if(e.status===400||e.status===404){
+        // The older C0N deployment does not yet recognize signed Workshop
+        // actions. The Supabase cron/webhook fallback runs in the meantime.
+        workshopApiBackoffUntil=Date.now()+3600000;
+      }
+      console.warn("Workshop signed API temporarily unavailable",{code:e.status||e.code||"posting"});
+    }
     finally{workshopBusy=false;}
   }
   let controlBusy = false,
