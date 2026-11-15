@@ -50,6 +50,13 @@ async function schema(db) {
  CREATE TABLE IF NOT EXISTS con.compound_audit (
  id uuid PRIMARY KEY, actor_id text NOT NULL, action text NOT NULL, subject_id text,
  details jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now());
+ ALTER TABLE con.compound_profiles ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_rules ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_apartments ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_residency ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_requests ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE con.compound_audit ENABLE ROW LEVEL SECURITY;
+ REVOKE ALL ON con.compound_profiles,con.compound_rules,con.compound_apartments,con.compound_residency,con.compound_requests,con.compound_audit FROM PUBLIC, anon, authenticated;
 `);
  await db.query("INSERT INTO con.compound_apartments(id,floor,unit) SELECT 'F'||f||'-0'||n,f,n FROM generate_series(1,4) AS f CROSS JOIN generate_series(1,8) AS n ON CONFLICT DO NOTHING");
 }
