@@ -1,0 +1,23 @@
+name: Railway Read-only Profile Checks
+on:
+  pull_request:
+    paths:
+      - "bot/**"
+      - ".github/workflows/railway-profile-checks.yml"
+  workflow_dispatch:
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+      - run: npm ci --omit=dev --ignore-scripts
+      - run: node --check index.js && node --check profile-db.js
+      - run: node --test trivia.test.js profile.test.js profile-db.test.js
