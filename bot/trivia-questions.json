@@ -233,7 +233,7 @@
     {
       "id": "tc_1409",
       "category": "year",
-      "question": "In what year did regular Boeing 707 flights begin across he Atlantic?",
+      "question": "In what year did regular Boeing 707 flights begin across the Atlantic?",
       "options": [
         "1958",
         "1960",
@@ -413,7 +413,7 @@
     {
       "id": "tc_637",
       "category": "director",
-      "question": "Who directed Good Morning Vietnam?",
+      "question": "Who directed Good Morning, Vietnam?",
       "options": [
         "David Lean",
         "Elia Kazan",
@@ -595,7 +595,7 @@
       "category": "author",
       "question": "Who wrote Riders of the Purple Sage?",
       "options": [
-        "Zane Gray",
+        "Zane Grey",
         "Richard Adams",
         "Ursula Le Guin",
         "Alan Paton"
@@ -669,7 +669,7 @@
       "options": [
         "Mario Puzo",
         "Harold Robbins",
-        "Zane Gray",
+        "Zane Grey",
         "Ursula Le Guin"
       ],
       "correct": 0
@@ -716,7 +716,7 @@
       "question": "Who wrote the novel The Left Hand Of Darkness?",
       "options": [
         "Ursula Le Guin",
-        "Zane Gray",
+        "Zane Grey",
         "Mario Puzo",
         "Henry James"
       ],
@@ -897,7 +897,7 @@
       "options": [
         "Eddie Murphy",
         "Marlon Brando",
-        "Ted Neely",
+        "Ted Neeley",
         "Harrison Ford"
       ],
       "correct": 3
@@ -946,7 +946,7 @@
         "Ted Danson",
         "Marlon Brando",
         "Daniel Day-Lewis",
-        "Angelica Houston"
+        "Anjelica Huston"
       ],
       "correct": 3
     },
@@ -968,7 +968,7 @@
       "question": "Who played the title role in the film version of Jesus Christ Superstar?",
       "options": [
         "Michael Troughton",
-        "Ted Neely",
+        "Ted Neeley",
         "Harrison Ford",
         "Ken Howard"
       ],
@@ -1006,7 +1006,7 @@
         "Ken Howard",
         "Gwyneth Paltrow",
         "William Shatner",
-        "Ted Neely"
+        "Ted Neeley"
       ],
       "correct": 0
     },
@@ -1018,7 +1018,7 @@
         "Eddie Murphy",
         "Jane Seymour",
         "Gene Anthony Ray",
-        "Angelica Houston"
+        "Anjelica Huston"
       ],
       "correct": 2
     },
@@ -1073,7 +1073,7 @@
     {
       "id": "tc_2107",
       "category": "actor",
-      "question": "Which actress was Roger Moor's first Bond girl?",
+      "question": "Which actress was Roger Moore's first Bond girl?",
       "options": [
         "Jane Seymour",
         "Charlie Sheen",
@@ -1157,12 +1157,12 @@
     {
       "id": "tc_332",
       "category": "singer",
-      "question": "Who sang the Bond theme form From Russia With Love?",
+      "question": "Who sang the Bond theme from From Russia With Love?",
       "options": [
-        "Dinah Shore",
+        "Nancy Sinatra",
         "Matt Monro",
-        "William DeVries",
-        "Petula Clark"
+        "Graham Nash",
+        "Gladys Knight"
       ],
       "correct": 1
     },
@@ -1171,8 +1171,8 @@
       "category": "singer",
       "question": "Who sang the title song for the Bond film You Only Live Twice?",
       "options": [
-        "Joni Mitchell",
         "Matt Monro",
+        "Graham Nash",
         "Nancy Sinatra",
         "Gladys Knight"
       ],
@@ -1183,9 +1183,9 @@
       "category": "singer",
       "question": "Who sang with Crosby, Stills and Young?",
       "options": [
-        "Johnny Horton",
+        "Matt Monro",
         "Nancy Sinatra",
-        "Petula Clark",
+        "Gladys Knight",
         "Graham Nash"
       ],
       "correct": 3
