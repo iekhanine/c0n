@@ -80,7 +80,7 @@ begin
     (r.objectives->>(r.cycle%jsonb_array_length(r.objectives)))||chr(10)||chr(10)||
     '🏅 **Salary: '||(r.xp_reward*10)||' Compound Credits · +'||r.xp_reward||' XP**'||chr(10)||
     '⏱️ **Shift: minimum '||r.min_minutes||' minutes**'||chr(10)||
-    '**ACCEPT THIS JOB:** Type `[x]` as a message in this channel. The FIRST resident to accept gets the exclusive assignment.'||chr(10)||
+    '**ACCEPT THIS JOB:** Type `accept` as a message in this channel. The FIRST resident to accept gets the exclusive assignment.'||chr(10)||
     'The Overseer issues the required tools and supplies from the Compound stockroom and tells you where to report.'||chr(10)||
     'After your shift, the bot will ping you. Answer **Yes, completed** to collect your salary and XP, or **Not yet** for more time.'||chr(10)||
     'Only confirmed assigned work earns the job bonus. New objectives rotate daily.'||chr(10)||chr(10)||
