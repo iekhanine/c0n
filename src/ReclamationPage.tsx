@@ -1,7 +1,7 @@
 import { useEffect,useState,type FormEvent } from "react";
 import { Dices, BriefcaseBusiness, Hammer, Wallet, Shield, RefreshCw } from "lucide-react";
 import ReclamationSystems from "./ReclamationSystems";
-type Task={id:string;title:string;description:string;profession_id:string|null;completion_type:string;duration_minutes:number;character_xp:number;profession_xp:number;pay_credits:string|number;stamina_cost:number;materials:Record<string,number>};
+type Task={version?:number;status?:string;id:string;title:string;description:string;profession_id:string|null;completion_type:string;duration_minutes:number;character_xp:number;profession_xp:number;pay_credits:string|number;stamina_cost:number;materials:Record<string,number>};
 type Order={id:string;status:string;title:string;due_at:string|null};
 type Character={id:string;name:string;profession_id:string;level:number;xp:string|number;health:number;stamina:number;attributes:Record<string,number>;skills:Record<string,number>};
 type Game={character:Character|null;tasks:Task[];projects:{id:string;title:string;phase:number;state:string;requirements:Record<string,number>;progress:Record<string,number>}[];wallet:string;orders:Order[];settings:{rules?:{allocation_points?:number;starting_attribute?:number;starting_max?:number};story?:{stage:string}};overseer?:{treasury:string;taskTemplates:Task[]}};
@@ -18,6 +18,7 @@ export default function ReclamationPage(){
  const [attrs,setAttrs]=useState<Record<string,number>>({strength:5,intelligence:5,charisma:5,agility:5,endurance:5,perception:5});
  const [dice,setDice]=useState(20),[modifier,setModifier]=useState(0),[diceResult,setDiceResult]=useState<{faces:number[];total:number}|null>(null);
  const [task,setTask]=useState({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});
+ const [editingTask,setEditingTask]=useState<{id:string;version:number;status:string}|null>(null);
  const load=async()=>{try{setGame(await request<Game>("state"));setError("")}catch(e){setError((e as Error).message)}finally{setPending(false)}};
  useEffect(()=>{void load()},[]);
  const run=async(action:string,data:unknown)=>{setNotice("");setError("");try{const response=await request<{result:unknown}>(action,"POST",data);setNotice("Action completed.");if(action==="dice.roll")setDiceResult(response.result as {faces:number[];total:number});await load()}catch(e){setError((e as Error).message)}};
@@ -27,7 +28,7 @@ export default function ReclamationPage(){
  const remaining=points-Object.values(attrs).reduce((s,v)=>s+v-base,0);
  function changeAttr(key:string,delta:number){setAttrs(old=>{const value=old[key]+delta;if(value<base||value>max||(delta>0&&remaining<=0))return old;return {...old,[key]:value}})}
  function register(e:FormEvent){e.preventDefault();if(remaining!==0)return;void run("character.create",{name,profession,attributes:attrs})}
- function addTask(e:FormEvent){e.preventDefault();void run("task.publish",task)}
+ function addTask(e:FormEvent){e.preventDefault();void run(editingTask?"task.update":"task.publish",editingTask?{...task,...editingTask}:task)}
  const style={background:"#151b22",border:"1px solid #34404b",borderRadius:8,padding:18} as const;
  return <div style={{maxWidth:1160,margin:"24px auto",padding:"0 16px",color:"#e5ebf1",fontFamily:"inherit"}}>
   <header style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap",marginBottom:20}}>
@@ -67,13 +68,14 @@ export default function ReclamationPage(){
     </section>
    </>}
    <section style={{...style,marginBottom:16}}><h2>Restoration milestones</h2>{game.projects.map(p=><p key={p.id}><b>{p.title}</b> · {p.state} · Phase {p.phase}</p>)}</section>
-   {game.overseer&&<section style={style}><h2>Overseer: work-order editor</h2><p>Treasury: {format(game.overseer.treasury)} CC</p><form onSubmit={addTask} style={{display:"grid",gap:12,maxWidth:640}}>
+   {game.overseer&&<section style={style}><h2>Overseer: work-order editor</h2><p>Treasury: {format(game.overseer.treasury)} CC</p><label>Existing work orders <select value={editingTask?.id||""} onChange={e=>{const found=(game.overseer?.taskTemplates||[]).find((t:Task&{version?:number;status?:string})=>t.id===e.target.value) as (Task&{version?:number;status?:string})|undefined;if(!found){setEditingTask(null);setTask({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});return;}setEditingTask({id:found.id,version:found.version||1,status:found.status||"published"});setTask({title:found.title,profession:found.profession_id||"carpenter",description:found.description||"",completionType:found.completion_type,minutes:found.duration_minutes,xp:found.character_xp,skillXp:found.profession_xp,pay:Number(found.pay_credits)});}}><option value="">Create new task</option>{(game.overseer.taskTemplates||[]).map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label><form onSubmit={addTask} style={{display:"grid",gap:12,maxWidth:640}}>
     <label>Task title <input required value={task.title} onChange={e=>setTask({...task,title:e.target.value})}/></label>
     <label>Profession <select value={task.profession} onChange={e=>setTask({...task,profession:e.target.value})}>{professions.map(p=><option key={p}>{p}</option>)}</select></label>
     <label>Description <input value={task.description} onChange={e=>setTask({...task,description:e.target.value})}/></label>
     <label>Completion <select value={task.completionType} onChange={e=>setTask({...task,completionType:e.target.value})}>{["timer","quiz","dice","collaborative","dm_approval"].map(p=><option key={p}>{p}</option>)}</select></label>
     {([["minutes","Duration (minutes)"],["xp","Character XP"],["skillXp","Profession XP"],["pay","Payment (CC)"]] as const).map(([k,label])=><label key={k}>{label} <input type="number" min={0} max={k==="minutes"?10080:k==="pay"?1000000000:100000} value={task[k]} onChange={e=>setTask({...task,[k]:Number(e.target.value)})}/></label>)}
-    <button type="submit">Publish new task</button>
+    {editingTask&&<label>Task status <select value={editingTask.status} onChange={e=>setEditingTask({...editingTask,status:e.target.value})}>{["draft","published","paused","retired"].map(x=><option key={x}>{x}</option>)}</select></label>}
+    <button type="submit">{editingTask?"Save changes":"Publish new task"}</button>
    </form></section>}
    <ReclamationSystems game={game} run={run}/>
   </>}
