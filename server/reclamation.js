@@ -27,6 +27,21 @@ async function snapshot(pool,discordId,owner){
   pool.query("select key,value from con.game_settings where key in ('rules','story')")
  ]);
  const result={character:c.rows[0]||null,tasks:t.rows,projects:p.rows,wallet:w.rows[0]?.balance||"0",orders:a.rows,settings:Object.fromEntries(settings.rows.map(x=>[x.key,x.value]))};
+
+ const [storage,recipes,crafting,campaigns,dm,world]=await Promise.all([
+  pool.query("select s.storage_type,s.capacity,a.label apartment,i.item_id,it.name item_name,i.quantity from con.game_storage s left join con.game_apartments a on a.id=s.apartment_id left join con.game_inventory i on i.storage_id=s.id left join con.game_items it on it.id=i.item_id where s.storage_type='warehouse' or s.owner_character_id=(select id from con.game_characters where discord_id=$1) or s.apartment_id=(select a2.id from con.game_apartments a2 join con.compound_residency r on r.apartment_id=a2.legacy_apartment_id where r.discord_id=$1) order by s.storage_type,i.item_id",[discordId]),
+  pool.query("select id,title,profession_id,ingredients,products,duration_minutes,xp from con.game_recipes where status='published' order by profession_id,title"),
+  pool.query("select o.id,o.state,o.ready_at,r.title from con.game_crafting_orders o join con.game_recipes r on r.id=o.recipe_id join con.game_characters c on c.id=o.character_id where c.discord_id=$1 order by o.started_at desc limit 30",[discordId]),
+  pool.query("select id,title,synopsis,dm_discord_id,state from con.game_campaigns where state in ('active','paused') or dm_discord_id=$1 order by updated_at desc limit 60",[discordId]),
+  pool.query("select enabled from con.game_dungeon_masters where discord_id=$1",[discordId]),
+  pool.query("select id,title,description,event_type,location_id,published_at from con.game_world_events where state='published' order by published_at desc limit 30")
+ ]);
+ result.storage=storage.rows;
+ result.recipes=recipes.rows;
+ result.crafting=crafting.rows;
+ result.campaigns=campaigns.rows;
+ result.dungeonMaster=owner||dm.rows[0]?.enabled===true;
+ result.worldEvents=world.rows;
  if(owner){
   const [treasury,allTasks]=await Promise.all([
    pool.query("select balance from con.game_accounts where account_type='treasury'"),
