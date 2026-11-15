@@ -17,6 +17,7 @@ import { handleRoleReaction, reconcileRoleReactions } from "./reaction-roles.js"
 import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./onboarding.js";
 import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
+import { buildProfileCard } from "./profile.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -567,10 +568,11 @@ async function main() {
     // Mentioning the bot with "profile" returns the user's single-page card.
     if(m.guildId===guildId && !m.author.bot && m.mentions.has(client.user) &&
        /^\s*<@!?\d+>\s+profile\s*[.!?]?\s*$/i.test(m.content||"")){
-      run(()=>m.reply({
-        content:"https://thecompound.cultofnixon.com/u/"+m.author.id,
-        allowedMentions:{parse:[],repliedUser:false},
-      }));
+      run(async()=>{
+        const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:m.author.id});
+        if(profile.not_found)return m.reply({content:"No active Compound resident profile was found.",allowedMentions:{parse:[],repliedUser:false}});
+        return m.reply({...buildProfileCard(profile),allowedMentions:{parse:[],repliedUser:false}});
+      });
     }
     const record = activityRecord(m, allowedIds, publicIds, guildId);
     if (record) {
@@ -580,10 +582,13 @@ async function main() {
   });
   client.on(Events.InteractionCreate, (i) => {
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="profile"){
-      run(()=>i.reply({
-        content:"https://thecompound.cultofnixon.com/u/"+(i.options.getUser("member")?.id||i.user.id),
-        flags:MessageFlags.Ephemeral,allowedMentions:{parse:[]},
-      }));
+      run(async()=>{
+        await i.deferReply({flags:MessageFlags.Ephemeral});
+        const userId=i.options.getUser("member")?.id||i.user.id;
+        const profile=await send({kind:"profile_lookup",guild_id:guildId,user_id:userId});
+        if(profile.not_found)return i.editReply({content:"No active Compound resident profile was found."});
+        return i.editReply(buildProfileCard(profile));
+      });
       return;
     }
 
