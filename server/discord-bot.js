@@ -10,6 +10,7 @@ import { requireMembership } from "./membership.js";
 import { discordMigration } from "./discord-schema.js";
 import { ensureCompoundSchema, applyTriviaResults, publicCompoundProfile } from "./compound.js";
 import { verifyBridge, canonicalJson } from "../shared/discord-signing.js";
+import {workshopPoll,workshopPosted,workshopStart,workshopComplete} from "./workshop-jobs.js";
 import {
   ensureControl,
   controlRequest,
@@ -213,6 +214,10 @@ async function acceptSync(db, s, b, headers) {
       "membership_roles",
       "trivia_result",
       "profile_lookup",
+      "workshop_jobs_poll",
+      "workshop_jobs_posted",
+      "workshop_job_start",
+      "workshop_job_complete",
     ].includes(b.kind)
   )
     fail(400, "Unknown worker event.");
@@ -220,7 +225,7 @@ async function acceptSync(db, s, b, headers) {
     fail(403, "Wrong Discord server.");
   if (b.kind.startsWith("control_")) await ensureControl(db);
   if (b.kind.startsWith("participation") || b.kind === "server_stats") await ensureParticipation(db);
-  if (b.kind === "trivia_result" || b.kind === "profile_lookup") await ensureCompoundSchema(db);
+  if (b.kind === "trivia_result" || b.kind === "profile_lookup" || b.kind === "workshop_job_complete") await ensureCompoundSchema(db);
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -245,6 +250,14 @@ async function acceptSync(db, s, b, headers) {
       const result = await controlSync(client, s, b);
       await client.query("COMMIT");
       return { ...result, guild_id: s.guild_id };
+    }
+    if (b.kind.startsWith("workshop_")) {
+      const result=b.kind==="workshop_jobs_poll" ? await workshopPoll(client)
+       : b.kind==="workshop_jobs_posted" ? await workshopPosted(client,b)
+       : b.kind==="workshop_job_start" ? await workshopStart(client,b)
+       : await workshopComplete(client,b);
+      await client.query("COMMIT");
+      return {...result,guild_id:s.guild_id};
     }
     if (b.kind === "profile_lookup") {
       if (!snowflake(b.user_id)) fail(400,"Invalid profile lookup.");
