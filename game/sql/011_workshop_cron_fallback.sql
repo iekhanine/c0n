@@ -53,8 +53,8 @@ begin
  -- Queue one edition per due channel. The first eight are all due together.
  for r in select ro.* from con.workshop_job_rotations ro
    where not ro.active and ro.next_at<=now()
-   and not exists(select 1 from con.workshop_job_posts p
-    where p.channel_id=ro.channel_id and p.cycle=ro.cycle)
+   and not exists(select 1 from con.workshop_job_posts existing
+    where existing.channel_id=ro.channel_id and existing.cycle=ro.cycle)
    order by ro.stagger_minutes for update skip locked
  loop
   if not exists(select 1 from con.webhooks w where w.channel_id=r.channel_id and w.enabled) then
