@@ -54,7 +54,8 @@ async function rules(){const d=await call("rules");const r=d.rules;
 return head("XP & activity rules","Real Discord participation events feed character XP. Daily caps limit farming and spam.")+'<div class="panel"><h2>Activity XP policy</h2><form id="rules-form" class="inline-form">'+[["message_xp","XP per message"],["reaction_xp","XP per reaction"],["daily_message_cap","Daily message cap"],["daily_reaction_cap","Daily reaction cap"]].map(([name,label])=>'<label class="field">'+label+'<input required type="number" min="0" max="500" name="'+name+'" value="'+num(r[name])+'"></label>').join("")+'<button class="primary" type="submit">Save XP rules</button></form><p class="hint space">Existing participation events are counted once, from the connected C0N Discord server. The new policy takes effect when a character is refreshed.</p></div>'}
 async function audit(){const d=await call("audit");return head("Audit history","Recorded actions for apartment claims, transfers, approvals and progression changes.")+(d.events.length?table(["Date","Actor Discord ID","Event","Subject","Details"],d.events.map(e=>'<tr><td>'+esc(new Date(e.created_at).toLocaleString())+'</td><td>'+esc(e.actor_id)+'</td><td>'+esc(e.action)+'</td><td>'+esc(e.subject_id||"")+'</td><td><code>'+esc(JSON.stringify(e.details))+'</code></td></tr>')):'<div class="empty">No activity has been recorded.</div>')}
 async function publicProfile(id){
- const data=await call("public_profile&id="+encodeURIComponent(id));
+ const response=await fetch(API+"?action=compound_public_profile&id="+encodeURIComponent(id),{credentials:"include",cache:"no-store"});
+ const data=await response.json();if(!response.ok)throw Error(data.error||"Resident unavailable");
  const m=data.member,p=data.stats;
  const identity=m.membership;
  document.title=(identity?.codename||m.display_name)+" | The Compound";
