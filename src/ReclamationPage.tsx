@@ -17,6 +17,7 @@ export default function ReclamationPage(){
  const [name,setName]=useState(""),[profession,setProfession]=useState("carpenter");
  const [attrs,setAttrs]=useState<Record<string,number>>({strength:5,intelligence:5,charisma:5,agility:5,endurance:5,perception:5});
  const [dice,setDice]=useState(20),[modifier,setModifier]=useState(0),[diceResult,setDiceResult]=useState<{faces:number[];total:number}|null>(null);
+ const [donations,setDonations]=useState<Record<string,number>>({});
  const [task,setTask]=useState({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});
  const [editingTask,setEditingTask]=useState<{id:string;version:number;status:string}|null>(null);
  const load=async()=>{try{setGame(await request<Game>("state"));setError("")}catch(e){setError((e as Error).message)}finally{setPending(false)}};
@@ -67,7 +68,25 @@ export default function ReclamationPage(){
      {diceResult&&<p role="status">Rolled {diceResult.faces.join(", ")} · Total <strong>{diceResult.total}</strong></p>}
     </section>
    </>}
-   <section style={{...style,marginBottom:16}}><h2>Restoration milestones</h2>{game.projects.map(p=><p key={p.id}><b>{p.title}</b> · {p.state} · Phase {p.phase}</p>)}</section>
+   <section style={{...style,marginBottom:16}}><h2>Restoration milestones</h2>
+    <p>Complete paid jobs to earn work units. Deliver salvaged materials from your carry inventory to advance construction.</p>
+    {game.projects.map(p=><article key={p.id} style={{borderBottom:"1px solid #34404b",padding:"14px 0"}}>
+     <strong>{p.title}</strong> <small>Phase {p.phase} · {p.state}</small>
+     {Object.entries(p.requirements||{}).map(([item,needed])=>{
+       const current=Number(p.progress?.[item]||0),remaining=Math.max(0,Number(needed)-current);
+       return <div key={item} style={{display:"flex",alignItems:"center",gap:10,margin:"7px 0",flexWrap:"wrap"}}>
+        <span style={{minWidth:220}}>{item.replaceAll("_"," ")}: {current}/{needed}</span>
+        <progress value={current} max={Number(needed)} />
+        {game.character&&p.state==="active"&&item!=="work_units"&&remaining>0&&<>
+          <input type="number" aria-label={item+" donation quantity"} min={1} max={remaining} style={{width:78}} value={donations[p.id+":"+item]||1} onChange={e=>setDonations({...donations,[p.id+":"+item]:Number(e.target.value)})}/>
+          <button type="button" onClick={()=>void run("project.contribute",{projectId:p.id,item,quantity:donations[p.id+":"+item]||1})}>Donate</button>
+        </>}
+       </div>
+     })}
+     {game.overseer&&p.state==="active"&&Object.entries(p.requirements||{}).every(([item,n])=>Number(p.progress?.[item]||0)>=Number(n))&&
+       <button type="button" onClick={()=>void run("project.finalize",{id:p.id})}>Complete phase and open next sector</button>}
+    </article>)}
+   </section>
    {game.overseer&&<section style={style}><h2>Overseer: work-order editor</h2><p>Treasury: {format(game.overseer.treasury)} CC</p><label>Existing work orders <select value={editingTask?.id||""} onChange={e=>{const found=(game.overseer?.taskTemplates||[]).find((t:Task&{version?:number;status?:string})=>t.id===e.target.value) as (Task&{version?:number;status?:string})|undefined;if(!found){setEditingTask(null);setTask({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});return;}setEditingTask({id:found.id,version:found.version||1,status:found.status||"published"});setTask({title:found.title,profession:found.profession_id||"carpenter",description:found.description||"",completionType:found.completion_type,minutes:found.duration_minutes,xp:found.character_xp,skillXp:found.profession_xp,pay:Number(found.pay_credits)});}}><option value="">Create new task</option>{(game.overseer.taskTemplates||[]).map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label><form onSubmit={addTask} style={{display:"grid",gap:12,maxWidth:640}}>
     <label>Task title <input required value={task.title} onChange={e=>setTask({...task,title:e.target.value})}/></label>
     <label>Profession <select value={task.profession} onChange={e=>setTask({...task,profession:e.target.value})}>{professions.map(p=><option key={p}>{p}</option>)}</select></label>
