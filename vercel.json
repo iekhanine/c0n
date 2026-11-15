@@ -38,6 +38,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/admin/:section/:subsection",
+      "destination": "/index.html"
+    },
+    {
       "source": "/projects",
       "destination": "/index.html"
     },
