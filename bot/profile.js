@@ -67,3 +67,30 @@ export function buildProfileCard(payload) {
   );
   return {embeds:[embed],components:[row],allowedMentions:{parse:[]}};
 }
+
+
+/**
+ * A visually faithful card when the website's signed profile lookup endpoint
+ * has not yet been deployed. Never show invented XP, apartment, or membership.
+ */
+export function buildPreviewCard(user) {
+ const id=String(user?.id||"");
+ const url=safeUrl(id);
+ const title=clean(user?.displayName||user?.globalName||user?.username||"Discord Resident",90)||"Discord Resident";
+ const icon=typeof user?.avatarURL==="string"&&/^https:\/\/cdn\.discordapp\.com\/avatars\/\d{17,20}\/(?:a_)?[0-9a-f]{32}\.(?:png|gif|webp)(?:\?size=\d+)?$/.test(user.avatarURL)?user.avatarURL:LOGO;
+ const embed=new EmbedBuilder()
+  .setColor(DEFAULT_COLOR)
+  .setAuthor({name:"CULT OF NIX0N  /  THE COMPOUND",iconURL:LOGO})
+  .setTitle("✦  "+title)
+  .setThumbnail(icon)
+  .setDescription("**PROFILE PREVIEW**  ·  Live character data not connected yet\n🏠  **Apartment:** Pending database connection\nMembership: Pending database connection")
+  .addFields(
+   {name:"⬡  LEVEL",value:"**—**\n**— XP**  ·  ▱▱▱▱▱▱▱▱▱▱",inline:false},
+   ...["♥  HEALTH","⚡  STAMINA","⚔  SKILL","✦  CHARISMA","◈  INTELLECT","✧  LUCK"].map(name=>({name,value:"**—**\n▱▱▱▱▱▱▱▱▱▱",inline:true}))
+  )
+  .setFooter({text:"PREVIEW ONLY  •  Character data will appear after the Compound backend release",iconURL:LOGO});
+ const components=[new ActionRowBuilder().addComponents(
+  new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Full Profile (pending release)").setEmoji("🔗").setURL(url)
+ )];
+ return {embeds:[embed],components,allowedMentions:{parse:[]}};
+}
