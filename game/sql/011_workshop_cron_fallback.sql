@@ -30,7 +30,7 @@ begin
      then r.launch_at+interval '24 hours'+make_interval(mins=>r.stagger_minutes)
      else r.next_at+interval '24 hours' end;
    -- Do not flood a backlog if the service was offline for several days.
-   v_next:=greatest(v_next,now()+interval '1 minute');
+   if v_next<=now() then v_next:=now()+interval '24 hours'; end if;
    update con.workshop_job_rotations set cycle=cycle+1,next_at=v_next,last_post_id=p.id,
     last_message_id=p.command_result->>'id',updated_at=now() where channel_id=p.channel_id;
    v_command:=gen_random_uuid();
@@ -49,6 +49,21 @@ begin
    raise warning 'Workshop webhook send failed for channel %: %',p.channel_id,
      (select error from con.discord_commands where id=p.fallback_command_id);
   end if;
+ end loop;
+ -- Retry failed pin attempts no more often than every 30 minutes.
+ -- Discord owners must grant PIN_MESSAGES to the bot; this function cannot do so.
+ for p in select post.id,post.channel_id,post.message_id
+  from con.workshop_job_posts post
+  join con.discord_commands cmd on cmd.id=post.fallback_pin_command_id
+  where post.state='posted' and post.message_id is not null
+   and cmd.state='failed' and cmd.created_at<now()-interval '30 minutes'
+ loop
+  v_command:=gen_random_uuid();
+  insert into con.discord_commands(id,guild_id,actor_id,actor_name,operation,payload)
+  values(v_command,v_guild,'267489014922215434','1van','messages.pin',
+   jsonb_build_object('channel_id',p.channel_id,'message_id',p.message_id,
+    'pinned',true,'reason','Retry pinning current daily Workshop objective'));
+  update con.workshop_job_posts set fallback_pin_command_id=v_command where id=p.id;
  end loop;
  -- Queue one edition per due channel. The first eight are all due together.
  for r in select ro.* from con.workshop_job_rotations ro
