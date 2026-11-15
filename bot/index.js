@@ -18,6 +18,7 @@ import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./
 import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
 import { handleDice, registerDice } from "./dice.js";
+import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
 import { fetchReadOnlyProfile } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
@@ -310,6 +311,14 @@ async function main() {
       heartbeatBusy = false;
     }
   }
+  let workshopBusy=false;
+  async function rotateWorkshop(){
+    if(state!=="ready"||!guild||workshopBusy)return;
+    workshopBusy=true;
+    try{await runWorkshopJobs(guild,send);}
+    catch(e){console.warn("Workshop objective rotation temporarily unavailable",{code:e.status||e.code||"posting"});}
+    finally{workshopBusy=false;}
+  }
   let controlBusy = false,
     receipt = null;
   async function commands() {
@@ -504,6 +513,7 @@ async function main() {
         type: ActivityType.Watching,
       });
       state = "ready";
+      run(rotateWorkshop);
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
       run(reconcileWelcomeReactions);
       run(checkProgress);
@@ -608,6 +618,10 @@ async function main() {
     }
   });
   client.on(Events.InteractionCreate, (i) => {
+    if(i.guildId===guildId&&(i.isButton()||i.isModalSubmit())&&i.customId.startsWith("workshop:")){
+      run(()=>handleWorkshopInteraction(i,send));return;
+    }
+
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="roll"){
       run(()=>handleDice(i));return;
     }
@@ -702,10 +716,12 @@ async function main() {
     progressTimer = setInterval(() => run(checkProgress), 3600000),
     membershipTimer = setInterval(() => run(syncMembershipRoles), 60000),
     controlTimer = setInterval(() => run(commands), 5000),
+    workshopTimer = setInterval(() => run(rotateWorkshop), 12000),
     statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId}))); }, 15 * 60 * 1000);
   const shutdown = async () => {
     state = "stopping";
     clearInterval(controlTimer);
+    clearInterval(workshopTimer);
     clearInterval(statsTimer);
     clearInterval(progressTimer);
     clearInterval(membershipTimer);
