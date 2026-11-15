@@ -67,7 +67,11 @@ const required = (op) =>
                     ? P.ManageNicknames
                     : P.ManageGuild;
 const botRequired = (op) =>
-  readOperation(op) && !op.startsWith("bans.") && !op.startsWith("webhooks.")
+  // Pin Messages can be granted at channel/category scope without being
+  // granted at server level. The messages.pin handler checks the effective
+  // permission for both the actor and bot on the target channel.
+  op === "messages.pin" ||
+  (readOperation(op) && !op.startsWith("bans.") && !op.startsWith("webhooks."))
     ? null
     : required(op);
 export const requiredPermissions = [
