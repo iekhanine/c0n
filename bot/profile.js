@@ -79,12 +79,12 @@ export function buildPreviewCard(user) {
   .setAuthor({name:"CULT OF NIX0N  /  THE COMPOUND",iconURL:LOGO})
   .setTitle("✦  "+title)
   .setThumbnail(icon)
-  .setDescription("**PROFILE PREVIEW**  ·  Live character data not connected yet\n  **Apartment:** Pending database connection\nMembership: Pending database connection")
+  .setDescription("  **Apartment:** Pending database connection\nMembership: Pending database connection")
   .addFields(
    {name:"⬡  LEVEL",value:"**XP: Not available**",inline:false},
    ...["♥  HEALTH","⚡  STAMINA","⚔  SKILL","✦  CHARISMA","◈  INTELLECT","✧  LUCK"].map(name=>({name,value:"**Not available**",inline:true}))
   )
-  .setFooter({text:"PREVIEW ONLY  •  Character data will appear after the Compound backend release",iconURL:LOGO});
+  .setFooter({text:"THE COMPOUND  •  CHARACTER RECORD",iconURL:LOGO});
  const components=[new ActionRowBuilder().addComponents(
   new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Full Profile (pending release)").setEmoji("🔗").setURL(url)
  )];
