@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readSession, accessFor, json } from "./auth.js";
 import { database } from "./db.js";
+import { hasActiveMembership } from "./membership.js";
 const GAME_ORIGIN = "https://thecompound.cultofnixon.com";
 class Fault extends Error { constructor(status, message) { super(message); this.status=status; } }
 const bad=(status,message)=>{throw new Fault(status,message);};
@@ -13,13 +14,21 @@ async function schema(db) {
  await db.query(`CREATE SCHEMA IF NOT EXISTS con;
  CREATE TABLE IF NOT EXISTS con.compound_profiles (
  discord_id text PRIMARY KEY, display_name text NOT NULL,
- xp integer NOT NULL DEFAULT 0 CHECK(xp>=0), health integer NOT NULL DEFAULT 100 CHECK(health BETWEEN 0 AND 100),
+ xp integer NOT NULL DEFAULT 0 CHECK(xp>=0), activity_xp integer NOT NULL DEFAULT 0, manual_xp integer NOT NULL DEFAULT 0, health integer NOT NULL DEFAULT 100 CHECK(health BETWEEN 0 AND 100),
  stamina integer NOT NULL DEFAULT 100 CHECK(stamina BETWEEN 0 AND 100),
  skill integer NOT NULL DEFAULT 5 CHECK(skill BETWEEN 0 AND 100),
  charisma integer NOT NULL DEFAULT 5 CHECK(charisma BETWEEN 0 AND 100),
  intellect integer NOT NULL DEFAULT 5 CHECK(intellect BETWEEN 0 AND 100),
  luck integer NOT NULL DEFAULT 5 CHECK(luck BETWEEN 0 AND 100),
  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+ ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS activity_xp integer NOT NULL DEFAULT 0;
+ ALTER TABLE con.compound_profiles ADD COLUMN IF NOT EXISTS manual_xp integer NOT NULL DEFAULT 0;
+ CREATE TABLE IF NOT EXISTS con.compound_rules (
+ id boolean PRIMARY KEY DEFAULT true CHECK(id), message_xp integer NOT NULL DEFAULT 5 CHECK(message_xp BETWEEN 0 AND 100),
+ reaction_xp integer NOT NULL DEFAULT 1 CHECK(reaction_xp BETWEEN 0 AND 100),
+ daily_message_cap integer NOT NULL DEFAULT 20 CHECK(daily_message_cap BETWEEN 0 AND 500),
+ daily_reaction_cap integer NOT NULL DEFAULT 15 CHECK(daily_reaction_cap BETWEEN 0 AND 500));
+ INSERT INTO con.compound_rules(id) VALUES(true) ON CONFLICT DO NOTHING;
  CREATE TABLE IF NOT EXISTS con.compound_apartments (
  id text PRIMARY KEY, floor integer NOT NULL, unit integer NOT NULL,
  capacity integer NOT NULL DEFAULT 2 CHECK(capacity BETWEEN 1 AND 8),
@@ -48,9 +57,30 @@ async function audit(db, actor, action, subject, details={}) {
  await db.query("INSERT INTO con.compound_audit(id,actor_id,action,subject_id,details) VALUES ($1,$2,$3,$4,$5)",[randomUUID(),actor,action,subject,JSON.stringify(details)]);
 }
 async function profile(db,user) {
- const {rows}=await db.query(`INSERT INTO con.compound_profiles(discord_id,display_name)
- VALUES($1,$2) ON CONFLICT(discord_id) DO UPDATE SET display_name=EXCLUDED.display_name
- RETURNING *, 1+floor(xp/250.0)::integer AS level`,[user.id,simple(user.name||user.username)]);
+ await db.query("INSERT INTO con.compound_profiles(discord_id,display_name) VALUES($1,$2) ON CONFLICT(discord_id) DO UPDATE SET display_name=EXCLUDED.display_name",
+  [user.id,simple(user.name||user.username)]);
+ let earned=0;
+ try {
+  const {rows}=await db.query(`WITH rules AS (SELECT * FROM con.compound_rules WHERE id=true),
+  daily AS (SELECT date_trunc('day',e.occurred_at) AS day,
+  LEAST(count(*) FILTER(WHERE e.event_type='message'),max(r.daily_message_cap))::integer AS messages,
+  LEAST(count(*) FILTER(WHERE e.event_type='reaction'),max(r.daily_reaction_cap))::integer AS reactions,
+  max(r.message_xp)::integer AS mxp,max(r.reaction_xp)::integer AS rxp
+  FROM con.discord_participation_events e CROSS JOIN rules r
+  WHERE e.user_id=$1 AND e.onboarding=false
+  AND e.guild_id=(SELECT guild_id FROM con.discord_settings WHERE id=true)
+  GROUP BY date_trunc('day',e.occurred_at))
+  SELECT coalesce(sum(messages*mxp+reactions*rxp),0)::integer AS earned FROM daily`,[user.id]);
+  earned=Math.max(0,Number(rows[0]?.earned)||0);
+ } catch(e) {
+  if(e.code!=="42P01")throw e;
+  // Bot participation tables not initialized yet; keep previously earned XP.
+  const prev=await db.query("SELECT activity_xp FROM con.compound_profiles WHERE discord_id=$1",[user.id]);
+  earned=Number(prev.rows[0]?.activity_xp)||0;
+ }
+ const {rows}=await db.query(`UPDATE con.compound_profiles SET activity_xp=$2,
+ xp=GREATEST(0,LEAST(1000000,$2+manual_xp)),updated_at=now() WHERE discord_id=$1
+ RETURNING *, 1+floor(xp/250.0)::integer AS level`,[user.id,earned]);
  return rows[0];
 }
 async function occupants(db,apt) {
@@ -90,6 +120,10 @@ export default async function compoundHandler(req,res) {
   const db=database();
   if (!schemaReady) schemaReady = schema(db).catch(e=>{schemaReady=null; throw e;});
   await schemaReady;
+  if (!access.owner) {
+    const botMember=await db.query("SELECT 1 FROM con.discord_members WHERE discord_id=$1 AND active=true AND is_bot=false LIMIT 1",[session.user.id]).catch(e=>{if(e.code==="42P01")return {rows:[]};throw e;});
+    if(!botMember.rows.length && !await hasActiveMembership(session.user,db))return json(res,403,{error:"An active C0N membership or verified Discord server membership is required."});
+  }
   const current=await profile(db,session.user);
   const rawAction=new URL(req.url,"https://cultofnixon.com").searchParams.get("action")||"compound_me";
   const action=rawAction.startsWith("compound_")?rawAction.slice(9):rawAction;
@@ -115,6 +149,10 @@ export default async function compoundHandler(req,res) {
     const {rows}=await db.query(`SELECT p.*,1+floor(p.xp/250.0)::integer AS level,r.apartment_id FROM con.compound_profiles p LEFT JOIN con.compound_residency r ON r.discord_id=p.discord_id ORDER BY p.display_name LIMIT 500`);
     return json(res,200,{residents:rows});
    }
+   if(action==="rules"){
+    const {rows:[rules]}=await db.query("SELECT message_xp,reaction_xp,daily_message_cap,daily_reaction_cap FROM con.compound_rules WHERE id=true");
+    return json(res,200,{rules});
+   }
    if(action==="audit"){
     if(!isAdmin)bad(403,"Staff access required.");
     const {rows}=await db.query("SELECT * FROM con.compound_audit ORDER BY created_at DESC LIMIT 150");
@@ -124,12 +162,18 @@ export default async function compoundHandler(req,res) {
   }
   const body=typeof req.body==="string"?JSON.parse(req.body||"{}"):req.body||{};
   if(JSON.stringify(body).length>5000)bad(413,"Request too large.");
-  if(action==="claim" || action==="request" || action==="consent" || action==="decision" || action==="adjust"){
+  if(action==="claim" || action==="request" || action==="consent" || action==="decision" || action==="adjust" || action==="rules"){
    const client=await db.connect();
    try {
     await client.query("BEGIN");
     let result={ok:true};
-    if(action==="claim"){
+    if(action==="rules"){
+      if(!isAdmin)bad(403,"Staff access required.");
+      const fields=["message_xp","reaction_xp","daily_message_cap","daily_reaction_cap"];
+      for(const field of fields)if(!Number.isInteger(body[field])||body[field]<0||body[field]>(field.includes("cap")?500:100))bad(400,"Invalid XP rule.");
+      await client.query("UPDATE con.compound_rules SET message_xp=$1,reaction_xp=$2,daily_message_cap=$3,daily_reaction_cap=$4 WHERE id=true",fields.map(f=>body[f]));
+      await audit(client,session.user.id,"rules.updated",null,body);
+    } else if(action==="claim"){
       if(!unit(body.apartment_id))bad(400,"Invalid apartment.");
       const apt=body.apartment_id;
       const {rows:[a]}=await client.query("SELECT * FROM con.compound_apartments WHERE id=$1 FOR UPDATE",[apt]);
@@ -178,7 +222,9 @@ export default async function compoundHandler(req,res) {
       const max=body.field==="xp"?1000000:100;
       if(body.value<0||body.value>max)bad(400,"Attribute outside allowed range.");
       const field=body.field;
-      const {rowCount}=await client.query("UPDATE con.compound_profiles SET "+field+"=$2,updated_at=now() WHERE discord_id=$1",[body.discord_id,body.value]);
+      const {rowCount}=field==="xp"
+        ? await client.query("UPDATE con.compound_profiles SET manual_xp=$2-activity_xp,xp=$2,updated_at=now() WHERE discord_id=$1",[body.discord_id,body.value])
+        : await client.query("UPDATE con.compound_profiles SET "+field+"=$2,updated_at=now() WHERE discord_id=$1",[body.discord_id,body.value]);
       if(!rowCount)bad(404,"Member not found.");
       await audit(client,session.user.id,"profile.adjusted",body.discord_id,{field,value:body.value});
     }
