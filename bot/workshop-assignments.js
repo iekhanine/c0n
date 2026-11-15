@@ -1,3 +1,4 @@
+import {workshopDatabaseCall} from "./profile-db.js";
 import {ActionRowBuilder,ButtonBuilder,ButtonStyle,MessageFlags} from "discord.js";
 const uid=x=>typeof x==="string"&&/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(x);
 export const isWorkshopClaimMessage=message=>!message.author?.bot&&/^\s*\[x\]\s*$/i.test(message.content||"");
@@ -40,7 +41,7 @@ export function formatWorkshopReminder(a){
 export async function acceptWorkshopClaim(m,send){
  if(!isWorkshopClaimMessage(m))return false;
  try{
-  const data=await send({kind:"workshop_exclusive_claim",guild_id:m.guildId,
+  const data=await workshopDatabaseCall("claim",{guild_id:m.guildId,
     user_id:m.author.id,channel_id:m.channelId,message_id:m.id});
   await m.channel.send({content:formatWorkshopAssignment(data),
    allowedMentions:{users:[m.author.id],parse:[]}});
@@ -53,7 +54,7 @@ export async function acceptWorkshopClaim(m,send){
  return true;
 }
 export async function pollWorkshopReminders(guild,send){
- const {assignment:a}=await send({kind:"workshop_due_reminders",guild_id:guild.id});
+ const {assignment:a}=await workshopDatabaseCall("due",{guild_id:guild.id});
  if(!a)return false;
  if(!uid(a.post_id))throw Error("Invalid workshop reminder");
  const channel=await guild.channels.fetch(a.channel_id);
@@ -62,7 +63,7 @@ export async function pollWorkshopReminders(guild,send){
  let msg=(await channel.messages.fetch({limit:50})).find(m=>m.author.id===guild.client.user.id&&m.content.includes(marker))||null;
  if(!msg)msg=await channel.send({content:formatWorkshopReminder(a),
   components:reminderButtons(a.post_id),allowedMentions:{users:[a.discord_id],parse:[]}});
- await send({kind:"workshop_reminder_sent",guild_id:guild.id,job_id:a.post_id,
+ await workshopDatabaseCall("reminder",{guild_id:guild.id,job_id:a.post_id,
   user_id:a.discord_id,channel_id:a.channel_id,message_id:msg.id});
  return true;
 }
@@ -71,7 +72,7 @@ export async function answerWorkshop(i,send){
  if(!match||!uid(match[1]))return false;
  await i.deferReply({flags:MessageFlags.Ephemeral});
  try{
-  const r=await send({kind:"workshop_answer",guild_id:i.guildId,job_id:match[1],
+  const r=await workshopDatabaseCall("answer",{guild_id:i.guildId,job_id:match[1],
    user_id:i.user.id,answer:match[2]});
   const message=r.already_completed?"This objective was already paid. No duplicate credits awarded."
    :r.extended?"Understood. The Overseer will check again in 30 minutes. Your job remains assigned to you."
