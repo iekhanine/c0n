@@ -153,6 +153,11 @@ export default async function compoundHandler(req,res) {
    }
    if(action==="residents"){
     if(!isAdmin)bad(403,"Staff access required.");
+    await db.query(`INSERT INTO con.compound_profiles(discord_id,display_name)
+      SELECT dm.discord_id,dm.name FROM con.discord_members dm
+      JOIN con.discord_settings ds ON ds.guild_id=dm.guild_id AND ds.id=true
+      WHERE dm.active=true AND dm.is_bot=false
+      ON CONFLICT(discord_id) DO NOTHING`).catch(e=>{if(e.code!=="42P01")throw e;});
     const {rows}=await db.query(`SELECT p.*,1+floor(p.xp/250.0)::integer AS level,r.apartment_id FROM con.compound_profiles p LEFT JOIN con.compound_residency r ON r.discord_id=p.discord_id ORDER BY p.display_name LIMIT 500`);
     return json(res,200,{residents:rows});
    }
