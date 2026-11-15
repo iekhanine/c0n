@@ -114,6 +114,8 @@ export async function applyTriviaResults(db,client,b){
   const intellect=Math.floor(r.max_streak/3);
   await client.query("INSERT INTO con.compound_profiles(discord_id,display_name)VALUES($1,$2) ON CONFLICT(discord_id) DO UPDATE SET display_name=EXCLUDED.display_name",[r.id,r.name.trim()]);
   await client.query("INSERT INTO con.compound_trivia_results(match_id,discord_id,correct,max_streak,xp_awarded,intellect_awarded)VALUES($1,$2,$3,$4,$5,$6)",[b.match_id,r.id,r.correct,r.max_streak,xp,intellect]);
+  await client.query("INSERT INTO con.compound_progress_events(source_key,discord_id,source,description,xp_delta,intellect_delta,details) VALUES($1,$2,'trivia',$3,$4,$5,$6) ON CONFLICT(source_key) DO NOTHING",
+   ["trivia:"+b.match_id+":"+r.id,r.id,"Trivia: "+r.correct+" correct",xp,intellect,JSON.stringify({match_id:b.match_id,correct:r.correct,max_streak:r.max_streak})]);
   await client.query("UPDATE con.compound_profiles SET trivia_xp=LEAST(1000000,trivia_xp+$2), xp=LEAST(1000000,GREATEST(0,activity_xp+manual_xp+trivia_xp+$2)),intellect=LEAST(100,intellect+$3),updated_at=now() WHERE discord_id=$1",[r.id,xp,intellect]);
  }
  return {ok:true,awarded:b.results.length,match_id:b.match_id};
@@ -191,6 +193,24 @@ async function finalize(db,request,actor) {
  await audit(db,actor,"housing.approved",request.requester_id,{request_id:request.id,apartment_id:request.apartment_id});
  return true;
 }
+async function publicCompoundProfile(db,id) {
+ const {rows:[member]}=await db.query(`SELECT dm.discord_id,dm.name,dm.avatar,dm.joined_at FROM con.discord_members dm
+ JOIN con.discord_settings ds ON ds.guild_id=dm.guild_id AND ds.id=true
+ WHERE dm.discord_id=$1 AND dm.active=true AND dm.is_bot=false`,[id]);
+ if(!member)bad(404,"Resident not found.");
+ const stats=await profile(db,{id,name:member.name});
+ const {rows:[residence]}=await db.query("SELECT apartment_id FROM con.compound_residency WHERE discord_id=$1",[id]);
+ let membership=null;
+ if((await db.query("SELECT to_regclass('con.memberships') IS NOT NULL AS exists")).rows[0]?.exists){
+  membership=(await db.query("SELECT member_no,codename,joined_at,active FROM con.memberships WHERE user_id=$1 AND active=true",[id])).rows[0]||null;
+ }
+ return {member:{
+  id,display_name:member.name,avatar:member.avatar,
+  joined_at:member.joined_at,apartment:residence?.apartment_id||"The Unhoused",
+  membership:membership?{member_no:String(membership.member_no).padStart(6,"0"),codename:membership.codename,joined_at:membership.joined_at,verified:true}:null
+ },stats:{xp:stats.xp,level:stats.level,health:stats.health,stamina:stats.stamina,
+  skill:stats.skill,charisma:stats.charisma,intellect:stats.intellect,luck:stats.luck}};
+}
 export default async function compoundHandler(req,res) {
  const origin=req.headers.origin;
  res.setHeader("Vary","Origin, Cookie");
@@ -204,6 +224,15 @@ export default async function compoundHandler(req,res) {
  if(req.method==="OPTIONS"){res.statusCode=origin===GAME_ORIGIN?204:403;return res.end();}
  if(!["GET","POST"].includes(req.method))return json(res,405,{error:"Unsupported method."});
  if(req.method==="POST" && origin!==GAME_ORIGIN)return json(res,403,{error:"Invalid request origin."});
+ const rawAction=new URL(req.url,"https://cultofnixon.com").searchParams.get("action")||"compound_me";
+ if(rawAction==="compound_public_profile" && req.method==="GET"){
+  try {
+   const id=new URL(req.url,"https://cultofnixon.com").searchParams.get("id");
+   if(!snowflake(id))return json(res,400,{error:"Invalid resident."});
+   const db=database();await ensureCompoundSchema(db);
+   return json(res,200,await publicCompoundProfile(db,id));
+  }catch(e){return json(res,e instanceof Fault?e.status:503,{error:e instanceof Fault?e.message:"Profile temporarily unavailable."});}
+ }
  const session=await readSession(req);
  if(!session)return json(res,401,{error:"Sign in with Discord first.",login_url:"https://cultofnixon.com/api/auth/discord/login?next=compound"});
  try {
@@ -222,6 +251,10 @@ export default async function compoundHandler(req,res) {
    if(action==="me"){
     const {rows:[home]}=await db.query("SELECT apartment_id,assigned_at FROM con.compound_residency WHERE discord_id=$1",[session.user.id]);
     return json(res,200,{user:session.user,profile:current,home:home||null,is_admin:isAdmin});
+   }
+   if(action==="history"){
+    const {rows}=await db.query("SELECT source,description,xp_delta,charisma_delta,intellect_delta,details,occurred_at FROM con.compound_progress_events WHERE discord_id=$1 ORDER BY occurred_at DESC,source_key DESC LIMIT 100",[session.user.id]);
+    return json(res,200,{events:rows});
    }
    if(action==="apartments"){
     const {rows}=await db.query(`SELECT a.*,COALESCE(json_agg(json_build_object('id',p.discord_id,'name',p.display_name,'xp',p.xp)) FILTER(WHERE p.discord_id IS NOT NULL),'[]'::json) AS occupants
