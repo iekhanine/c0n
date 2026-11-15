@@ -2,6 +2,7 @@ import { readSession, accessFor, json, ORIGIN } from "./auth.js";
 import { database } from "./db.js";
 import { createCharacter, acceptTask, completeTimerTask, publishTask, updateTask, rollDice } from "../game/server/engine.js";
 import { transferItem,startCraft,completeCraft } from "../game/server/storage.js";
+import {donateMaterial,finalizeProject} from "../game/server/projects.js";
 import { createCampaign,changeCampaignState,joinCampaign,startSession,joinSession,rollForSession,proposeAward,applyAward,setDungeonMaster } from "../game/server/campaigns.js";
 import { setCompensation,setTaxes,transferCredits,runPayroll,payOverseerStipend } from "../game/server/economy.js";
 const fail=(code,message)=>{throw Object.assign(new Error(message),{status:code})};
@@ -101,6 +102,13 @@ export async function reclamationHandler(req,res,poolFactory=database){
    const character=await pool.query("select id from con.game_characters where discord_id=$1",[session.user.id]);
    if(!character.rowCount)fail(409,"Create your character first");
    result=await rollDice(pool,{characterId:character.rows[0].id,sides:data.sides,count:data.count,modifier:data.modifier,purpose:String(data.purpose||"").slice(0,200)});
+  }else if(action==="project.contribute"){
+   if(!uuid(data.projectId))fail(400,"Invalid project ID");
+   result=await donateMaterial(pool,session.user.id,data);
+  }else if(action==="project.finalize"){
+   if(!owner)fail(403,"Overseer only");
+   if(!uuid(data.id))fail(400,"Invalid project ID");
+   result=await finalizeProject(pool,session.user.id,owner,data.id);
   }else if(action==="inventory.transfer"){
    result=await transferItem(pool,session.user.id,owner,data);
   }else if(action==="craft.start"){
