@@ -18,6 +18,7 @@ import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./
 import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
+import { fetchReadOnlyProfile } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -566,12 +567,21 @@ async function main() {
   // The production website may not have deployed its signed profile endpoint
   // yet. Fall back to an unmistakably labeled preview instead of fake stats.
   async function compoundCard(user) {
+    // Dedicated Postgres role sees only con.bot_public_profiles, never private
+    // identity, audit, credential or admin tables.
+    try {
+      const direct=await fetchReadOnlyProfile(user.id);
+      if(direct?.not_found)return {content:"No active Compound resident profile was found.",allowedMentions:{parse:[]}};
+      if(direct?.member&&direct?.stats)return buildProfileCard(direct);
+    } catch(e) {
+      console.warn("Read-only profile lookup failed",{code:e.code||"unavailable"});
+    }
     try {
       const result=await send({kind:"profile_lookup",guild_id:guildId,user_id:user.id});
       if (result?.not_found) return {content:"No active Compound resident profile was found.",allowedMentions:{parse:[]}};
       if (result?.member && result?.stats) return buildProfileCard(result);
     } catch(e) {
-      console.info("Compound profile database lookup unavailable; showing preview",{code:e.status||e.code||"unavailable"});
+      console.info("Compound signed profile lookup unavailable",{code:e.status||e.code||"unavailable"});
     }
     return buildPreviewCard(user);
   }
