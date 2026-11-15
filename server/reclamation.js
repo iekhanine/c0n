@@ -1,6 +1,6 @@
 import { readSession, accessFor, json, ORIGIN } from "./auth.js";
 import { database } from "./db.js";
-import { createCharacter, acceptTask, completeTimerTask, publishTask, rollDice } from "../game/server/engine.js";
+import { createCharacter, acceptTask, completeTimerTask, publishTask, updateTask, rollDice } from "../game/server/engine.js";
 import { transferItem,startCraft,completeCraft } from "../game/server/storage.js";
 import { createCampaign,changeCampaignState,joinCampaign,startSession,joinSession,rollForSession,proposeAward,applyAward,setDungeonMaster } from "../game/server/campaigns.js";
 import { setCompensation,setTaxes,transferCredits,runPayroll,payOverseerStipend } from "../game/server/economy.js";
@@ -47,7 +47,7 @@ async function snapshot(pool,discordId,owner){
  if(owner){
   const [treasury,allTasks]=await Promise.all([
    pool.query("select balance from con.game_accounts where account_type='treasury'"),
-   pool.query("select id,title,profession_id,completion_type,duration_minutes,character_xp,profession_xp,pay_credits,stamina_cost,status from con.game_task_templates order by updated_at desc limit 200")
+   pool.query("select id,title,profession_id,completion_type,duration_minutes,character_xp,profession_xp,pay_credits,stamina_cost,status,version,description from con.game_task_templates order by updated_at desc limit 200")
   ]);
   result.overseer={treasury:treasury.rows[0]?.balance,taskTemplates:allTasks.rows};
   const [awards,members,employment]=await Promise.all([
@@ -92,6 +92,10 @@ export async function reclamationHandler(req,res,poolFactory=database){
   }else if(action==="task.publish"){
    if(!owner)fail(403,"Overseer only");
    result=await publishTask(pool,session.user.id,data);
+  }else if(action==="task.update"){
+   if(!owner)fail(403,"Overseer only");
+   if(!uuid(data.id))fail(400,"Invalid task ID");
+   result=await updateTask(pool,session.user.id,data.id,data);
   }else if(action==="dice.roll"){
    if(!Number.isInteger(data.sides)||!Number.isInteger(data.count)||!Number.isInteger(data.modifier))fail(400,"Invalid dice");
    const character=await pool.query("select id from con.game_characters where discord_id=$1",[session.user.id]);
