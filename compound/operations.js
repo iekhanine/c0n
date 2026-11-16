@@ -97,7 +97,7 @@ async function opsRestoration(){
  '<div class="ops-list">'+g.projects.map(p=>opsSection("PHASE "+p.phase+" / "+p.state,p.title,"Current restoration requirements",
  Object.entries(p.requirements||{}).map(([item,needed])=>{
  const current=Number(p.progress?.[item]||0),remaining=Math.max(0,Number(needed)-current);
- return '<div class="ops-material"><div><strong>'+opsTxt(item.replaceAll("_"," "))+'</strong><span>'+current+' / '+Number(needed)+'</span></div><progress value="'+current+'" max="'+Number(needed)||1+'"></progress>'+
+ return '<div class="ops-material"><div><strong>'+opsTxt(item.replaceAll("_"," "))+'</strong><span>'+current+' / '+Number(needed)+'</span></div><progress value="'+current+'" max="'+(Number(needed)||1)+'"></progress>'+
  (g.character&&p.state==="active"&&remaining>0&&item!=="work_units"?'<form data-ops-action="project.contribute" class="ops-inline"><input type="hidden" name="projectId" value="'+opsTxt(p.id)+'"><input type="hidden" name="item" value="'+opsTxt(item)+'">'+opsField("QUANTITY","quantity","number",1,[],'min="1" max="'+remaining+'" required')+'<button class="btn" type="submit">Deliver</button></form>':"")+'</div>'}).join("")+
  (g.overseer&&p.state==="active"&&Object.entries(p.requirements||{}).every(([item,needed])=>Number(p.progress?.[item]||0)>=Number(needed))?'<button class="btn primary" data-ops-submit="project.finalize" data-id="'+opsTxt(p.id)+'">Finalize restoration phase</button>':"")
  )).join("")+'</div>';
@@ -185,7 +185,7 @@ async function opsOverseerCampaigns(){
  '<div class="ops-list">'+(g.overseer.pendingAwards||[]).map(a=>'<article class="ops-job"><strong>'+opsTxt(a.recipient)+'</strong><p>'+a.xp+' XP · '+opsMoney(a.credits)+'</p><button class="btn primary" data-ops-submit="award.approve" data-id="'+opsTxt(a.id)+'">Approve award</button></article>').join("")+'</div>')+
  opsSection("FIELD COMMAND","Current campaigns","Campaign lifecycle is controlled by authorized expedition staff.",
  '<div class="ops-list">'+(g.campaigns||[]).map(c=>'<article class="ops-job"><strong>'+opsTxt(c.title)+'</strong><p>'+opsTxt(c.synopsis)+'</p><span class="tag">'+opsTxt(c.state)+'</span><div class="ops-actions">'+
- [["active","Activate"],["paused","Pause"],["retired","Retire"]].filter(([k])=>k!==c.state).map(([state,label])=>'<button class="btn" data-ops-campaign-state="'+state+'" data-id="'+opsTxt(c.id)+'">'+label+'</button>').join("")+'</div></article>').join("")+'</div>');
+ [["active","Activate"],["paused","Pause"],["complete","Complete"]].filter(([k])=>k!==c.state).map(([state,label])=>'<button class="btn" data-ops-campaign-state="'+state+'" data-id="'+opsTxt(c.id)+'">'+label+'</button>').join("")+'</div></article>').join("")+'</div>');
 }
 async function opsOverseerSupplies(){
  return head("Supply administration","Stockroom movements, field requisitions, and controlled inventory.")+
