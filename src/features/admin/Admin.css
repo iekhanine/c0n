@@ -319,3 +319,25 @@ body.con-admin-page #root {
     font-size: 30px;
   }
 }
+
+/* Unified C0N header, matching the public community navigation. */
+.con-admin-header{background:#121411f2;border-bottom:1px solid #34382e;box-shadow:none;min-height:88px;height:88px;gap:25px;padding:14px max(28px,calc((100vw - 1400px)/2))}
+.con-admin-brand{min-width:160px;letter-spacing:.1em;color:#f2f2e8}
+.con-admin-brand img{width:58px;height:58px}
+.con-admin-header .con-public-nav{margin-left:auto;display:flex;align-items:center;gap:25px;flex:0 1 auto}
+.con-admin-header .con-public-nav a{font-weight:650;font-size:14px;color:#d1d8cb;text-decoration:none}
+.con-admin-header .con-public-nav a:hover{color:#c3e69a}
+.con-admin-header .con-header-actions{gap:16px}
+.con-admin .con-admin-main{margin-top:88px}
+.con-admin .con-publishing :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea),
+.con-admin .con-login-card :is(input,select,textarea){
+ display:block;background:#121d1a;color:#edf5ed;border:1px solid #597469;
+ border-radius:4px;padding:12px 14px;min-height:45px;line-height:1.5;
+ font-family:inherit;max-width:100%;box-sizing:border-box
+}
+.con-admin .con-publishing textarea{width:100%;min-height:120px;resize:vertical}
+.con-admin .con-publishing :is(input,textarea,select):focus-visible{outline:2px solid #a5ceae;outline-offset:2px;border-color:#a5ceae}
+.con-admin .con-publishing :is(label){line-height:1.6}
+.con-admin .con-publishing :is(input,textarea)::placeholder{color:#a8bdaf;opacity:1}
+@media(max-width:1160px){.con-admin-header{flex-wrap:wrap;height:auto;min-height:88px;padding:12px 24px}.con-admin-header .con-public-nav{margin-left:0;order:3;width:100%;justify-content:space-between}.con-admin .con-admin-main{margin-top:132px}}
+@media(max-width:700px){.con-admin-header .con-public-nav{gap:10px;flex-wrap:wrap}.con-admin-header{padding:8px 13px}.con-admin-header .con-header-actions{gap:7px}.con-admin-header .con-view-site{display:none}}
