@@ -208,12 +208,18 @@ export async function publicCompoundProfile(db,id) {
  if((await db.query("SELECT to_regclass('con.memberships') IS NOT NULL AS exists")).rows[0]?.exists){
   membership=(await db.query("SELECT member_no,codename,joined_at,active FROM con.memberships WHERE user_id=$1 AND active=true",[id])).rows[0]||null;
  }
+ const {rows:[activeJob]}=await db.query(`SELECT p.title,p.objective,p.job_location,p.channel_id,
+  a.state,a.due_at,a.started_at,a.salary_credits,a.xp_reward
+  FROM con.workshop_assignments a JOIN con.workshop_job_posts p ON p.id=a.post_id
+  WHERE a.discord_id=$1 AND a.state IN ('working','awaiting_confirmation')
+  ORDER BY a.started_at DESC LIMIT 1`,[id]);
  return {member:{
   id,display_name:member.name,avatar:member.avatar,
   joined_at:member.joined_at,apartment:residence?.apartment_id||"The Unhoused",
   membership:membership?{member_no:String(membership.member_no).padStart(6,"0"),codename:membership.codename,joined_at:membership.joined_at,verified:true}:null
  },stats:{xp:stats.xp,level:stats.level,health:stats.health,stamina:stats.stamina,
-  skill:stats.skill,charisma:stats.charisma,intellect:stats.intellect,luck:stats.luck}};
+  skill:stats.skill,charisma:stats.charisma,intellect:stats.intellect,luck:stats.luck},
+ active_job:activeJob||null};
 }
 export default async function compoundHandler(req,res) {
  const origin=req.headers.origin;
