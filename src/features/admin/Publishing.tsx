@@ -12,6 +12,12 @@ import {
   CheckSquare,
   Gamepad2,
   ListOrdered,
+  Building2,
+  KeyRound,
+  Wallet,
+  Wrench,
+  Shield,
+  ExternalLink,
 } from "lucide-react";
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
@@ -125,12 +131,12 @@ export default function Publishing({
       ["navigation", "Site navigation", ListOrdered], ["audit", "Content history", History],
       ["projectReports", "Project reports", BarChart3], ["reports", "Publishing reports", BarChart3]
     ] },
-    { title: "THE COMPOUND", items: [["games", "Game management", Gamepad2]] },
+    { title: "COMPOUND & OVERSEER", items: [["games", "Operations directory", Gamepad2]] },
     { title: "DISCORD BOT", items: [
       ["discord", "Bot configuration", Radio], ["webhooks", "Publishing channels", Hash],
       ["font", "Text generator", Type]
     ] },
-    { title: "SYSTEM & ACCESS", items: [["staff", "Staff permissions", Users], ["database", "Database health", Database]] },
+    { title: "OWNER & ACCESS", items: [["staff", "Staff permissions", Users], ["database", "Database health", Database]] },
   ];
   async function storage(update = false) {
     setBusy(true);
@@ -171,6 +177,22 @@ export default function Publishing({
             ))}
           </div>;
         })}
+        {owner && <>
+          <div className="con-nav-group">
+            <span className="con-sidebar-label">OVERSEER / FIELD COMMAND</span>
+            <a className="con-owner-direct" href="https://thecompound.cultofnixon.com/operations"><Building2 size={18}/> Operations overview <ExternalLink size={12}/></a>
+            <a className="con-owner-direct" href="https://thecompound.cultofnixon.com/overseer/work-orders"><Wrench size={18}/> Work orders <ExternalLink size={12}/></a>
+            <a className="con-owner-direct" href="https://thecompound.cultofnixon.com/operations/restoration"><Building2 size={18}/> Restoration <ExternalLink size={12}/></a>
+            <a className="con-owner-direct" href="https://thecompound.cultofnixon.com/overseer/campaigns"><Shield size={18}/> Expeditions <ExternalLink size={12}/></a>
+            <a className="con-owner-direct" href="https://thecompound.cultofnixon.com/overseer/finance"><Wallet size={18}/> Treasury & payroll <ExternalLink size={12}/></a>
+            <a className="con-owner-direct" href="https://thecompound.cultofnixon.com/admin/residents"><Users size={18}/> Resident records <ExternalLink size={12}/></a>
+          </div>
+          <div className="con-nav-group">
+            <span className="con-sidebar-label">MEMBERSHIP & ACCESS</span>
+            <a className="con-owner-direct" href="/membership"><KeyRound size={18}/> Invitation codes</a>
+            <a className="con-owner-direct" href="/admin/staff"><Users size={18}/> Staff permissions</a>
+          </div>
+        </>}
         <div className="con-sidebar-footer">
           <span className="con-online-dot" />
           Community control<small>BUILD. SHARE. SHIP.</small>
@@ -212,9 +234,11 @@ export default function Publishing({
         </p>
       )}
       {tab === "overview" ? (
-        <div className="con-admin-overview"><h2>Choose a system to manage</h2><div className="con-admin-systems">
+        <div className="con-admin-overview"><h2>Control center</h2><p>Each section has one purpose. Choose where you need to work without hunting through unrelated menus.</p><div className="con-admin-systems">
           <a href="/admin/update"><strong>Community website</strong><span>Posts, projects, navigation, moderation and content history</span></a>
-          <a href="https://thecompound.cultofnixon.com/"><strong>The Compound</strong><span>Resident profiles, apartments, assignments and progression</span></a>
+          <a href="https://thecompound.cultofnixon.com/operations"><strong>Compound operations</strong><span>Work orders, restoration, inventory and expedition progress</span></a>
+          {owner&&<a href="https://thecompound.cultofnixon.com/overseer/work-orders"><strong>Overseer command</strong><span>Contracts, operations, treasury, payroll and settlement oversight</span></a>}
+          {owner&&<a href="/membership"><strong>Member invitations</strong><span>Issue, review and revoke newcomer access codes</span></a>}
           <a href="/admin/discord"><strong>Discord bot</strong><span>Bot configuration, channel connections and tools</span></a>
           <a href="/admin/staff"><strong>System access</strong><span>Staff approvals, permissions and database health</span></a>
         </div></div>
@@ -238,7 +262,7 @@ export default function Publishing({
       ) : tab === "discord" ? (
         <DiscordExplorer />
       ) : tab === "games" ? (
-        <div className="con-database-panel"><h2>The Compound</h2><p>Game administration has a dedicated application and data model.</p><a className="con-primary" href="https://thecompound.cultofnixon.com/">Open Compound administration</a><p>Legacy facility controls remain available at <a href="/facility/control">Facility controls</a>.</p></div>
+        <div className="con-database-panel"><h2>Compound and Overseer administration</h2><p>Field operations, resident records, and Overseer policy have dedicated workspaces under the Compound domain.</p><div className="con-button-row"><a className="con-primary" href="https://thecompound.cultofnixon.com/operations">Open operations</a><a className="con-primary" href="https://thecompound.cultofnixon.com/overseer/work-orders">Manage work orders</a><a className="con-primary" href="https://thecompound.cultofnixon.com/overseer/finance">Financial administration</a></div></div>
       ) : tab === "navigation" ? (
         <NavigationEditor />
       ) : tab === "database" || !status?.initialized || status.needs_upgrade ? (
