@@ -3,8 +3,6 @@ import { ArrowRight, ChevronDown, LogOut, UserRound, Settings, Bell } from "luci
 import { ProjectPage, MemberProjects, projectApi } from "./ProjectPages";
 import { ProfilePage, PostPage, StreamPage, MemberDirectory, InboxPage } from "./Social";
 import CommunityFeed from "./CommunityFeed";
-import FacilityPage from "./FacilityPage";
-import ReclamationPage from "./ReclamationPage";
 import PublicNavigation from "./PublicNavigation";
 import MilitiaHub from "./MilitiaHub";
 import ArchivePage from "./ArchivePage";
@@ -115,7 +113,7 @@ export default function App() {
     if (account?.owner) void prepareProjects();
   }, [account?.owner]);
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const page = path === "/reclamation" ? "reclamation" : path === "/militia" ? "militia" : path === "/featured/manage" ? "featured-manage" : path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/facility" ? "facility" : path === "/facility/control" ? "facility-control" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
+  const page = path === "/militia" ? "militia" : path === "/featured/manage" ? "featured-manage" : path === "/archive" ? "archive" : path === "/archive/manage" ? "archive-manage" : path === "/membership" ? "membership" : path === "/merch" ? "merch" : path === "/inbox" ? "inbox" : path.startsWith("/c/") ? (path.split("/")[2]?.includes("-") ? "profile" : "subcon") : path.startsWith("/members/")
     ? "profile"
     : path.startsWith("/posts/")
       ? "post"
@@ -216,7 +214,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "reclamation" ? <ReclamationPage /> : page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "facility" ? <FacilityPage /> : page === "facility-control" ? (account?.owner ? <FacilityPage control /> : <p>Restricted terminal.</p>) : page === "militia" ? <MilitiaHub /> : page === "membership" ? (
+          {page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "militia" ? <MilitiaHub /> : page === "membership" ? (
             <MembershipPage />
           ) : page === "merch" ? (
             <MembershipPage merch />
