@@ -46,9 +46,21 @@ export async function acceptWorkshopClaim(m,send){
   await m.channel.send({content:formatWorkshopAssignment(data),
    allowedMentions:{users:[m.author.id],parse:[]}});
  }catch(e){
-  const content=e.status===409?"❌ That job is unavailable, already assigned, or you're already on a shift. Check the pinned objective."
-   :e.status===403?"Only active Compound members can accept Workshop jobs."
-   :"The Overseer couldn't issue this assignment. Please try again.";
+  // PostgreSQL raises domain exceptions as P0001, not HTTP 409/403.
+  // Provide actionable player-facing errors without exposing SQL internals.
+  const known=[
+   [/already assigned/i,"That objective is already assigned. Pick another Workshop channel."],
+   [/Finish your assigned shift/i,"You already have an active assignment. Complete it before accepting another."],
+   [/Stockroom shortage/i,"The Compound stockroom is short of supplies. Notify the Overseer."],
+   [/No active Workshop job/i,"There is no active Workshop objective in this channel."],
+   [/active member/i,"Only active Compound members can accept jobs."]
+  ];
+  const detail=String(e.message||"");
+  const match=known.find(([pattern])=>pattern.test(detail));
+  const content=match?match[1]:"The Overseer couldn't issue this assignment. Ask an admin to check the bot logs.";
+  console.error("Workshop claim failed",{code:e.code||"operation",
+    channel_id:m.channelId,user_id:m.author.id,
+    message:detail.slice(0,180)});
   await m.reply({content,allowedMentions:{parse:[],repliedUser:false}});
  }
  return true;
