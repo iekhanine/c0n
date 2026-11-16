@@ -21,6 +21,7 @@ import { handleDice, registerDice } from "./dice.js";
 import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
 import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./workshop-assignments.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
+import {isTreasuryMention,personalWalletCard,compoundTreasuryCard} from "./wallet.js";
 import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
@@ -629,13 +630,11 @@ async function main() {
     if (m.guildId === guildId && !m.author.bot && !m.webhookId)
       recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
     if(m.guildId===guildId&&!m.author.bot&&m.mentions.has(client.user)&&
-       /^\\s*<@!?\\d+>\\s+wallet\\s*[.!?]?\\s*$/i.test(m.content||"")){
+       isTreasuryMention(m.content,client.user.id)){
       run(async()=>{
         try{
-          const wallet=await fetchCompoundTreasury();
-          const amount=BigInt(wallet.balance).toLocaleString("en-US");
-          return m.reply({content:"🏦 **THE COMPOUND · TREASURY**\\nAvailable funds: **"+amount+" Compound Credits**.\\nThis is the communal bank, not your personal wallet.",
-            allowedMentions:{parse:[],repliedUser:false}});
+          const treasury=await fetchCompoundTreasury();
+          return m.reply({...compoundTreasuryCard(treasury),allowedMentions:{parse:[],repliedUser:false}});
         }catch(e){
           console.warn("Treasury lookup unavailable",{code:e.code||"unavailable"});
           return m.reply({content:"The Compound bank ledger is temporarily unavailable.",allowedMentions:{parse:[],repliedUser:false}});
@@ -676,10 +675,8 @@ async function main() {
       run(async()=>{
         await i.deferReply({flags:MessageFlags.Ephemeral});
         try{
-          const w=await fetchResidentWallet(i.user.id);
-          const balance=BigInt(w.balance).toLocaleString("en-US");
-          const earned=BigInt(w.earned).toLocaleString("en-US");
-          return i.editReply({content:"💳 **YOUR COMPOUND WALLET**\\nCurrent balance: **"+balance+" Credits**\\nLifetime Workshop earnings: **"+earned+" Credits**\\nComplete assigned Workshop objectives to earn more.",allowedMentions:{parse:[]}});
+          const wallet=await fetchResidentWallet(i.user.id);
+          return i.editReply(personalWalletCard(wallet));
         }catch(e){
           console.warn("Personal wallet lookup unavailable",{code:e.code||"unavailable"});
           return i.editReply({content:"Your Compound wallet is temporarily unavailable.",allowedMentions:{parse:[]}});
