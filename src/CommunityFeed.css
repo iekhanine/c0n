@@ -2395,3 +2395,8 @@ img.member-initial.project-author-avatar {
 .page-explore .reference-main .showcase-grid > .project-card-pinned {grid-column:span 2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-width:0}
 @media(max-width:900px){.page-explore .reference-main .showcase-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.page-explore .reference-main .showcase-grid{grid-template-columns:1fr}.page-explore .reference-main .showcase-grid > .project-card-pinned{grid-column:1;grid-template-columns:1fr}}
+
+/* Unified field typography for legacy community forms; existing custom controls override :where. */
+:where(.showcase) :where(textarea,input:not([type="checkbox"]):not([type="radio"]),select){background:#131c16;border:1px solid #596f54;color:#eef4e9;border-radius:4px;padding:10px 12px;min-height:42px;font-family:inherit;line-height:1.5;max-width:100%;box-sizing:border-box}
+:where(.showcase) textarea{min-height:110px;resize:vertical}
+:where(.showcase) :where(input,textarea,select):focus-visible{outline:2px solid #b4dba2;outline-offset:2px}
