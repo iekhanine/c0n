@@ -222,7 +222,7 @@ async function opsSupplies(){
  table(["Supply","Status","Review"],data.requests.map(r=>'<tr><td>'+opsTxt(data.catalog.find(c=>c.id===r.sku)?.label||r.sku)+'</td><td>'+opsTxt(r.status)+'</td><td>'+opsTxt(r.review||"")+'</td></tr>')));
 }
 async function opsOverseerSupplies(){
- if(!me?.is_overseer&&!me?.is_admin)throw Error("Overseer access required");
+ if(!me?.is_overseer)throw Error("Overseer access required");
  const [data,admin]=await Promise.all([opsFacilityRequest("state"),opsFacilityRequest("control")]);
  return head("Supply administration","Oversee requisitions, issue materials, review field reports and maintain facility directives.")+
  '<div class="ops-overview">'+opsCard("PENDING REQUESTS",admin.requests.filter(r=>r.status==="pending").length,"Unreviewed equipment requests")+
