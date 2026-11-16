@@ -10,7 +10,7 @@ type Game={character:Character|null;assignedName:string|null;tasks:Task[];projec
 const professions=["carpenter","metalworker","medic","farmer","engineer","scavenger"];
 async function request<T>(action:string,method="GET",data?:unknown):Promise<T>{
  const response=await fetch("/api/social?action=game_"+encodeURIComponent(action),{method,cache:"no-store",headers:data?{"Content-Type":"application/json"}:undefined,body:data?JSON.stringify(data):undefined});
- const body=await response.json();if(!response.ok)throw Error(body.error||"Game server unavailable");return body as T;
+ const body=await response.json();if(!response.ok)throw Error(body.error||"Compound records temporarily unavailable");return body as T;
 }
 const format=(n:number|string)=>Number(n).toLocaleString("en-US");
 export default function ReclamationPage(){
@@ -47,7 +47,7 @@ export default function ReclamationPage(){
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginBottom:16}}>
      <section style={style}><Shield size={20}/><h2 style={{margin:"8px 0"}}>{game.character.name}</h2><p>{game.character.profession_id} · Level {game.character.level}</p><strong>{format(game.character.xp)} XP</strong><p>Health {game.character.health} · Stamina {game.character.stamina}</p></section>
      <section style={style}><Wallet size={20}/><h2>${format(game.wallet)}</h2><p>Personal dollars</p><small>Fictional currency, no cash value</small></section>
-     <section style={style}><Hammer size={20}/><h2>Project Reclamation</h2><p>{game.projects.filter(p=>p.state==="active").length} active phase(s)</p><small>Bunker restoration effort</small></section>
+     <section style={style}><Hammer size={20}/><h2>Project Reclamation</h2><p>{game.projects.filter(p=>p.state==="active").length} active phase(s)</p><small>Settlement restoration</small></section>
     </div>
     <section style={{...style,marginBottom:16}}><h2><BriefcaseBusiness size={20} style={{display:"inline",verticalAlign:"middle"}}/> Available work orders</h2>
      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:10}}>
@@ -65,7 +65,7 @@ export default function ReclamationPage(){
        </button>
      </>}
     </div>)}</section>
-    <section style={{...style,marginBottom:16}}><h2><Dices size={20} style={{display:"inline"}}/> Dice terminal</h2><p>Cryptographically generated and permanently recorded on the server.</p>
+    <section style={{...style,marginBottom:16}}><h2><Dices size={20} style={{display:"inline"}}/> Field skill terminal</h2><p>Cryptographically generated and permanently recorded on the server.</p>
      <label>Die <select value={dice} onChange={e=>setDice(Number(e.target.value))}>{[4,6,8,10,12,20,100].map(n=><option value={n} key={n}>d{n}</option>)}</select></label>{" "}
      <label>Modifier <input type="number" min={-100} max={100} value={modifier} onChange={e=>setModifier(Number(e.target.value))} style={{width:65}}/></label>{" "}
      <button type="button" onClick={()=>void run("dice.roll",{sides:dice,count:1,modifier,purpose:"Free roll"})}>Roll</button>
