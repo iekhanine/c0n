@@ -17,7 +17,7 @@ export function formatWorkshopAssignment(a){
   "📦 **ISSUED BY THE COMPOUND STOCKROOM:** "+supplied,
   "📍 **ORDERS:** Go to The Compound and complete your task at "+a.location+".",
   "⏳ **Report time:** <t:"+Math.floor(new Date(a.due_at).getTime()/1000)+":R>",
-  "💰 **Salary:** "+a.credits+" Compound Credits · **XP:** "+a.xp,
+  "💰 **Salary:** "+a.credits+" Compound Dollars · **XP:** "+a.xp,
   "",
   "The Overseer will contact you when your shift is due for completion."
  ].join("\n");
@@ -34,7 +34,7 @@ export function formatWorkshopReminder(a){
   "⏰ <@"+a.discord_id+"> **THE OVERSEER REQUESTS A STATUS REPORT**",
   "Your assigned Workshop job **"+String(a.title).slice(0,140)+"** is due.",
   "Have you completed the assignment at "+a.job_location+"?",
-  "Confirm below to receive **"+a.salary_credits+" Compound Credits** and **"+a.xp_reward+" XP**, or request 30 more minutes.",
+  "Confirm below to receive **"+a.salary_credits+" Compound Dollars** and **"+a.xp_reward+" XP**, or request 30 more minutes.",
   "Assignment reference: `workshop-reminder:"+a.post_id+"`"
  ].join("\n");
 }
@@ -86,13 +86,13 @@ export async function answerWorkshop(i,send){
  try{
   const r=await workshopDatabaseCall("answer",{guild_id:i.guildId,job_id:match[1],
    user_id:i.user.id,answer:match[2]});
-  const message=r.already_completed?"This objective was already paid. No duplicate credits awarded."
+  const message=r.already_completed?"This objective was already paid. No duplicate dollars awarded."
    :r.extended?"Understood. The Overseer will check again in 30 minutes. Your job remains assigned to you."
-   :"✅ **Assignment completed.** Salary: **+"+r.credits+" Compound Credits**. Experience: **+"+r.xp+" XP**. Total Compound XP: "+r.total_xp+". Tools returned to the stockroom.";
+   :"✅ **Assignment completed.** Salary: **+"+r.credits+" Compound Dollars**. Experience: **+"+r.xp+" XP**. Total Compound XP: "+r.total_xp+". Tools returned to the stockroom.";
   await i.editReply({content:message,allowedMentions:{parse:[]}});
   if(r.completed){
    await i.message.edit({components:[]}).catch(()=>{});
-   await i.channel.send({content:"✅ <@"+i.user.id+"> completed **"+r.title+"** and earned **"+r.credits+" Credits** and **"+r.xp+" XP**.",
+   await i.channel.send({content:"✅ <@"+i.user.id+"> completed **"+r.title+"** and earned **"+r.credits+" Dollars** and **"+r.xp+" XP**.",
     allowedMentions:{users:[i.user.id],parse:[]}});
   }else if(r.extended)await i.message.edit({components:[]}).catch(()=>{});
  }catch(e){
