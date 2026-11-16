@@ -10,11 +10,12 @@ const sample={
 test("unhoused resident embeds all seven stats, no false verification and a direct profile link",()=>{
  const payload=buildProfileCard(sample);
  const embed=payload.embeds[0].toJSON();
- assert.equal(embed.fields.length,7);
+ assert.equal(embed.fields.length,8);
  assert.match(embed.title,/Night Owl/);
  assert.match(embed.description,/The Unhoused/);
  assert.match(embed.description,/UNVERIFIED/);
  assert.equal(embed.fields[0].name,"⬡  LEVEL 2");
+ assert.match(embed.fields[7].value,/No active assignment/);
  assert.match(embed.fields[0].value,/480 XP/);
  assert.match(embed.fields[0].value,/230 \/ 250/);
  assert.equal(embed.fields.find(x=>x.name.includes("HEALTH")).value,"**82 / 100**");
@@ -53,4 +54,16 @@ test("preview uses the actual Discord identity without inventing XP or character
  assert.doesNotMatch(JSON.stringify(embed),/[▰▱]/);
  assert.doesNotMatch(embed.description,/VERIFIED MEMBER/);
  assert.equal(preview.components[0].toJSON().components[0].url,"https://thecompound.cultofnixon.com/u/"+member);
+});
+
+test("active Workshop assignment includes destination and relative Discord timer",()=>{
+ const payload=buildProfileCard({...sample,active_job:{
+  title:"Medical / Objective 1",location:"the upper infirmary",state:"working",
+  due_at:"2026-11-16T04:12:37.000Z"
+ }});
+ const job=payload.embeds[0].toJSON().fields.find(field=>field.name.includes("ACTIVE WORKSHOP"));
+ assert.ok(job);
+ assert.match(job.value,/Medical \/ Objective 1/);
+ assert.match(job.value,/the upper infirmary/);
+ assert.match(job.value,/<t:1794802357:R>/);
 });
