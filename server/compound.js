@@ -259,8 +259,13 @@ export default async function compoundHandler(req,res) {
   const action=rawAction.startsWith("compound_")?rawAction.slice(9):rawAction;
   if(req.method==="GET") {
    if(action==="me"){
-    const {rows:[home]}=await db.query("SELECT apartment_id,assigned_at FROM con.compound_residency WHERE discord_id=$1",[session.user.id]);
-    return json(res,200,{user:session.user,profile:current,home:home||null,is_admin:isAdmin,is_overseer:access.owner===true});
+    const [homeResult,workshopResult]=await Promise.all([
+     db.query("SELECT apartment_id,assigned_at FROM con.compound_residency WHERE discord_id=$1",[session.user.id]),
+     db.query("SELECT balance FROM con.workshop_wallets WHERE discord_id=$1",[session.user.id])
+    ]);
+    return json(res,200,{user:session.user,profile:current,home:homeResult.rows[0]||null,
+     workshop_balance:workshopResult.rows[0]?.balance||0,
+     is_admin:isAdmin,is_overseer:access.owner===true});
    }
    if(action==="history"){
     const {rows}=await db.query("SELECT source,description,xp_delta,charisma_delta,intellect_delta,details,occurred_at FROM con.compound_progress_events WHERE discord_id=$1 ORDER BY occurred_at DESC,source_key DESC LIMIT 100",[session.user.id]);
