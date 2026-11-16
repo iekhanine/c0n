@@ -2,10 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/reclamation",
-      "destination": "/index.html"
-    },
-    {
       "source": "/featured/manage",
       "destination": "/index.html"
     },
@@ -15,14 +11,6 @@
     },
     {
       "source": "/archive/manage",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/facility",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/facility/control",
       "destination": "/index.html"
     },
     {
@@ -111,6 +99,21 @@
     }
   ],
   "redirects": [
+    {
+      "source": "/reclamation",
+      "destination": "https://thecompound.cultofnixon.com/operations",
+      "permanent": true
+    },
+    {
+      "source": "/facility/control",
+      "destination": "https://thecompound.cultofnixon.com/overseer/supplies",
+      "permanent": true
+    },
+    {
+      "source": "/facility",
+      "destination": "https://thecompound.cultofnixon.com/supplies",
+      "permanent": true
+    },
     {
       "source": "/out/:id",
       "destination": "/posts/:id",
