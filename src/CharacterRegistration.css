@@ -1,0 +1,76 @@
+.con-registration{--cr-bg:#0d1516;--cr-panel:#142024;--cr-border:#39494c;--cr-teal:#9fc9b4;--cr-text:#f0f2ec;--cr-muted:#b4c0bf;color:var(--cr-text);max-width:1080px;margin:18px auto 36px;font-family:inherit}
+.con-registration *{box-sizing:border-box}
+.con-registration-masthead{padding:35px 36px 31px;background:linear-gradient(115deg,#17282b,#10191c 68%);border:1px solid #455859;border-bottom:0}
+.con-registration-kicker{display:flex;align-items:center;gap:9px;color:#a9cfb9;font:600 11px/1.5 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em}
+.con-registration-signal{width:7px;height:7px;border-radius:50%;background:#a3cfa5;box-shadow:0 0 0 4px #a3cfa51a}
+.con-registration-title-row{display:flex;justify-content:space-between;gap:25px;align-items:center;margin-top:18px}
+.con-registration-title-row h2{margin:0 0 12px;font-weight:650;font-size:clamp(27px,4vw,40px);line-height:1.13;letter-spacing:-.035em;color:var(--cr-text)}
+.con-registration-title-row p{max-width:640px;margin:0;color:#bac8c8;font-size:15px;line-height:1.65}
+.con-registration-stage{white-space:nowrap;border:1px solid #4b6262;padding:12px 14px;font:600 13px 'IBM Plex Mono',ui-monospace,monospace;color:#c7e1d6;text-align:center}
+.con-registration-stage span{display:block;color:#819b99;font-size:10px;letter-spacing:.15em;margin-top:4px}
+.con-registration-form{border:1px solid #455859;background:#10191c;padding:0}
+.con-registration-section{padding:30px 36px 36px;border-bottom:1px solid #39494c}
+.con-registration-section-head{display:flex;gap:18px;align-items:flex-start;margin-bottom:23px}
+.con-registration-section-number{display:grid;place-items:center;flex:0 0 40px;height:40px;border:1px solid #557273;color:#a8d2bf;font:600 15px 'IBM Plex Mono',ui-monospace,monospace}
+.con-registration-section-head h3{font-size:21px;font-weight:630;letter-spacing:-.02em;margin:0 0 4px;color:#edf2ed}
+.con-registration-section-head p{color:#aebfbd;font-size:14px;margin:0;line-height:1.5}
+.con-registration-identity{display:flex;align-items:center;gap:18px;padding:19px 22px;background:#19282b;border:1px solid #41595b;flex-wrap:wrap}
+.con-registration-identity-symbol{flex:0 0 48px;height:48px;display:grid;place-items:center;background:#283d3d;color:#b2d6c7;border:1px solid #526e69}
+.con-registration-identity-content{flex:1;min-width:205px;display:grid;gap:5px}
+.con-registration-identity-content small,.con-registration-budget small{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;color:#9fc7bb;letter-spacing:.12em}
+.con-registration-identity-content strong{font-size:22px;font-weight:650;letter-spacing:-.015em}
+.con-registration-identity-content>span{display:flex;align-items:center;gap:6px;color:#a7beba;font-size:12px}
+.con-registration-identity-status{font:600 10px 'IBM Plex Mono',ui-monospace,monospace;color:#c6c1ab;border:1px solid #6a6452;padding:8px 10px;letter-spacing:.07em}
+.con-registration-identity-status.ready{color:#b9d9bd;border-color:#608366}
+.con-registration-profession-select-wrap{display:grid;gap:8px;max-width:420px;margin-bottom:18px}
+.con-registration-profession-select-wrap label{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;color:#a6c5bc;letter-spacing:.12em}
+.con-registration-select-shell{position:relative}
+.con-registration-select-shell select{appearance:none;width:100%;background:#1b2a2c;color:#f0f3ec;border:1px solid #5b7474;border-radius:3px;min-height:48px;padding:12px 43px 12px 15px;font-size:15px}
+.con-registration-select-shell>svg{position:absolute;right:14px;top:15px;pointer-events:none;color:#a5c7bc}
+.con-registration-trades{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.con-registration-trade{border:1px solid #354d51;background:#182629;border-radius:3px;color:#d7e2de;text-align:left;padding:17px;display:grid;align-content:start;gap:7px;min-height:138px;transition:background .15s,border-color .15s,box-shadow .15s;cursor:pointer}
+.con-registration-trade:hover{background:#233537;border-color:#688b80}
+.con-registration-trade.selected{background:#243d38;border-color:#a6cfb9;box-shadow:inset 0 0 0 1px #a6cfb94a}
+.con-registration-trade-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.con-registration-trade-title strong{font-size:15px;font-weight:650;color:#f0f3ed}
+.con-registration-radio{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;border:1px solid #7c9c94;border-radius:50%;color:#0b1516}
+.con-registration-trade.selected .con-registration-radio{background:#b7d7bd;border-color:#b7d7bd}
+.con-registration-trade-sub{font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.055em;color:#a3c4b5}
+.con-registration-trade-copy{font-size:12px;line-height:1.55;color:#b6c4c2}
+.con-registration-budget{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:#1b2d2c;border:1px solid #486360;padding:18px 20px;margin-bottom:16px}
+.con-registration-budget-number{font:650 34px/1.25 'IBM Plex Mono',ui-monospace,monospace;color:#c3e6d2}
+.con-registration-budget-number span{font-size:15px;color:#8ca9a2}
+.con-registration-budget-meter{flex:1;min-width:155px;display:grid;gap:9px}
+.con-registration-budget-rail{height:9px;background:#0c1619;border:1px solid #405755;overflow:hidden}
+.con-registration-budget-rail>div{background:#a9d1b5;height:100%;transition:width .15s}
+.con-registration-budget-meter span{font-size:12px;color:#b5c5c0}
+.con-registration-reset{display:flex;align-items:center;gap:7px;border:1px solid #607b74;background:#293d3b;color:#e0ece4;padding:8px 12px;border-radius:3px;min-height:37px;font-size:13px;cursor:pointer}
+.con-registration-attributes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.con-registration-attribute{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 17px;background:#172529;border:1px solid #3d5557;min-height:91px}
+.con-registration-attr-copy{flex:1;min-width:0}
+.con-registration-attr-copy label{display:block;font-size:15px;font-weight:650;color:#e5eee8}
+.con-registration-attr-copy p{margin:5px 0 0;color:#a6bdb8;font-size:12px;line-height:1.45}
+.con-registration-stepper{display:flex;align-items:center;gap:5px}
+.con-registration-stepper button{display:grid;place-items:center;width:34px;height:34px;border:1px solid #607e77;border-radius:3px;background:#263f3b;color:#dbebe2;padding:0;cursor:pointer}
+.con-registration-stepper button:hover:not(:disabled){background:#35574d}
+.con-registration-stepper button:disabled{opacity:.35;cursor:not-allowed}
+.con-registration-stepper output{display:grid;place-items:center;width:35px;color:#f0f4eb;font:600 18px 'IBM Plex Mono',ui-monospace,monospace}
+.con-registration-footer{padding:28px 36px 32px;background:#172326;display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.con-registration-footer-copy{display:flex;align-items:flex-start;gap:12px;color:#b6d0c4}
+.con-registration-footer-copy strong{color:#edf4ee;display:block;margin-bottom:3px}
+.con-registration-footer-copy p{font-size:13px;margin:0;color:#a9beba;max-width:640px;line-height:1.55}
+.con-registration-submit{display:flex;justify-content:center;align-items:center;gap:13px;padding:13px 20px;min-height:48px;border:1px solid #afd4b7;background:#b0d1b7;border-radius:3px;color:#0d2119;font-size:14px;font-weight:700;cursor:pointer}
+.con-registration-submit:hover:not(:disabled){background:#c9e3d1}
+.con-registration-submit:disabled{opacity:.42;cursor:not-allowed}
+.con-registration-help{font-size:12px;color:#c5bfa9}
+.con-registration-error{color:#f1aba6;font-size:13px}
+.con-registration-overseer{width:100%;margin-top:10px;border-top:1px solid #435453;padding-top:19px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.con-registration-overseer>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:#b7d4c6;font-size:12px}
+.con-registration-overseer>div span{color:#a5b9b2}
+.con-registration-overseer a{display:flex;gap:8px;align-items:center;color:#dcf1df;border:1px solid #688579;padding:9px 13px;text-decoration:none;font-size:13px;border-radius:3px}
+.con-registration-overseer a:hover{background:#284139}
+.con-registration-about{display:flex;align-items:center;gap:8px;margin:15px 0 0;padding:8px 0;border:0;background:transparent;color:#b4c8c0;font-size:13px;cursor:pointer}
+.con-registration-about-copy{color:#aebebb;font-size:13px;line-height:1.7;max-width:720px;margin:0 0 22px}
+.con-registration button:focus-visible,.con-registration a:focus-visible,.con-registration select:focus-visible{outline:2px solid #c3e7c8;outline-offset:3px}
+@media(max-width:780px){.con-registration-masthead,.con-registration-section,.con-registration-footer{padding-left:22px;padding-right:22px}.con-registration-trades{grid-template-columns:repeat(2,minmax(0,1fr))}.con-registration-attributes{grid-template-columns:1fr}.con-registration-stage{display:none}}
+@media(max-width:480px){.con-registration-masthead,.con-registration-section,.con-registration-footer{padding-left:17px;padding-right:17px}.con-registration-trades{grid-template-columns:1fr}.con-registration-section-head{gap:12px}.con-registration-identity{padding:15px}.con-registration-attribute{padding:13px;gap:8px}.con-registration-attr-copy p{font-size:11px}}
