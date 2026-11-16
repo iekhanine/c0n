@@ -21,7 +21,7 @@ import { handleDice, registerDice } from "./dice.js";
 import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
 import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./workshop-assignments.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
-import { fetchReadOnlyProfile, workshopDatabaseCall } from "./profile-db.js";
+import { fetchReadOnlyProfile, workshopDatabaseCall, diagnoseWorkshopClaim } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -530,6 +530,13 @@ async function main() {
         type: ActivityType.Watching,
       });
       state = "ready";
+      run(async()=>{try{
+        const result=await diagnoseWorkshopClaim();
+        console.info("Workshop owner claim rollback probe",result);
+      }catch(e){
+        console.error("Workshop owner claim rollback probe failed",
+          {code:e.code||"none",message:String(e.message||"unknown").slice(0,230)});
+      }});
       // Read-only permission probe: the impossible member ID must fail the
       // membership check, but must NOT fail on function execution permissions.
       run(async()=>{try{
