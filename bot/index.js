@@ -21,7 +21,7 @@ import { handleDice, registerDice } from "./dice.js";
 import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
 import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./workshop-assignments.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
-import { fetchReadOnlyProfile } from "./profile-db.js";
+import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -525,6 +525,10 @@ async function main() {
         description:"View your Compound membership card and character stats",
         options:[{name:"member",description:"Optional Discord member to view",type:6,required:false}],
       });
+      await guild.commands.create({
+        name:"wallet",
+        description:"Check your personal Compound Credits balance",
+      });
       // Trivia channels are managed by staff; do not auto-create on restart.
       client.user.setActivity("cultofnixon.com", {
         type: ActivityType.Watching,
@@ -625,6 +629,21 @@ async function main() {
     if (m.guildId === guildId && !m.author.bot && !m.webhookId)
       recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
     if(m.guildId===guildId&&!m.author.bot&&m.mentions.has(client.user)&&
+       /^\\s*<@!?\\d+>\\s+wallet\\s*[.!?]?\\s*$/i.test(m.content||"")){
+      run(async()=>{
+        try{
+          const wallet=await fetchCompoundTreasury();
+          const amount=BigInt(wallet.balance).toLocaleString("en-US");
+          return m.reply({content:"🏦 **THE COMPOUND · TREASURY**\\nAvailable funds: **"+amount+" Compound Credits**.\\nThis is the communal bank, not your personal wallet.",
+            allowedMentions:{parse:[],repliedUser:false}});
+        }catch(e){
+          console.warn("Treasury lookup unavailable",{code:e.code||"unavailable"});
+          return m.reply({content:"The Compound bank ledger is temporarily unavailable.",allowedMentions:{parse:[],repliedUser:false}});
+        }
+      });
+      return;
+    }
+    if(m.guildId===guildId&&!m.author.bot&&m.mentions.has(client.user)&&
        /^\s*<@!?\d+>\s+profile\s*[.!?]?\s*$/i.test(m.content||"")){
       run(async()=>{
         const payload=await compoundCard({
@@ -652,6 +671,21 @@ async function main() {
 
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="roll"){
       run(()=>handleDice(i));return;
+    }
+    if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="wallet"){
+      run(async()=>{
+        await i.deferReply({flags:MessageFlags.Ephemeral});
+        try{
+          const w=await fetchResidentWallet(i.user.id);
+          const balance=BigInt(w.balance).toLocaleString("en-US");
+          const earned=BigInt(w.earned).toLocaleString("en-US");
+          return i.editReply({content:"💳 **YOUR COMPOUND WALLET**\\nCurrent balance: **"+balance+" Credits**\\nLifetime Workshop earnings: **"+earned+" Credits**\\nComplete assigned Workshop objectives to earn more.",allowedMentions:{parse:[]}});
+        }catch(e){
+          console.warn("Personal wallet lookup unavailable",{code:e.code||"unavailable"});
+          return i.editReply({content:"Your Compound wallet is temporarily unavailable.",allowedMentions:{parse:[]}});
+        }
+      });
+      return;
     }
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="profile"){
       run(async()=>{
