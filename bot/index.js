@@ -21,7 +21,7 @@ import { handleDice, registerDice } from "./dice.js";
 import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
 import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./workshop-assignments.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
-import { fetchReadOnlyProfile, workshopDatabaseCall, diagnoseWorkshopClaim } from "./profile-db.js";
+import { fetchReadOnlyProfile } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -530,23 +530,6 @@ async function main() {
         type: ActivityType.Watching,
       });
       state = "ready";
-      run(async()=>{try{
-        const result=await diagnoseWorkshopClaim();
-        console.info("Workshop owner claim rollback probe",result);
-      }catch(e){
-        console.error("Workshop owner claim rollback probe failed",
-          {code:e.code||"none",message:String(e.message||"unknown").slice(0,230)});
-      }});
-      // Read-only permission probe: the impossible member ID must fail the
-      // membership check, but must NOT fail on function execution permissions.
-      run(async()=>{try{
-        await workshopDatabaseCall("claim",{guild_id:guild.id,
-          user_id:"999999999999999994",channel_id:"1571523950033248266",
-          message_id:"999999999999999994"});
-        console.warn("Workshop privilege probe unexpected result");
-      }catch(e){console.info("Workshop claim privilege probe",
-        {code:e.code||"none",message:String(e.message||"unknown").slice(0,180)});}});
-
       run(rotateWorkshop);
       run(checkWorkshopReminders);
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
