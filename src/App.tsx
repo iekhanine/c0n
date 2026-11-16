@@ -130,7 +130,7 @@ export default function App() {
               : path === "/community"
                 ? "community"
                 : path === "/"
-                  ? "facility"
+                  ? "explore"
                   : "missing";
   if (account === null || (account.user && membershipAccess === null))
     return <div className="showcase con-locked-shell"><div className="con-lock-checking"><img src="/con-logo.png" alt="C0N"/><p>Checking access to The Compound…</p></div></div>;
