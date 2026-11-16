@@ -69,14 +69,14 @@ export default function App() {
   // Character creation is mandatory for active members before other gameplay.
   // Never lock the site on transient database/API failures.
   useEffect(()=>{
-    if(!account?.user||membershipAccess!==true||window.location.pathname==="/reclamation")return;
+    if(!account?.user||account.owner===true||membershipAccess!==true||window.location.pathname==="/reclamation")return;
     const controller=new AbortController();
     void fetch("/api/social?action=game_state",{cache:"no-store",signal:controller.signal})
       .then(response=>response.ok?response.json():null)
       .then(data=>{if(!controller.signal.aborted&&data&&data.character===null)window.location.replace("/reclamation")})
       .catch(()=>{});
     return ()=>controller.abort();
-  },[account?.user?.id,membershipAccess]);
+  },[account?.user?.id,account?.owner,membershipAccess]);
   const [seedError, setSeedError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
