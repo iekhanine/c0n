@@ -104,7 +104,7 @@ function activeJobPanel(job){
  '<p>'+esc(job.objective||"")+'</p><p><strong>Location:</strong> '+esc(job.job_location||"The Compound")+'</p>'+
  '<p><strong>Status:</strong> '+esc(status)+'</p>'+
  '<div class="countdown"'+dueAttr+' aria-label="Time remaining until job reminder">Calculating…</div>'+
- '<p class="hint">Salary: '+num(job.salary_credits)+' Credits · Reward: '+num(job.xp_reward)+' XP</p></section>';
+ '<p class="hint">Salary: '+num(job.salary_credits)+' Dollars · Reward: '+num(job.xp_reward)+' XP</p></section>';
 }
 function updateJobCountdowns(){
  document.querySelectorAll('[data-job-deadline]').forEach(el=>{
@@ -123,8 +123,8 @@ function newcomerGuide(){
  ['4. Receive your assignment','The Overseer bot issues tools and materials from the shared Compound stockroom and sends you a mission briefing, destination, salary, XP reward, and shift duration. Supplies are finite.'],
  ['5. Complete your shift','Follow the story objective at its listed Compound location. The timer starts when you accept. You can check the countdown on your public character profile, or use /profile in Discord.'],
  ['6. Answer the Overseer','Once your shift time has elapsed, the bot pings you. Select Yes, completed to confirm. Select Not yet to keep the assignment and receive another check-in 30 minutes later.'],
- ['7. Collect credits and XP','Confirmation awards the stated salary and experience once. Reusable tools return to the stockroom. Your progression is on your public profile and in /profile.'],
- ['8. Check your money','Type /wallet in Discord to see your private Compound Credits balance and lifetime Workshop earnings. Mention the bot with @cultofnixon wallet to check the Compound’s overall treasury.']
+ ['7. Collect dollars and XP','Confirmation awards the stated salary and experience once. Reusable tools return to the stockroom. Your progression is on your public profile and in /profile.'],
+ ['8. Check your money','Type /wallet in Discord to see your private Compound Dollars balance and lifetime Workshop earnings. Mention the bot with @cultofnixon wallet to check the Compound’s overall treasury.']
  ];
  return '<div class="guide-head"><div class="eyebrow">THE COMPOUND / FIELD MANUAL</div>'+
  '<h1>New Resident Field Guide</h1><p class="muted">Everything you need to know about joining the Workshop, accepting missions, earning XP and getting paid.</p></div>'+
@@ -132,7 +132,7 @@ function newcomerGuide(){
  '<section class="guide-step"><h2>'+esc(title)+'</h2><p>'+esc(detail)+'</p></section>').join('')+'</div>'+
  '<div class="panel space"><h2>Important Workshop rules</h2>'+
  '<p>Jobs are first come, first served. A claimed objective cannot be accepted by someone else. New objectives rotate daily, staggered between channels. Just chatting in a Workshop channel does not complete a job or award its contracted salary.</p>'+
- '<p>All credits, supplies, and assignments are fictional Compound game resources. The Compound treasury is separate from each resident’s wallet.</p>'+
+ '<p>All dollars, supplies, and assignments are fictional Compound game resources. The Compound treasury is separate from each resident’s wallet.</p>'+
  '<div class="guide-actions"><a class="btn primary" href="https://discord.gg/dSHMeZ4ETJ">Join the Discord</a><a class="btn" href="/">The Compound</a></div></div></div>';
 }
 async function publicProfile(id){
