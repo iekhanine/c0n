@@ -1,12 +1,12 @@
 import { useEffect,useState,type FormEvent } from "react";
 import { Dices, BriefcaseBusiness, Hammer, Wallet, Shield, RefreshCw } from "lucide-react";
 import ReclamationSystems from "./ReclamationSystems";
+import CharacterRegistration from "./CharacterRegistration";
 type Task={version?:number;status?:string;id:string;title:string;description:string;profession_id:string|null;completion_type:string;duration_minutes:number;character_xp:number;profession_xp:number;pay_credits:string|number;stamina_cost:number;materials:Record<string,number>};
 type Order={id:string;status:string;title:string;completion_type:string;due_at:string|null};
 type Review={id:string;moderator_note:string;title:string;member_name:string};
 type Character={id:string;name:string;profession_id:string;level:number;xp:string|number;health:number;stamina:number;attributes:Record<string,number>;skills:Record<string,number>};
-type Game={character:Character|null;tasks:Task[];projects:{id:string;title:string;phase:number;state:string;requirements:Record<string,number>;progress:Record<string,number>}[];wallet:string;orders:Order[];settings:{rules?:{allocation_points?:number;starting_attribute?:number;starting_max?:number};story?:{stage:string}};overseer?:{treasury:string;taskTemplates:Task[]};reviewQueue?:Review[]};
-const fields=["strength","intelligence","charisma","agility","endurance","perception"] as const;
+type Game={character:Character|null;assignedName:string|null;tasks:Task[];projects:{id:string;title:string;phase:number;state:string;requirements:Record<string,number>;progress:Record<string,number>}[];wallet:string;orders:Order[];settings:{rules?:{allocation_points?:number;starting_attribute?:number;starting_max?:number};story?:{stage:string}};overseer?:{treasury:string;taskTemplates:Task[]};reviewQueue?:Review[]};
 const professions=["carpenter","metalworker","medic","farmer","engineer","scavenger"];
 async function request<T>(action:string,method="GET",data?:unknown):Promise<T>{
  const response=await fetch("/api/social?action=game_"+encodeURIComponent(action),{method,cache:"no-store",headers:data?{"Content-Type":"application/json"}:undefined,body:data?JSON.stringify(data):undefined});
@@ -14,22 +14,17 @@ async function request<T>(action:string,method="GET",data?:unknown):Promise<T>{
 }
 const format=(n:number|string)=>Number(n).toLocaleString("en-US");
 export default function ReclamationPage(){
- const [game,setGame]=useState<Game|null>(null),[pending,setPending]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
- const [name,setName]=useState(""),[profession,setProfession]=useState("carpenter");
- const [attrs,setAttrs]=useState<Record<string,number>>({strength:5,intelligence:5,charisma:5,agility:5,endurance:5,perception:5});
+ const [game,setGame]=useState<Game|null>(null),[pending,setPending]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [dice,setDice]=useState(20),[modifier,setModifier]=useState(0),[diceResult,setDiceResult]=useState<{faces:number[];total:number}|null>(null);
  const [donations,setDonations]=useState<Record<string,number>>({});
  const [task,setTask]=useState({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});
  const [editingTask,setEditingTask]=useState<{id:string;version:number;status:string}|null>(null);
  const load=async()=>{try{setGame(await request<Game>("state"));setError("")}catch(e){setError((e as Error).message)}finally{setPending(false)}};
  useEffect(()=>{void load()},[]);
- const run=async(action:string,data:unknown)=>{setNotice("");setError("");try{const response=await request<{result:unknown}>(action,"POST",data);setNotice("Action completed.");if(action==="dice.roll")setDiceResult(response.result as {faces:number[];total:number});await load()}catch(e){setError((e as Error).message)}};
+ const run=async(action:string,data:unknown)=>{setNotice("");setError("");if(action==="character.create")setSaving(true);try{const response=await request<{result:unknown}>(action,"POST",data);setNotice(action==="character.create"?"Character registration complete.":"Action completed.");if(action==="dice.roll")setDiceResult(response.result as {faces:number[];total:number});await load()}catch(e){setError((e as Error).message)}finally{setSaving(false)}};
  const points=game?.settings?.rules?.allocation_points??20;
  const base=game?.settings?.rules?.starting_attribute??5;
  const max=game?.settings?.rules?.starting_max??10;
- const remaining=points-Object.values(attrs).reduce((s,v)=>s+v-base,0);
- function changeAttr(key:string,delta:number){setAttrs(old=>{const value=old[key]+delta;if(value<base||value>max||(delta>0&&remaining<=0))return old;return {...old,[key]:value}})}
- function register(e:FormEvent){e.preventDefault();if(remaining!==0)return;void run("character.create",{name,profession,attributes:attrs})}
  function addTask(e:FormEvent){e.preventDefault();void run(editingTask?"task.update":"task.publish",editingTask?{...task,...editingTask}:task)}
  const style={background:"#151b22",border:"1px solid #34404b",borderRadius:8,padding:18} as const;
  return <div style={{maxWidth:1160,margin:"24px auto",padding:"0 16px",color:"#e5ebf1",fontFamily:"inherit"}}>
@@ -39,13 +34,16 @@ export default function ReclamationPage(){
   </header>
   {pending?<p>Connecting to the game database…</p>:error&&!game?<p role="alert">{error}</p>:game&&<>
    {notice&&<p role="status" style={{color:"#9fdeb8"}}>{notice}</p>}{error&&<p role="alert" style={{color:"#ff9c9c"}}>{error}</p>}
-   {!game.character?<section style={style}><h2>Mandatory character registration</h2><p>You must allocate all starting points and choose a profession before taking jobs.</p>
-    <form onSubmit={register}><label>Character name <input required maxLength={50} minLength={2} value={name} onChange={e=>setName(e.target.value)} style={{display:"block",margin:"7px 0 15px",padding:9,width:"min(100%,420px)"}}/></label>
-     <label>Starting profession <select value={profession} onChange={e=>setProfession(e.target.value)} style={{display:"block",margin:"7px 0 15px",padding:9}}>{professions.map(p=><option key={p} value={p}>{p}</option>)}</select></label>
-     <h3>Distribute points ({remaining} remaining)</h3>
-     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:12,marginBottom:20}}>{fields.map(k=><div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}><label>{k}</label><div style={{display:"flex",alignItems:"center",gap:10}}><button type="button" disabled={attrs[k]<=base} onClick={()=>changeAttr(k,-1)}>−</button><b>{attrs[k]}</b><button type="button" disabled={attrs[k]>=max||remaining<=0} onClick={()=>changeAttr(k,1)}>+</button></div></div>)}</div>
-     <button type="submit" disabled={remaining!==0||name.trim().length<2}>Create character</button>
-    </form></section>:<>
+   {!game.character?<CharacterRegistration
+      assignedName={game.assignedName}
+      isOverseer={Boolean(game.overseer)}
+      points={points}
+      base={base}
+      max={max}
+      submitting={saving}
+      error={error}
+      onRegister={data=>void run("character.create",data)}
+    />:<>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginBottom:16}}>
      <section style={style}><Shield size={20}/><h2 style={{margin:"8px 0"}}>{game.character.name}</h2><p>{game.character.profession_id} · Level {game.character.level}</p><strong>{format(game.character.xp)} XP</strong><p>Health {game.character.health} · Stamina {game.character.stamina}</p></section>
      <section style={style}><Wallet size={20}/><h2>{format(game.wallet)} CC</h2><p>Personal credits</p><small>Fictional currency, no cash value</small></section>
