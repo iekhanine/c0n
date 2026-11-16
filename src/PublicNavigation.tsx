@@ -5,7 +5,7 @@ import "./PublicNavigation.css";
 
 type NavId="compound"|"archive"|"militia";
 const keys:NavId[]=["compound","archive","militia"];
-const hrefs:Record<NavId,string>={compound:"/",archive:"/archive",militia:"/militia"};
+const hrefs:Record<NavId,string>={compound:"https://thecompound.cultofnixon.com/",archive:"/archive",militia:"/militia"};
 const nameKeys:Record<NavId,string>={compound:"nav.compound",archive:"nav.archive",militia:"nav.militia"};
 const setting="layout.nav.order";
 function parse(value:string|undefined):NavId[]{
@@ -18,7 +18,7 @@ function parse(value:string|undefined):NavId[]{
 export default function PublicNavigation(){
  const {entries}=useSiteContent();
  const order=parse(entries[setting]?.value??SITE_COPY[setting]);
- return <nav aria-label="Community" className="con-public-nav">{order.map(key=><a key={key} aria-current={location.pathname===hrefs[key]?"page":undefined} href={hrefs[key]}>{entries[nameKeys[key]]?.removed?"":entries[nameKeys[key]]?.value??SITE_COPY[nameKeys[key]]}</a>)}</nav>;
+ return <nav aria-label="Community" className="con-public-nav">{order.map(key=><a key={key} aria-current={(key==="compound"?location.hostname==="thecompound.cultofnixon.com":location.pathname===hrefs[key])?"page":undefined} href={hrefs[key]}>{entries[nameKeys[key]]?.removed?"":entries[nameKeys[key]]?.value??SITE_COPY[nameKeys[key]]}</a>)}</nav>;
 }
 export function NavigationEditor(){
  const {owner,entries,ready,change}=useSiteContent();
