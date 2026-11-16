@@ -19,7 +19,7 @@
 }
 .con-tool-tabs {
   position: fixed;
-  top: 80px;
+  top: 88px;
   left: 0;
   bottom: 0;
   width: 248px;
@@ -891,3 +891,8 @@
 .con-admin-systems a:hover {background:#233b2a;border-color:#92b779;}
 .con-admin-systems strong {font-size:19px;}
 .con-admin-systems span {font-size:15px;line-height:1.6;color:#bac8b8;}
+
+.con-admin .con-owner-direct{display:flex;align-items:center;gap:10px;min-height:39px;padding:9px 13px;color:#d5e6d9;text-decoration:none;border:1px solid transparent;border-radius:4px;font-size:13px}
+.con-admin .con-owner-direct:hover{background:#233c2b;border-color:#53735a;color:#f4f8ed}
+.con-admin .con-owner-direct svg:last-child{margin-left:auto;opacity:.55}
+@media(max-width:1160px){.con-tool-tabs{top:132px}}
