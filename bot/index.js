@@ -528,7 +528,7 @@ async function main() {
       });
       await guild.commands.create({
         name:"wallet",
-        description:"Check your personal Compound Credits balance",
+        description:"Check your personal Compound Dollars balance",
       });
       // Trivia channels are managed by staff; do not auto-create on restart.
       client.user.setActivity("cultofnixon.com", {
