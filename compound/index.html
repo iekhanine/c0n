@@ -19,6 +19,7 @@
 .stat-presets button:hover,.stat-presets button:focus-visible{background:#385342}
 .stat-editor-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .stat-preview{color:var(--green);font-family:'IBM Plex Mono',monospace}
+.workshop-job{margin-top:20px;padding:22px;border:1px solid #64865f;background:#15231a;border-radius:5px}.workshop-job h2{margin:8px 0}.workshop-job .countdown{font:700 24px 'IBM Plex Mono',monospace;color:var(--green)}.guide-steps{display:grid;gap:14px;counter-reset:guide}.guide-step{padding:20px;border:1px solid var(--border);background:var(--panel)}.guide-step h2{margin:0 0 8px;font-size:18px}.guide-step p{color:var(--muted);margin:0}.guide-step code{color:var(--green)}.guide-head{max-width:850px;margin:44px auto 26px}.guide-content{max-width:850px;margin:0 auto 55px;padding:0 18px}.guide-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:23px}
 </style></head><body><div id="app" class="load">Connecting to Cult of nix0n…</div>
 <script>
 "use strict";
@@ -27,7 +28,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const num=v=>Number(v||0).toLocaleString();
 let me=null,flash="",err="";
 const sections=[
- {name:"COMMUNITY",links:[["/","Overview"],["/apartments","Apartment building"],["/profile","My character"],["/requests","Housing requests"]]},
+ {name:"COMMUNITY",links:[["/","Overview"],["/apartments","Apartment building"],["/profile","My character"],["/guide","Newcomer guide"],["/requests","Housing requests"]]},
  {name:"GAME ADMINISTRATION",admin:true,links:[["/admin/residents","Member directory"],["/admin/apartments","Apartment management"],["/admin/requests","Approvals"],["/admin/progression","Progression controls"],["/admin/rules","XP & activity rules"],["/admin/audit","Audit history"]]},
  {name:"OTHER SYSTEMS",links:[["https://cultofnixon.com/admin","Community website admin"],["https://cultofnixon.com/admin/discord","Discord bot admin"]]}
 ];
@@ -93,6 +94,47 @@ return head("Character progression","Manage XP and character attributes. Every a
 async function rules(){const d=await call("rules");const r=d.rules;
 return head("XP & activity rules","Real Discord participation events feed character XP. Daily caps limit farming and spam.")+'<div class="panel"><h2>Activity XP policy</h2><form id="rules-form" class="inline-form">'+[["message_xp","XP per message"],["reaction_xp","XP per reaction"],["daily_message_cap","Daily message cap"],["daily_reaction_cap","Daily reaction cap"]].map(([name,label])=>'<label class="field">'+label+'<input required type="number" min="0" max="500" name="'+name+'" value="'+num(r[name])+'"></label>').join("")+'<button class="primary" type="submit">Save XP rules</button></form><p class="hint space">Existing participation events are counted once, from the connected C0N Discord server. The new policy takes effect when a character is refreshed.</p></div>'}
 async function audit(){const d=await call("audit");return head("Audit history","Recorded actions for apartment claims, transfers, approvals and progression changes.")+(d.events.length?table(["Date","Actor Discord ID","Event","Subject","Details"],d.events.map(e=>'<tr><td>'+esc(new Date(e.created_at).toLocaleString())+'</td><td>'+esc(e.actor_id)+'</td><td>'+esc(e.action)+'</td><td>'+esc(e.subject_id||"")+'</td><td><code>'+esc(JSON.stringify(e.details))+'</code></td></tr>')):'<div class="empty">No activity has been recorded.</div>')}
+function activeJobPanel(job){
+ if(!job||!job.title)return '<section class="panel space"><h2>Current Workshop assignment</h2><p class="muted">No active job assigned.</p></section>';
+ const due=new Date(job.due_at).getTime();
+ const dueAttr=Number.isFinite(due)?' data-job-deadline="'+Math.floor(due)+'"':"";
+ const status=job.state==="awaiting_confirmation"?"Awaiting completion confirmation":"In progress";
+ return '<section class="workshop-job" aria-label="Current Workshop assignment">'+
+ '<div class="eyebrow">CURRENTLY ASSIGNED JOB</div><h2>'+esc(job.title)+'</h2>'+
+ '<p>'+esc(job.objective||"")+'</p><p><strong>Location:</strong> '+esc(job.job_location||"The Compound")+'</p>'+
+ '<p><strong>Status:</strong> '+esc(status)+'</p>'+
+ '<div class="countdown"'+dueAttr+' aria-label="Time remaining until job reminder">Calculating…</div>'+
+ '<p class="hint">Salary: '+num(job.salary_credits)+' Credits · Reward: '+num(job.xp_reward)+' XP</p></section>';
+}
+function updateJobCountdowns(){
+ document.querySelectorAll('[data-job-deadline]').forEach(el=>{
+  const due=Number(el.dataset.jobDeadline);if(!Number.isFinite(due))return;
+  const rem=Math.max(0,Math.ceil((due-Date.now())/1000));
+  const h=Math.floor(rem/3600),m=Math.floor(rem%3600/60),sec=rem%60;
+  el.textContent=rem>0?'Time left: '+(h?h+'h ':'')+m+'m '+String(sec).padStart(2,'0')+'s':'Shift time reached · Awaiting Overseer check-in';
+ });
+}
+setInterval(updateJobCountdowns,1000);
+function newcomerGuide(){
+ const stages=[
+ ['1. Join the Compound','Join the Discord server and follow the server onboarding and role instructions. Workshop access depends on your server roles.'],
+ ['2. Open a Workshop channel','Visit Job Board, Carpentry, Metalworking, Medical, Agriculture, Engineering, Scavenging, or Payroll. Read the pinned daily objective and reward before accepting.'],
+ ['3. Type accept','Post the word accept by itself in the channel. The first resident to claim the current job gets it exclusively. Each member can hold only one unfinished job at a time.'],
+ ['4. Receive your assignment','The Overseer bot issues tools and materials from the shared Compound stockroom and sends you a mission briefing, destination, salary, XP reward, and shift duration. Supplies are finite.'],
+ ['5. Complete your shift','Follow the story objective at its listed Compound location. The timer starts when you accept. You can check the countdown on your public character profile, or use /profile in Discord.'],
+ ['6. Answer the Overseer','Once your shift time has elapsed, the bot pings you. Select Yes, completed to confirm. Select Not yet to keep the assignment and receive another check-in 30 minutes later.'],
+ ['7. Collect credits and XP','Confirmation awards the stated salary and experience once. Reusable tools return to the stockroom. Your progression is on your public profile and in /profile.'],
+ ['8. Check your money','Type /wallet in Discord to see your private Compound Credits balance and lifetime Workshop earnings. Mention the bot with @cultofnixon wallet to check the Compound’s overall treasury.']
+ ];
+ return '<div class="guide-head"><div class="eyebrow">THE COMPOUND / FIELD MANUAL</div>'+
+ '<h1>New Resident Field Guide</h1><p class="muted">Everything you need to know about joining the Workshop, accepting missions, earning XP and getting paid.</p></div>'+
+ '<div class="guide-content"><div class="guide-steps">'+stages.map(([title,detail])=>
+ '<section class="guide-step"><h2>'+esc(title)+'</h2><p>'+esc(detail)+'</p></section>').join('')+'</div>'+
+ '<div class="panel space"><h2>Important Workshop rules</h2>'+
+ '<p>Jobs are first come, first served. A claimed objective cannot be accepted by someone else. New objectives rotate daily, staggered between channels. Just chatting in a Workshop channel does not complete a job or award its contracted salary.</p>'+
+ '<p>All credits, supplies, and assignments are fictional Compound game resources. The Compound treasury is separate from each resident’s wallet.</p>'+
+ '<div class="guide-actions"><a class="btn primary" href="https://discord.gg/dSHMeZ4ETJ">Join the Discord</a><a class="btn" href="/">The Compound</a></div></div></div>';
+}
 async function publicProfile(id){
  const response=await fetch(API+"?action=compound_public_profile&id="+encodeURIComponent(id),{credentials:"include",cache:"no-store"});
  const data=await response.json();if(!response.ok)throw Error(data.error||"Resident unavailable");
@@ -108,12 +150,14 @@ async function publicProfile(id){
  '<div><h1>'+esc(identity?.codename||m.display_name)+'</h1><div class="muted">'+(identity?'VERIFIED MEMBER · '+esc(memberCode||identity.member_no):'COMPOUND RESIDENT · MEMBERSHIP NOT ISSUED')+'</div></div>'+
  '<div class="public-card-bottom"><div><span class="eyebrow">APARTMENT</span><div><strong>'+esc(m.apartment)+'</strong></div></div><div><span class="eyebrow">RESIDENT</span><div><strong>'+esc(m.display_name)+'</strong></div></div></div></section>'+
  '<section class="panel public-stats" aria-label="Character statistics"><div class="row"><h2>Character Stats</h2><span class="tag">LEVEL '+num(p.level)+'</span></div>'+
- '<div class="attributes">'+[["XP",p.xp],["Health",p.health],["Stamina",p.stamina],["Skill",p.skill],["Charisma",p.charisma],["Intellect",p.intellect],["Luck",p.luck]].map(x=>attr(...x)).join("")+'</div></section></main>';
+ '<div class="attributes">'+[["XP",p.xp],["Health",p.health],["Stamina",p.stamina],["Skill",p.skill],["Charisma",p.charisma],["Intellect",p.intellect],["Luck",p.luck]].map(x=>attr(...x)).join("")+'</div></section>'+
+ activeJobPanel(data.active_job)+'</main>';
 }
 async function render(){
 const el=document.getElementById("app");el.className="";el.innerHTML='<div class="load">Loading…</div>';
 const publicId=path().match(/^\/u\/(\d{17,20})$/)?.[1];
-if(publicId){try{el.innerHTML=await publicProfile(publicId);}catch(e){el.innerHTML='<div class="public-sheet"><div class="empty">'+esc(e.message)+'</div></div>';}return;}
+if(path()==="/guide"){el.innerHTML=newcomerGuide();return;}
+if(publicId){try{el.innerHTML=await publicProfile(publicId);}catch(e){el.innerHTML='<div class="public-sheet"><div class="empty">'+esc(e.message)+'</div></div>';}updateJobCountdowns();return;}
 
 try{
 me=await call("me");const routes={"/":overview,"/apartments":apartments,"/profile":profile,"/requests":requests,"/admin/residents":residents,"/admin/apartments":manageApartments,"/admin/requests":approvals,"/admin/progression":progression,"/admin/rules":rules,"/admin/audit":audit};
