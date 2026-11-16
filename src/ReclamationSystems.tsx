@@ -93,7 +93,7 @@ export default function ReclamationSystems({game,run}:{game:GameView;run:(action
      <label style={label}>Session <select value={awardSession} onChange={e=>setAwardSession(e.target.value)} required><option value="">Select active session</option>{(game.sessions||[]).map(s=><option key={s.id} value={s.id}>{s.id.slice(0,8)}</option>)}</select></label>
      <label style={label}>Recipient Discord ID <input required value={awardMember} onChange={e=>setAwardMember(e.target.value)} style={input}/></label>
      <label style={label}>XP <input type="number" min={0} max={10000} value={awardXp} onChange={e=>setAwardXp(Number(e.target.value))}/></label>
-     <label style={label}>Dollars <input type="number" min={0} max={100000} value={awardCredits} onChange={e=>setAwardCredits(Number(e.target.value))}/></label>
+     <label style={label}>Amount ($) <input type="number" min={0} max={100000} value={awardCredits} onChange={e=>setAwardCredits(Number(e.target.value))}/></label>
      <button type="submit">Send to Overseer for approval</button>
     </form>}
    </>}
@@ -103,14 +103,14 @@ export default function ReclamationSystems({game,run}:{game:GameView;run:(action
    <p>Dollars paid to another resident incur the configured transaction tax.</p>
    <form onSubmit={e=>submit(e,"credits.transfer",{recipient:receiver,amount,key:crypto.randomUUID()})}>
     <label style={label}>Recipient Discord ID <input required value={receiver} onChange={e=>setReceiver(e.target.value)} style={input}/></label>
-    <label style={label}>Amount in Dollars <input type="number" min={1} max={100000000} value={amount} onChange={e=>setAmount(Number(e.target.value))}/></label>
+    <label style={label}>Amount ($) <input type="number" min={1} max={100000000} value={amount} onChange={e=>setAmount(Number(e.target.value))}/></label>
     <button type="submit">Transfer dollars</button>
    </form>
   </section>}
   {!!(game.worldEvents||[]).length&&<section style={panel}><h2>World events</h2>{(game.worldEvents||[]).map(w=><p key={w.id}><strong>{w.title}</strong> · {w.description}</p>)}</section>}
   {game.overseer&&<section style={panel}>
    <h2><Crown size={19} style={{display:"inline"}}/> Overseer financial controls</h2>
-   <p>Treasury: {money(game.overseer.treasury)} Dollars</p>
+   <p>Treasury: ${money(game.overseer.treasury)}</p>
    <form onSubmit={e=>submit(e,"taxes.update",{income:taxIncome,sales:taxSales})}>
     <h3>Taxation</h3>
     <label style={label}>Income tax % <input type="number" min={0} max={25} value={taxIncome} onChange={e=>setTaxIncome(Number(e.target.value))}/></label>
@@ -143,7 +143,7 @@ export default function ReclamationSystems({game,run}:{game:GameView;run:(action
    <h3>Pending campaign awards</h3>
    {(game.overseer.pendingAwards||[]).length===0&&<p>No awards awaiting approval.</p>}
    {(game.overseer.pendingAwards||[]).map(a=><div key={a.id} style={{padding:"10px 0",borderBottom:"1px solid #34404b"}}>
-    {a.recipient} · {a.xp} XP · {money(a.credits)} Dollars{" "}
+    {a.recipient} · {a.xp} XP · ${money(a.credits)}{" "}
     <button type="button" onClick={()=>void run("award.approve",{id:a.id})}>Approve and issue</button>
    </div>)}
   </section>}
