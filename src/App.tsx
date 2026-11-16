@@ -66,17 +66,8 @@ export default function App() {
       .catch(()=>{});
     return ()=>{active=false;};
   },[membershipAccess,account?.user?.id]);
-  // Character creation is mandatory for active members before other gameplay.
-  // Never lock the site on transient database/API failures.
-  useEffect(()=>{
-    if(!account?.user||account.owner===true||membershipAccess!==true||window.location.pathname==="/reclamation")return;
-    const controller=new AbortController();
-    void fetch("/api/social?action=game_state",{cache:"no-store",signal:controller.signal})
-      .then(response=>response.ok?response.json():null)
-      .then(data=>{if(!controller.signal.aborted&&data&&data.character===null)window.location.replace("/reclamation")})
-      .catch(()=>{});
-    return ()=>controller.abort();
-  },[account?.user?.id,account?.owner,membershipAccess]);
+  // Resident intake is handled only on the dedicated Compound subdomain.
+  // Community access must not be gated by a character-registration record.
   const [seedError, setSeedError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -207,7 +198,7 @@ export default function App() {
                   <a href="/inbox">Inbox · Replies</a>
                   <a href="/membership">Membership & invitations</a>
                   <a href="/my-projects">My projects</a>
-                  <a href="/reclamation">Project Reclamation RPG</a>
+                  <a href="https://thecompound.cultofnixon.com/operations">Compound operations</a>
                   <button type="button" disabled={signingOut} onClick={() => void signOut()}>
                     <LogOut size={16}/> {signingOut ? "Signing out…" : "Log out"}
                   </button>
