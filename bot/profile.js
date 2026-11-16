@@ -51,6 +51,18 @@ export function buildProfileCard(payload) {
       stat("LUCK",p.luck,"✧"),
     )
     .setFooter({text:"THE COMPOUND  •  CHARACTER RECORD",iconURL:LOGO});
+  if(payload.active_job?.title){
+    const job=payload.active_job;
+    const due=Date.parse(job.due_at);
+    const deadline=Number.isFinite(due)?"<t:"+Math.floor(due/1000)+":R>":"Pending";
+    const status=job.state==="awaiting_confirmation"?"Awaiting completion confirmation":"In progress";
+    embed.addFields({name:"🔧  ACTIVE WORKSHOP JOB",value:
+      "**"+clean(job.title,130)+"**\n"+
+      "📍 "+clean(job.location||"The Compound",130)+"\n"+
+      "⏱ "+status+" · "+deadline,inline:false});
+  }else{
+    embed.addFields({name:"🔧  WORKSHOP JOB",value:"No active assignment",inline:false});
+  }
   // A member may have an animated or static avatar. Only use the
   // official Discord CDN, not a user-supplied URL.
   if(/^(a_)?[0-9a-f]{32}$/.test(m.avatar||"")) {
