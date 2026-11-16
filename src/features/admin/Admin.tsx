@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
 import { MemberProjects } from "../../ProjectPages";
 import Publishing from "./Publishing";
+import PublicNavigation from "../../PublicNavigation";
+import "../../CommunityFeed.css";
 import {
   SiteTextProvider,
   Editable,
@@ -112,9 +114,10 @@ export default function Admin() {
               </small>
             </span>
           </a>
+          <PublicNavigation />
           <div className="con-header-actions">
-            {session?.owner && <a className="con-view-site" href="/archive/manage">Archive Editor</a>}
-            {session?.owner && <a className="con-view-site" href="/featured/manage">Featured Content</a>}
+            
+            
             <WebsiteEditToggle />
             <a
               className="con-view-site"
