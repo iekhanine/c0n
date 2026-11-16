@@ -71,18 +71,3 @@ export async function workshopDatabaseCall(kind,args){
   const result=await db.query(sql,values);
   return result.rows[0]?.payload;
 }
-
-export async function diagnoseWorkshopClaim(){
- const pool=database();
- if(!pool)throw Error("Workshop database unavailable");
- const client=await pool.connect();
- try{
-  await client.query("BEGIN");
-  const r=await client.query("select con.bot_workshop_claim($1,$2,$3,$4) as payload",[
-   "903106349850849370","267489014922215434","1571523950033248266","999999999999999995"
-  ]);
-  return {ok:true,title:r.rows[0]?.payload?.title};
- }finally{
-  try{await client.query("ROLLBACK");}finally{client.release();}
- }
-}
