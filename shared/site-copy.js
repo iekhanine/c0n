@@ -29,8 +29,8 @@ export const SITE_COPY = {
   "admin.font.title": "Discord text generator",
   "admin.font.description": "Convert plain text into C0N small caps, then copy it straight into Discord.",
   "admin.discord.title": "Discord bot",
-  "admin.games.title": "Compound games",
-  "admin.games.description": "Manage the in-world facility economy, work orders, and member requisitions.",
+  "admin.games.title": "Compound operations",
+  "admin.games.description": "Access field operations, Overseer responsibilities, work orders, finances and member requisitions.",
   "admin.navigation.title": "Navigation",
   "admin.navigation.description": "Choose the order of public navigation links.",
   "admin.discord.description":
