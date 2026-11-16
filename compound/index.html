@@ -30,7 +30,7 @@ const num=v=>Number(v||0).toLocaleString();
 let me=null,flash="",err="";
 const sections=[
  {name:"RESIDENT SERVICES",links:[["/","Overview"],["/apartments","Apartment building"],["/profile","Resident profile"],["/requests","Housing requests"],["/guide","Field guide"]]},
- {name:"COMPOUND OPERATIONS",links:[["/operations","Operations overview"],["/operations/registration","Personnel registration"],["/operations/work-orders","Work orders"],["/operations/restoration","Restoration milestones"],["/operations/inventory","Stockroom & fabrication"],["/operations/campaigns","Campaigns & expeditions"],["/operations/finance","Resident finances"]]},
+ {name:"COMPOUND OPERATIONS",links:[["/operations","Operations overview"],["/operations/registration","Personnel registration"],["/operations/work-orders","Work orders"],["/operations/restoration","Restoration milestones"],["/operations/inventory","Stockroom & fabrication"],["/supplies","Supply requisitions"],["/operations/campaigns","Campaigns & expeditions"],["/operations/finance","Resident finances"]]},
  {name:"OVERSEER / COMMAND",admin:true,links:[["/overseer/work-orders","Work-order administration"],["/overseer/campaigns","Expedition oversight"],["/overseer/finance","Financial administration"],["/overseer/supplies","Supply administration"],["/admin/progression","Progression controls"]]},
  {name:"OVERSEER / PERSONNEL",admin:true,links:[["/admin/residents","Resident directory"],["/admin/apartments","Housing management"],["/admin/requests","Housing approvals"],["/admin/rules","XP & activity policy"],["/admin/audit","Accountability log"]]},
  {name:"WEBSITE & ACCESS",links:[["https://cultofnixon.com/membership","Membership & invite codes"],["https://cultofnixon.com/admin","Website administration"],["https://cultofnixon.com/admin/discord","Discord administration"]]}
@@ -176,7 +176,7 @@ try{
 me=await call("me");const routes={"/":overview,"/apartments":apartments,"/profile":profile,"/requests":requests,
  "/operations":opsHome,"/operations/registration":opsRegistration,
  "/operations/work-orders":opsWorkOrders,"/operations/restoration":opsRestoration,
- "/operations/inventory":opsInventory,"/operations/campaigns":opsCampaigns,
+ "/operations/inventory":opsInventory,"/supplies":opsSupplies,"/operations/campaigns":opsCampaigns,
  "/operations/finance":opsFinance,
  "/overseer/work-orders":opsOverseerWork,"/overseer/campaigns":opsOverseerCampaigns,
  "/overseer/finance":opsOverseerFinance,"/overseer/supplies":opsOverseerSupplies,
