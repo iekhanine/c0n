@@ -20,7 +20,8 @@
 .stat-editor-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .stat-preview{color:var(--green);font-family:'IBM Plex Mono',monospace}
 .workshop-job{margin-top:20px;padding:22px;border:1px solid #64865f;background:#15231a;border-radius:5px}.workshop-job h2{margin:8px 0}.workshop-job .countdown{font:700 24px 'IBM Plex Mono',monospace;color:var(--green)}.guide-steps{display:grid;gap:14px;counter-reset:guide}.guide-step{padding:20px;border:1px solid var(--border);background:var(--panel)}.guide-step h2{margin:0 0 8px;font-size:18px}.guide-step p{color:var(--muted);margin:0}.guide-step code{color:var(--green)}.guide-head{max-width:850px;margin:44px auto 26px}.guide-content{max-width:850px;margin:0 auto 55px;padding:0 18px}.guide-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:23px}
-</style></head><body><div id="app" class="load">Connecting to Cult of nix0n…</div>
+</style><link rel="stylesheet" href="/operations.css"></head><body><div id="app" class="load">Connecting to Cult of nix0n…</div>
+<script src="/operations.js"></script>
 <script>
 "use strict";
 const API="https://cultofnixon.com/api/social";
@@ -28,22 +29,34 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const num=v=>Number(v||0).toLocaleString();
 let me=null,flash="",err="";
 const sections=[
- {name:"COMMUNITY",links:[["/","Overview"],["/apartments","Apartment building"],["/profile","My character"],["/guide","Newcomer guide"],["/requests","Housing requests"]]},
- {name:"GAME ADMINISTRATION",admin:true,links:[["/admin/residents","Member directory"],["/admin/apartments","Apartment management"],["/admin/requests","Approvals"],["/admin/progression","Progression controls"],["/admin/rules","XP & activity rules"],["/admin/audit","Audit history"]]},
- {name:"OTHER SYSTEMS",links:[["https://cultofnixon.com/admin","Community website admin"],["https://cultofnixon.com/admin/discord","Discord bot admin"]]}
+ {name:"RESIDENT SERVICES",links:[["/","Overview"],["/apartments","Apartment building"],["/profile","Resident profile"],["/requests","Housing requests"],["/guide","Field guide"]]},
+ {name:"COMPOUND OPERATIONS",links:[["/operations","Operations overview"],["/operations/registration","Personnel registration"],["/operations/work-orders","Work orders"],["/operations/restoration","Restoration milestones"],["/operations/inventory","Stockroom & fabrication"],["/operations/campaigns","Campaigns & expeditions"],["/operations/finance","Resident finances"]]},
+ {name:"OVERSEER / COMMAND",admin:true,links:[["/overseer/work-orders","Work-order administration"],["/overseer/campaigns","Expedition oversight"],["/overseer/finance","Financial administration"],["/overseer/supplies","Supply administration"],["/admin/progression","Progression controls"]]},
+ {name:"OVERSEER / PERSONNEL",admin:true,links:[["/admin/residents","Resident directory"],["/admin/apartments","Housing management"],["/admin/requests","Housing approvals"],["/admin/rules","XP & activity policy"],["/admin/audit","Accountability log"]]},
+ {name:"WEBSITE & ACCESS",links:[["https://cultofnixon.com/membership","Membership & invite codes"],["https://cultofnixon.com/admin","Website administration"],["https://cultofnixon.com/admin/discord","Discord administration"]]}
 ];
 async function call(action,body){const method=body?"POST":"GET";const resp=await fetch(API+"?action="+encodeURIComponent("compound_"+action),{method,credentials:"include",cache:"no-store",headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined});let data=await resp.json().catch(()=>({error:"Could not read server response"}));if(!resp.ok)throw new Error(data.error||"Request failed");return data;}
 function path(){return location.pathname.replace(/\/$/,"")||"/"}
 function head(title,description){return '<header class="page-head"><div class="eyebrow">C0N / THE COMPOUND</div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></header>'}
 function table(headers,rows){return '<div class="tablewrap"><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join("")+'</tr></thead><tbody>'+rows.join("")+'</tbody></table></div>'}
 function notice(){let n=(err?'<div role="alert" class="notice error">'+esc(err)+'</div>':'')+(flash?'<div role="status" class="notice">'+esc(flash)+'</div>':'');err="";flash="";return n}
+function compoundGlobalHeader(){
+ const name=me?.user?.name||"Resident";
+ return '<header class="compound-global-header"><a class="compound-global-brand" href="https://cultofnixon.com/"><img src="https://cultofnixon.com/con-logo.png" alt="C0N logo"><span>CULT OF NIX0N</span></a>'+
+ '<nav class="compound-global-nav" aria-label="C0N primary navigation">'+
+ '<a href="/" aria-current="page">THE COMPOUND</a>'+
+ '<a href="https://cultofnixon.com/archive">ARCHIVE</a>'+
+ '<a href="https://cultofnixon.com/militia">MILITIA</a>'+
+ '<a href="https://discord.gg/dSHMeZ4ETJ" target="_blank" rel="noopener">DISCORD</a>'+
+ '</nav><div class="compound-global-status">'+esc(name)+' <span class="tag">'+(me?.is_overseer?'OVERSEER':me?.is_admin?'STAFF':'RESIDENT')+'</span></div></header>';
+}
 function appFrame(content){
 const loc=path(),isAdmin=me.is_admin;
-return '<div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div><strong>THE COMPOUND</strong><small>CULT OF NIX0N</small></div></a><nav aria-label="Compound navigation" style="display:block">'+sections.filter(s=>!s.admin||isAdmin).map(s=>'<div class="nav-label">'+esc(s.name)+'</div>'+s.links.map(([url,label])=>'<a class="nav-link" '+(loc===url?'aria-current="page"':'')+' href="'+esc(url)+'">'+esc(label)+'</a>').join("")).join("")+'</nav><div class="side-bottom">CHARACTER SYSTEM / LIVE DATABASE<br>Powered by Discord identity</div></aside><div class="main"><header class="topbar"><span>THE COMPOUND / '+esc(loc.toUpperCase())+'</span><div class="identity">'+esc(me.user.name)+' <span class="tag">'+(isAdmin?'STAFF':'RESIDENT')+'</span><a href="https://cultofnixon.com/" style="font-size:13px">C0N</a></div></header>'+notice()+content+'</div></div>';
+return compoundGlobalHeader()+'<div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div><strong>THE COMPOUND</strong><small>CULT OF NIX0N</small></div></a><nav aria-label="Compound navigation" style="display:block">'+sections.filter(s=>!s.admin||isAdmin).map(s=>'<div class="nav-label">'+esc(s.name)+'</div>'+s.links.map(([url,label])=>'<a class="nav-link" '+(loc===url?'aria-current="page"':'')+' href="'+esc(url)+'">'+esc(label)+'</a>').join("")).join("")+'</nav><div class="side-bottom">COMPOUND RECORDS / LIVE LEDGER<br>Powered by Discord identity</div></aside><div class="main"><header class="topbar"><span>THE COMPOUND / '+esc(loc.toUpperCase())+'</span><div class="identity">'+esc(me.user.name)+' <span class="tag">'+(isAdmin?'STAFF':'RESIDENT')+'</span><a href="https://cultofnixon.com/" style="font-size:13px">C0N</a></div></header>'+notice()+content+'</div></div>';
 }
 function login(error){
 document.getElementById("app").className="";
-document.getElementById("app").innerHTML='<div class="login"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div class="eyebrow">CULT OF NIX0N / THE COMPOUND</div><h1>Enter The Compound</h1><p>Sign in with your existing Discord identity. Apartment assignments, characters, and approvals are saved to the real C0N database, not browser storage.</p><a class="btn primary" href="https://cultofnixon.com/api/auth/discord/login?next=compound">Continue with Discord</a><p class="hint">You will authorize through cultofnixon.com and return here automatically. Existing C0N session holders can simply refresh.</p>'+(error?'<p class="notice error">'+esc(error)+'</p>':'')+'</div>';
+document.getElementById("app").innerHTML='<div class="login"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div class="eyebrow">CULT OF NIX0N / THE COMPOUND</div><h1>Enter The Compound</h1><p>Sign in with your existing Discord identity. Apartment assignments, personnel records, and approvals are preserved in the Compound registry.</p><a class="btn primary" href="https://cultofnixon.com/api/auth/discord/login?next=compound">Continue with Discord</a><p class="hint">You will authorize through cultofnixon.com and return here automatically. Existing C0N session holders can simply refresh.</p>'+(error?'<p class="notice error">'+esc(error)+'</p>':'')+'</div>';
 }
 function attr(key,value){return '<div class="attribute"><strong>'+num(value)+'</strong><span>'+esc(key)+'</span>'+(key==="XP"?'':'<div class="meter"><i style="width:'+Math.max(0,Math.min(100,Number(value)))+'%"></i></div>')+'</div>'}
 async function overview(){const a=await call("apartments"),r=await call("requests");let home=me.home?.apartment_id||"The Unhoused";return head("Welcome to The Compound","Your resident overview, progression and active housing status.")+
@@ -132,7 +145,7 @@ function newcomerGuide(){
  '<section class="guide-step"><h2>'+esc(title)+'</h2><p>'+esc(detail)+'</p></section>').join('')+'</div>'+
  '<div class="panel space"><h2>Important Workshop rules</h2>'+
  '<p>Jobs are first come, first served. A claimed objective cannot be accepted by someone else. New objectives rotate daily, staggered between channels. Just chatting in a Workshop channel does not complete a job or award its contracted salary.</p>'+
- '<p>All dollars, supplies, and assignments are fictional Compound game resources. The Compound treasury is separate from each resident’s wallet.</p>'+
+ '<p>The Compound treasury and each resident’s accounts are recorded separately.</p>'+
  '<div class="guide-actions"><a class="btn primary" href="https://discord.gg/dSHMeZ4ETJ">Join the Discord</a><a class="btn" href="/">The Compound</a></div></div></div>';
 }
 async function publicProfile(id){
@@ -160,12 +173,22 @@ if(path()==="/guide"){el.innerHTML=newcomerGuide();return;}
 if(publicId){try{el.innerHTML=await publicProfile(publicId);}catch(e){el.innerHTML='<div class="public-sheet"><div class="empty">'+esc(e.message)+'</div></div>';}updateJobCountdowns();return;}
 
 try{
-me=await call("me");const routes={"/":overview,"/apartments":apartments,"/profile":profile,"/requests":requests,"/admin/residents":residents,"/admin/apartments":manageApartments,"/admin/requests":approvals,"/admin/progression":progression,"/admin/rules":rules,"/admin/audit":audit};
-let target=routes[path()];let isAdmin=path().startsWith("/admin/");
-if(isAdmin&&!me.is_admin){err="Game staff permissions required.";target=overview;}
+me=await call("me");const routes={"/":overview,"/apartments":apartments,"/profile":profile,"/requests":requests,
+ "/operations":opsHome,"/operations/registration":opsRegistration,
+ "/operations/work-orders":opsWorkOrders,"/operations/restoration":opsRestoration,
+ "/operations/inventory":opsInventory,"/operations/campaigns":opsCampaigns,
+ "/operations/finance":opsFinance,
+ "/overseer/work-orders":opsOverseerWork,"/overseer/campaigns":opsOverseerCampaigns,
+ "/overseer/finance":opsOverseerFinance,"/overseer/supplies":opsOverseerSupplies,
+ "/admin/residents":residents,"/admin/apartments":manageApartments,
+ "/admin/requests":approvals,"/admin/progression":progression,
+ "/admin/rules":rules,"/admin/audit":audit};
+let target=routes[path()];let isAdmin=path().startsWith("/admin/")||path().startsWith("/overseer/");
+if(isAdmin&&!me.is_admin){err="Overseer authorization required.";target=overview;}
 if(!target){err="That page does not exist.";target=overview;}
 el.innerHTML=appFrame(await target());
 bind();
+if(typeof bindOperations==='function')bindOperations();
 }catch(e){if(String(e.message).includes("Sign in"))login("");else login(e.message);}
 }
 async function perform(action,body){try{await call(action,body);flash="Saved successfully.";err="";await render();}catch(e){err=e.message;flash="";await render();}}
