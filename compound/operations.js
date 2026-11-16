@@ -232,7 +232,7 @@ function bindOperations(){
  document.querySelectorAll("form[data-ops-action]").forEach(form=>form.addEventListener("submit",async e=>{
   e.preventDefault();
   if(opsPending)return;
-  const action=form.dataset.opsAction;
+  let action=form.dataset.opsAction;
   let data=opsFormPayload(form);
   if(action==="character.create"){data={profession:data.profession,attributes:window.opsRegistration?.values||{}};}
   if(action==="project.contribute")data={projectId:data.projectId,item:data.item,quantity:Number(data.quantity)};
