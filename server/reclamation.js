@@ -27,7 +27,8 @@ async function snapshot(pool,discordId,owner){
    where c.discord_id=$1 order by w.accepted_at desc limit 40`,[discordId]),
   pool.query("select key,value from con.game_settings where key in ('rules','story')")
  ]);
- const result={character:c.rows[0]||null,tasks:t.rows,projects:p.rows,wallet:w.rows[0]?.balance||"0",orders:a.rows,settings:Object.fromEntries(settings.rows.map(x=>[x.key,x.value]))};
+ const identity=(await pool.query("select codename from con.memberships where user_id=$1 and active=true",[discordId])).rows[0];
+ const result={character:c.rows[0]||null,tasks:t.rows,projects:p.rows,wallet:w.rows[0]?.balance||"0",orders:a.rows,settings:Object.fromEntries(settings.rows.map(x=>[x.key,x.value])),assignedName:identity?.codename||null};
 
  const [storage,recipes,crafting,campaigns,dm,world]=await Promise.all([
   pool.query("select s.storage_type,s.capacity,a.label apartment,i.item_id,it.name item_name,i.quantity from con.game_storage s left join con.game_apartments a on a.id=s.apartment_id left join con.game_inventory i on i.storage_id=s.id left join con.game_items it on it.id=i.item_id where s.storage_type='warehouse' or s.owner_character_id=(select id from con.game_characters where discord_id=$1) or s.apartment_id=(select a2.id from con.game_apartments a2 join con.compound_residency r on r.apartment_id=a2.legacy_apartment_id where r.discord_id=$1) order by s.storage_type,i.item_id",[discordId]),
@@ -85,7 +86,9 @@ export async function reclamationHandler(req,res,poolFactory=database){
   const data=await payload(req);
   let result;
   if(action==="character.create"){
-   result=await createCharacter(pool,{discordId:session.user.id,name:data.name,profession:data.profession,attributes:data.attributes});
+   const assigned=(await pool.query("select codename from con.memberships where user_id=$1 and active=true",[session.user.id])).rows[0]?.codename;
+   if(!assigned)fail(409,"Your assigned membership codename is missing. Contact the Overseer.");
+   result=await createCharacter(pool,{discordId:session.user.id,name:assigned,profession:data.profession,attributes:data.attributes});
   }else if(action==="task.accept"){
    if(!uuid(data.id))fail(400,"Invalid task ID");
    result=await acceptTask(pool,session.user.id,data.id);
