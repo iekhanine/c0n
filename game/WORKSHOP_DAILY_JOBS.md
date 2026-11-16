@@ -11,10 +11,10 @@ Eight Workshop channels each have exactly one published and pinned objective. Th
 3. In the same transaction, the Overseer reserves that profession's tools and consumable supplies from the shared `game_storage` warehouse, records issued items on `workshop_assignments`, and stamps an assignment and due time. If supplies are insufficient, the entire claim rolls back and no job is assigned.
 4. The bot posts a story-flavored dispatch telling the member where in The Compound to complete the job, which items were issued, and the salary/XP reward.
 5. After the minimum shift (currently 10 minutes), the Railway bot posts a reminder and pings the assignee with **Yes, completed** and **Not yet** buttons.
-6. **Not yet** leaves the shift assigned, rescheduling a new reminder for 30 minutes later. **Yes** pays exactly once in a locked database transaction, credits Compound XP and the appropriate stat, and checks reusable tool kits back into the stockroom. Consumed materials stay deducted.
+6. **Not yet** leaves the shift assigned, rescheduling a new reminder for 30 minutes later. **Yes** pays exactly once in a locked database transaction, awards Compound XP and the appropriate stat, and checks reusable tool kits back into the stockroom. Consumed materials stay deducted.
 7. If a member has already created a Reclamation game character, completing a job also credits that character's XP and profession skill XP. Existing regular Compound accounts require no character creation.
 
-The user receives **10 × listed XP** in fictional Compound Credits for the completed contract: 250, 350, or 400 credits depending on channel. Salary is debited from the game treasury, moved into the game system clearing account with balanced ledger entries, and reflected in a dedicated `workshop_wallets` balance per Discord member. This is separate from periodic salaried employment payroll.
+The user receives **10 × listed XP** in fictional Compound Dollars for the completed contract: 250, 350, or 400 dollars depending on channel. Salary is debited from the game treasury, moved into the game system clearing account with balanced ledger entries, and reflected in a dedicated `workshop_wallets` balance per Discord member. This is separate from periodic salaried employment payroll.
 
 ### Safety, audit and identity
 
