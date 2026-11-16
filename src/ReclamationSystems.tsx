@@ -132,7 +132,7 @@ export default function ReclamationSystems({game,run}:{game:GameView;run:(action
    </form>
    <form onSubmit={e=>submit(e,"overseer.stipend",{amount:stipend,key:crypto.randomUUID()})}>
     <h3>Overseer stipend</h3>
-    <label style={label}>Amount in Dollars <input type="number" min={1} max={1000000} value={stipend} onChange={e=>setStipend(Number(e.target.value))}/></label>
+    <label style={label}>Amount ($) <input type="number" min={1} max={1000000} value={stipend} onChange={e=>setStipend(Number(e.target.value))}/></label>
     <button type="submit">Transfer stipend from treasury</button>
    </form>
    <form onSubmit={e=>submit(e,"dm.grant",{discordId:dmId,enabled:true})}>
