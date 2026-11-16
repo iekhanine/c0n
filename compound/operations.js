@@ -49,6 +49,7 @@ async function opsHome(){
  ["/operations/work-orders","Work orders","Available contracts, active duties, field reports"],
  ["/operations/restoration","Restoration milestones","Bunker reconstruction and material deliveries"],
  ["/operations/inventory","Stockroom & crafting","Stored materials, tools, recovery and production"],
+ ["/supplies","Supply requisitions","Request equipment and submit field reports"],
  ["/operations/campaigns","Campaigns & expeditions","Crew expeditions, sessions and field checks"],
  ["/operations/finance","Resident finances","Personal balance and transfers"],
  ["/guide","Newcomer field guide","Registration, roles, shifts and payroll"]
@@ -57,6 +58,7 @@ async function opsHome(){
  '<div class="ops-link-grid">'+[
  ["/overseer/work-orders","Work-order administration","Create, edit, suspend and review contracts"],
  ["/overseer/finance","Financial administration","Treasury, wages, taxes and payroll"],
+ ["/overseer/supplies","Facility oversight","Requisitions, supply grants and recovery reports"],
  ["/overseer/campaigns","Expedition oversight","Create operations, grant roles, approve rewards"],
  ["/admin/residents","Personnel administration","Resident directory, apartments and progression"],
  ["https://cultofnixon.com/membership","Invitation codes","Issue and revoke newcomer invitations"],
