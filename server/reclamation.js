@@ -67,7 +67,18 @@ async function snapshot(pool,discordId,owner){
  }
  return result;
 }
+const COMPOUND_ORIGIN="https://thecompound.cultofnixon.com";
 export async function reclamationHandler(req,res,poolFactory=database){
+ const origin=req.headers.origin;
+ res.setHeader("Vary","Origin, Cookie");
+ res.setHeader("Cache-Control","private, no-store");
+ if(origin===COMPOUND_ORIGIN){
+  res.setHeader("Access-Control-Allow-Origin",COMPOUND_ORIGIN);
+  res.setHeader("Access-Control-Allow-Credentials","true");
+  res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers","Content-Type");
+ }
+ if(req.method==="OPTIONS"){res.statusCode=origin===COMPOUND_ORIGIN?204:403;return res.end();}
  try{
   if(!["GET","POST"].includes(req.method))return json(res,405,{error:"Method not allowed"});
   const session=await readSession(req);
@@ -81,7 +92,7 @@ export async function reclamationHandler(req,res,poolFactory=database){
    if(action!=="state")fail(404,"Unknown operation");
    return json(res,200,await snapshot(pool,session.user.id,owner));
   }
-  if(req.headers.origin!==ORIGIN)fail(403,"Invalid request origin");
+  if(req.headers.origin!==ORIGIN&&req.headers.origin!==COMPOUND_ORIGIN)fail(403,"Invalid request origin");
   if(!String(req.headers["content-type"]||"").startsWith("application/json"))fail(415,"JSON required");
   const data=await payload(req);
   let result;
