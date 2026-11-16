@@ -46,13 +46,13 @@ export default function ReclamationPage(){
     />:<>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginBottom:16}}>
      <section style={style}><Shield size={20}/><h2 style={{margin:"8px 0"}}>{game.character.name}</h2><p>{game.character.profession_id} · Level {game.character.level}</p><strong>{format(game.character.xp)} XP</strong><p>Health {game.character.health} · Stamina {game.character.stamina}</p></section>
-     <section style={style}><Wallet size={20}/><h2>{format(game.wallet)} Dollars</h2><p>Personal dollars</p><small>Fictional currency, no cash value</small></section>
+     <section style={style}><Wallet size={20}/><h2>${format(game.wallet)}</h2><p>Personal dollars</p><small>Fictional currency, no cash value</small></section>
      <section style={style}><Hammer size={20}/><h2>Project Reclamation</h2><p>{game.projects.filter(p=>p.state==="active").length} active phase(s)</p><small>Bunker restoration effort</small></section>
     </div>
     <section style={{...style,marginBottom:16}}><h2><BriefcaseBusiness size={20} style={{display:"inline",verticalAlign:"middle"}}/> Available work orders</h2>
      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:10}}>
       {game.tasks.filter(t=>!t.profession_id||t.profession_id===game.character?.profession_id).map(t=><article key={t.id} style={{border:"1px solid #34404b",borderRadius:7,padding:12}}>
-       <strong>{t.title}</strong><p>{t.description}</p><p style={{fontSize:13,color:"#a9b5c0"}}>{t.duration_minutes} min · {t.character_xp} XP · {t.profession_xp} profession XP · {format(t.pay_credits)} Dollars</p>
+       <strong>{t.title}</strong><p>{t.description}</p><p style={{fontSize:13,color:"#a9b5c0"}}>{t.duration_minutes} min · {t.character_xp} XP · {t.profession_xp} profession XP · ${format(t.pay_credits)}</p>
        <button type="button" onClick={()=>void run("task.accept",{id:t.id})}>Accept job</button>
       </article>)}
      </div></section>
@@ -97,12 +97,12 @@ export default function ReclamationPage(){
      <button type="button" onClick={()=>void run("task.review.approve",{id:w.id})}>Approve and award XP / pay</button>
     </article>)}
    </section>}
-   {game.overseer&&<section style={style}><h2>Overseer: work-order editor</h2><p>Treasury: {format(game.overseer.treasury)} Dollars</p><label>Existing work orders <select value={editingTask?.id||""} onChange={e=>{const found=(game.overseer?.taskTemplates||[]).find((t:Task&{version?:number;status?:string})=>t.id===e.target.value) as (Task&{version?:number;status?:string})|undefined;if(!found){setEditingTask(null);setTask({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});return;}setEditingTask({id:found.id,version:found.version||1,status:found.status||"published"});setTask({title:found.title,profession:found.profession_id||"carpenter",description:found.description||"",completionType:found.completion_type,minutes:found.duration_minutes,xp:found.character_xp,skillXp:found.profession_xp,pay:Number(found.pay_credits)});}}><option value="">Create new task</option>{(game.overseer.taskTemplates||[]).map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label><form onSubmit={addTask} style={{display:"grid",gap:12,maxWidth:640}}>
+   {game.overseer&&<section style={style}><h2>Overseer: work-order editor</h2><p>Treasury: ${format(game.overseer.treasury)}</p><label>Existing work orders <select value={editingTask?.id||""} onChange={e=>{const found=(game.overseer?.taskTemplates||[]).find((t:Task&{version?:number;status?:string})=>t.id===e.target.value) as (Task&{version?:number;status?:string})|undefined;if(!found){setEditingTask(null);setTask({title:"",profession:"carpenter",description:"",completionType:"timer",minutes:15,xp:35,skillXp:25,pay:350});return;}setEditingTask({id:found.id,version:found.version||1,status:found.status||"published"});setTask({title:found.title,profession:found.profession_id||"carpenter",description:found.description||"",completionType:found.completion_type,minutes:found.duration_minutes,xp:found.character_xp,skillXp:found.profession_xp,pay:Number(found.pay_credits)});}}><option value="">Create new task</option>{(game.overseer.taskTemplates||[]).map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label><form onSubmit={addTask} style={{display:"grid",gap:12,maxWidth:640}}>
     <label>Task title <input required value={task.title} onChange={e=>setTask({...task,title:e.target.value})}/></label>
     <label>Profession <select value={task.profession} onChange={e=>setTask({...task,profession:e.target.value})}>{professions.map(p=><option key={p}>{p}</option>)}</select></label>
     <label>Description <input value={task.description} onChange={e=>setTask({...task,description:e.target.value})}/></label>
     <label>Completion <select value={task.completionType} onChange={e=>setTask({...task,completionType:e.target.value})}>{["timer","quiz","dice","collaborative","dm_approval"].map(p=><option key={p}>{p}</option>)}</select></label>
-    {([["minutes","Duration (minutes)"],["xp","Character XP"],["skillXp","Profession XP"],["pay","Payment (Dollars)"]] as const).map(([k,label])=><label key={k}>{label} <input type="number" min={0} max={k==="minutes"?10080:k==="pay"?1000000000:100000} value={task[k]} onChange={e=>setTask({...task,[k]:Number(e.target.value)})}/></label>)}
+    {([["minutes","Duration (minutes)"],["xp","Character XP"],["skillXp","Profession XP"],["pay","Payment ($)"]] as const).map(([k,label])=><label key={k}>{label} <input type="number" min={0} max={k==="minutes"?10080:k==="pay"?1000000000:100000} value={task[k]} onChange={e=>setTask({...task,[k]:Number(e.target.value)})}/></label>)}
     {editingTask&&<label>Task status <select value={editingTask.status} onChange={e=>setEditingTask({...editingTask,status:e.target.value})}>{["draft","published","paused","retired"].map(x=><option key={x}>{x}</option>)}</select></label>}
     <button type="submit">{editingTask?"Save changes":"Publish new task"}</button>
    </form></section>}
