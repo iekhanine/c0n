@@ -67,14 +67,25 @@ async function snapshot(db,id){
 async function tx(db,fn){const c=await db.connect();try{await c.query("BEGIN");const out=await fn(c);await c.query("COMMIT");return out;}catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}}
 async function lock(c,id){await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[id]);}
 function validId(value){if(typeof value!=="string"||!/^[0-9a-f-]{36}$/i.test(value))fail(400,"Invalid identifier");return value;}
+const COMPOUND_ORIGIN="https://thecompound.cultofnixon.com";
 export async function facilityHandler(req,res,dbFactory=database){
+ const origin=req.headers.origin;
+ res.setHeader("Vary","Origin, Cookie");
+ res.setHeader("Cache-Control","private, no-store");
+ if(origin===COMPOUND_ORIGIN){
+  res.setHeader("Access-Control-Allow-Origin",COMPOUND_ORIGIN);
+  res.setHeader("Access-Control-Allow-Credentials","true");
+  res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers","Content-Type");
+ }
+ if(req.method==="OPTIONS"){res.statusCode=origin===COMPOUND_ORIGIN?204:403;return res.end();}
  try{
   const user=(await readSession(req))?.user;
   if(!user?.id)fail(401,"Sign in required");
   const url=new URL(req.url,ORIGIN),action=url.searchParams.get("action")||"facility_state";
   if(!action.startsWith("facility_"))fail(404,"Unknown operation");
   const owner=ownerIDs().has(user.id);
-  if(req.method!=="GET"&&req.headers.origin!==ORIGIN)fail(403,"Invalid origin");
+  if(req.method!=="GET"&&req.headers.origin!==ORIGIN&&req.headers.origin!==COMPOUND_ORIGIN)fail(403,"Invalid origin");
   const db=dbFactory();await setup(db);
   if(action==="facility_state"){method(req,"GET");return json(res,200,await snapshot(db,user.id));}
   if(action==="facility_control"){method(req,"GET");if(!owner)fail(403,"Forbidden");const [requests,assignments,members,grants]=await Promise.all([
