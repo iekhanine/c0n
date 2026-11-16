@@ -187,10 +187,67 @@ async function opsOverseerCampaigns(){
  '<div class="ops-list">'+(g.campaigns||[]).map(c=>'<article class="ops-job"><strong>'+opsTxt(c.title)+'</strong><p>'+opsTxt(c.synopsis)+'</p><span class="tag">'+opsTxt(c.state)+'</span><div class="ops-actions">'+
  [["active","Activate"],["paused","Pause"],["complete","Complete"]].filter(([k])=>k!==c.state).map(([state,label])=>'<button class="btn" data-ops-campaign-state="'+state+'" data-id="'+opsTxt(c.id)+'">'+label+'</button>').join("")+'</div></article>').join("")+'</div>');
 }
+async function opsFacilityRequest(action,data){
+ const r=await fetch("https://cultofnixon.com/api/social?action=facility_"+encodeURIComponent(action),{
+  method:data?"POST":"GET",credentials:"include",cache:"no-store",
+  headers:data?{"Content-Type":"application/json"}:undefined,
+  body:data?JSON.stringify(data):undefined});
+ const result=await r.json().catch(()=>({error:"Supply service is not available"}));
+ if(!r.ok)throw Error(result.error||"Supply request failed");
+ return result;
+}
+async function opsSupplies(){
+ const data=await opsFacilityRequest("state");
+ return head("Supply requisitions","Request equipment from the stockroom, inspect assigned recovery work and submit field reports.")+
+ '<div class="ops-overview">'+opsCard("AVAILABLE FUNDS",opsMoney(data.wallet?.credits),"Facility requisition balance")+
+ opsCard("ACTIVE REQUESTS",data.requests.filter(r=>["pending","assigned"].includes(r.status)).length,"Awaiting approval or field duty")+'</div>'+
+ opsSection("REQUISITION","Request supplies","Requests are reviewed by the Overseer. Some supplies may require a field duty.",
+ '<form class="ops-form ops-form-grid" data-facility-action="request">'+
+ opsField("SUPPLY ITEM","sku","select",data.catalog[0]?.id||"",data.catalog.map(c=>[c.id,c.label+" · "+opsMoney(c.cost)]),"required")+
+ opsField("REQUEST NOTES","note","textarea","","")+
+ '<button class="btn primary">Submit requisition</button></form>')+
+ opsSection("MY FIELD DUTIES","Assigned recovery work","Complete the verification sequence and report your field activity.",
+ '<div class="ops-list">'+(data.assignments.length?data.assignments.map(a=>{
+ const duty=data.duties.find(x=>x.id===a.duty);
+ return '<article class="ops-job"><div class="ops-job-top"><strong>'+opsTxt(duty?.title||"Work order")+'</strong><span>'+opsTxt(a.status)+'</span></div><p>'+opsTxt(duty?.question||"")+'</p>'+
+ (a.status==="assigned"?'<form class="ops-form" data-facility-action="submit">'+
+ '<input type="hidden" name="id" value="'+opsTxt(a.id)+'">'+
+ opsField("VERIFICATION SEQUENCE","answer","text","",[],'required maxlength="40"')+
+ opsField("COMPLETION REPORT","report","textarea","",[],'required maxlength="1500"')+
+ '<button class="btn primary">Submit field report</button></form>':"")+'</article>'
+ }).join(""):opsEmpty("No active duties."))+'</div>')+
+ opsSection("REQUEST HISTORY","Previous requests","Review your requisitions and fulfillment status.",
+ table(["Supply","Status","Review"],data.requests.map(r=>'<tr><td>'+opsTxt(data.catalog.find(c=>c.id===r.sku)?.label||r.sku)+'</td><td>'+opsTxt(r.status)+'</td><td>'+opsTxt(r.review||"")+'</td></tr>')));
+}
 async function opsOverseerSupplies(){
- return head("Supply administration","Stockroom movements, field requisitions, and controlled inventory.")+
- opsSection("SHARED STOCKROOM","Warehouse administration","Use the dedicated inventory screens to issue and receive supplies.",
- '<div class="ops-link-grid"><a class="ops-link" href="/operations/inventory"><strong>Stockroom & fabrication</strong><span>Inventory balances and recovery recipes</span></a><a class="ops-link" href="/admin/residents"><strong>Personnel roster</strong><span>Available residents and assignments</span></a></div>');
+ if(!me?.is_overseer&&!me?.is_admin)throw Error("Overseer access required");
+ const [data,admin]=await Promise.all([opsFacilityRequest("state"),opsFacilityRequest("control")]);
+ return head("Supply administration","Oversee requisitions, issue materials, review field reports and maintain facility directives.")+
+ '<div class="ops-overview">'+opsCard("PENDING REQUESTS",admin.requests.filter(r=>r.status==="pending").length,"Unreviewed equipment requests")+
+ opsCard("REPORTS WAITING",admin.assignments.filter(a=>a.status==="submitted").length,"Work reports requiring verification")+
+ opsCard("RECENT GRANTS",admin.grants.length,"Logged supply issues")+'</div>'+
+ opsSection("REQUISITION QUEUE","Equipment requests","Approve an affordable request, deny it, or assign a recovery duty.",
+ '<div class="ops-list">'+(admin.requests.filter(r=>r.status==="pending").map(r=>
+ '<article class="ops-job"><div class="ops-job-top"><strong>'+opsTxt(r.member_name||r.member_id)+'</strong><span>'+opsMoney(r.cost)+'</span></div><p>'+opsTxt(data.catalog.find(i=>i.id===r.sku)?.label||r.sku)+' · '+opsTxt(r.note||"No notes")+'</p>'+
+ '<div class="ops-actions"><button class="btn primary" data-facility-submit="decide" data-id="'+opsTxt(r.id)+'" data-approve="true">Approve</button>'+
+ '<button class="btn" data-facility-submit="decide" data-id="'+opsTxt(r.id)+'" data-approve="false">Deny</button>'+
+ '</div><form class="ops-form ops-form-grid" data-facility-action="assign"><input type="hidden" name="id" value="'+opsTxt(r.id)+'">'+
+ opsField("REQUIRED FIELD DUTY","duty","select",data.duties[0]?.id||"",data.duties.map(d=>[d.id,d.title]))+
+ '<button class="btn">Assign recovery duty</button></form></article>').join("")||opsEmpty("No requisitions await review."))+'</div>')+
+ opsSection("FIELD REVIEW","Submitted reports","Verify completion or return the report for correction.",
+ '<div class="ops-list">'+(admin.assignments.filter(a=>a.status==="submitted").map(a=>'<article class="ops-job"><strong>'+opsTxt(a.member_name||a.member_id)+'</strong><p>'+opsTxt(a.report||"No field report")+'</p>'+
+ '<div class="ops-actions"><button class="btn primary" data-facility-submit="review" data-id="'+opsTxt(a.id)+'" data-approve="true">Verify & reward</button>'+
+ '<button class="btn" data-facility-submit="review" data-id="'+opsTxt(a.id)+'" data-approve="false">Return report</button></div></article>').join("")||opsEmpty("No submitted reports await verification."))+'</div>')+
+ opsSection("DIRECT ISSUANCE","Issue supplies","Grant approved equipment to an active member; every issuance is recorded.",
+ '<form class="ops-form ops-form-grid" data-facility-action="grant">'+
+ opsField("RECIPIENT","member_id","select","",[["","Select resident"],...admin.members.map(m=>[m.user_id,m.codename])],"required")+
+ opsField("SUPPLY ITEM","sku","select",data.catalog[0]?.id||"",data.catalog.map(c=>[c.id,c.label]))+
+ opsField("QUANTITY","quantity","number",1,[],'min="1" max="100" required')+
+ opsField("ISSUANCE NOTE","note","textarea","","")+
+ '<button class="btn primary">Issue supplies</button></form>')+
+ opsSection("FACILITY DIRECTIVE","Overseer bulletin","Update the standing direction visible to resident teams.",
+ '<form class="ops-form" data-facility-action="directive">'+opsField("CURRENT DIRECTIVE","directive","textarea",data.directive,[],'required maxlength="1200"')+
+ '<button class="btn primary">Publish directive</button></form>');
 }
 function opsFormPayload(form){
  const data=Object.fromEntries(new FormData(form).entries());
@@ -208,6 +265,20 @@ async function opsAction(action,data){
  finally{opsPending=false;}
 }
 function bindOperations(){
+ document.querySelectorAll("form[data-facility-action]").forEach(form=>form.addEventListener("submit",async e=>{
+  e.preventDefault();if(opsPending)return;
+  const action=form.dataset.facilityAction,values=opsFormPayload(form);
+  if("quantity" in values)values.quantity=Number(values.quantity);
+  opsPending=true;try{await opsFacilityRequest(action,values);flash="Facility record updated.";err="";await render();}
+  catch(e){err=e.message;flash="";await render();}
+  finally{opsPending=false;}
+ }));
+ document.querySelectorAll("[data-facility-submit]").forEach(b=>b.addEventListener("click",async()=>{
+  if(!confirm("Confirm this Overseer decision?"))return;
+  opsPending=true;try{await opsFacilityRequest(b.dataset.facilitySubmit,{id:b.dataset.id,approve:b.dataset.approve==="true"});flash="Decision recorded.";err="";await render();}
+  catch(e){err=e.message;flash="";await render();}
+  finally{opsPending=false;}
+ }));
  const registration=window.opsRegistration;
  if(registration){
   const update=()=>{
