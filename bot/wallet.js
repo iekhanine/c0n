@@ -21,7 +21,7 @@ export function personalWalletCard(wallet){
    .setDescription("Your personal account in the Compound.")
    .addFields(
     {name:"AVAILABLE BALANCE",value:"**$"+credits(wallet.balance)+"**",inline:false},
-    {name:"LIFETIME WORKSHOP EARNINGS",value:"$"+credits(wallet.earned)+"",inline:false}
+    {name:"LIFETIME WORKSHOP EARNINGS",value:"$"+credits(wallet.earned),inline:false}
    )
    .setFooter({text:"Earn dollars by completing assigned Workshop objectives."});
   return {embeds:[embed],allowedMentions:{parse:[]}};
