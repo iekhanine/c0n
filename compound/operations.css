@@ -56,3 +56,8 @@
 .compound-global-status a{text-decoration:none}
 @media(max-width:960px){.compound-global-header{height:auto;min-height:65px;padding:10px 18px;flex-wrap:wrap;gap:12px}.compound-global-nav{margin-left:0;gap:15px;order:3;width:100%}.compound-global-status{margin-left:auto}.ops-attribute-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.ops-section{padding:18px}.ops-form-grid,.ops-overview,.ops-link-grid{grid-template-columns:1fr}.ops-attribute{flex-wrap:wrap}.ops-job-top{flex-wrap:wrap}.ops-job-top span{white-space:normal}}
+
+/* Matching base controls on older Compound administration screens. */
+.shell :where(textarea,input:not([type="checkbox"]):not([type="radio"]),select){background:#111e16;border:1px solid #607c62;color:#f1f5ec;padding:10px 12px;border-radius:4px;min-height:42px;font-family:inherit;max-width:100%;box-sizing:border-box}
+.shell textarea{min-height:112px;resize:vertical}
+.shell :where(textarea,input,select):focus-visible{outline:2px solid #c2dfb4;outline-offset:2px}
