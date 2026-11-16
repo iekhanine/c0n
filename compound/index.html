@@ -31,7 +31,7 @@ let me=null,flash="",err="";
 const sections=[
  {name:"RESIDENT SERVICES",links:[["/","Overview"],["/apartments","Apartment building"],["/profile","Resident profile"],["/requests","Housing requests"],["/guide","Field guide"]]},
  {name:"COMPOUND OPERATIONS",links:[["/operations","Operations overview"],["/operations/registration","Personnel registration"],["/operations/work-orders","Work orders"],["/operations/restoration","Restoration milestones"],["/operations/inventory","Stockroom & fabrication"],["/supplies","Supply requisitions"],["/operations/campaigns","Campaigns & expeditions"],["/operations/finance","Resident finances"]]},
- {name:"OVERSEER / COMMAND",admin:true,links:[["/overseer/work-orders","Work-order administration"],["/overseer/campaigns","Expedition oversight"],["/overseer/finance","Financial administration"],["/overseer/supplies","Supply administration"],["/admin/progression","Progression controls"]]},
+ {name:"OVERSEER / COMMAND",overseer:true,links:[["/overseer/work-orders","Work-order administration"],["/overseer/campaigns","Expedition oversight"],["/overseer/finance","Financial administration"],["/overseer/supplies","Supply administration"],["/admin/progression","Progression controls"]]},
  {name:"OVERSEER / PERSONNEL",admin:true,links:[["/admin/residents","Resident directory"],["/admin/apartments","Housing management"],["/admin/requests","Housing approvals"],["/admin/rules","XP & activity policy"],["/admin/audit","Accountability log"]]},
  {name:"WEBSITE & ACCESS",links:[["https://cultofnixon.com/membership","Membership & invite codes"],["https://cultofnixon.com/admin","Website administration"],["https://cultofnixon.com/admin/discord","Discord administration"]]}
 ];
@@ -52,7 +52,7 @@ function compoundGlobalHeader(){
 }
 function appFrame(content){
 const loc=path(),isAdmin=me.is_admin;
-return compoundGlobalHeader()+'<div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div><strong>THE COMPOUND</strong><small>CULT OF NIX0N</small></div></a><nav aria-label="Compound navigation" style="display:block">'+sections.filter(s=>!s.admin||isAdmin).map(s=>'<div class="nav-label">'+esc(s.name)+'</div>'+s.links.map(([url,label])=>'<a class="nav-link" '+(loc===url?'aria-current="page"':'')+' href="'+esc(url)+'">'+esc(label)+'</a>').join("")).join("")+'</nav><div class="side-bottom">COMPOUND RECORDS / LIVE LEDGER<br>Powered by Discord identity</div></aside><div class="main"><header class="topbar"><span>THE COMPOUND / '+esc(loc.toUpperCase())+'</span><div class="identity">'+esc(me.user.name)+' <span class="tag">'+(isAdmin?'STAFF':'RESIDENT')+'</span><a href="https://cultofnixon.com/" style="font-size:13px">C0N</a></div></header>'+notice()+content+'</div></div>';
+return compoundGlobalHeader()+'<div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div><strong>THE COMPOUND</strong><small>CULT OF NIX0N</small></div></a><nav aria-label="Compound navigation" style="display:block">'+sections.filter(s=>s.overseer?me.is_overseer:(!s.admin||isAdmin)).map(s=>'<div class="nav-label">'+esc(s.name)+'</div>'+s.links.map(([url,label])=>'<a class="nav-link" '+(loc===url?'aria-current="page"':'')+' href="'+esc(url)+'">'+esc(label)+'</a>').join("")).join("")+'</nav><div class="side-bottom">COMPOUND RECORDS / LIVE LEDGER<br>Powered by Discord identity</div></aside><div class="main"><header class="topbar"><span>THE COMPOUND / '+esc(loc.toUpperCase())+'</span><div class="identity">'+esc(me.user.name)+' <span class="tag">'+(isAdmin?'STAFF':'RESIDENT')+'</span><a href="https://cultofnixon.com/" style="font-size:13px">C0N</a></div></header>'+notice()+content+'</div></div>';
 }
 function login(error){
 document.getElementById("app").className="";
@@ -184,7 +184,7 @@ me=await call("me");const routes={"/":overview,"/apartments":apartments,"/profil
  "/admin/requests":approvals,"/admin/progression":progression,
  "/admin/rules":rules,"/admin/audit":audit};
 let target=routes[path()];let isAdmin=path().startsWith("/admin/")||path().startsWith("/overseer/");
-if(isAdmin&&!me.is_admin){err="Overseer authorization required.";target=overview;}
+if(isAdmin&&!(path().startsWith("/overseer/")?me.is_overseer:me.is_admin)){err="Overseer authorization required.";target=overview;}
 if(!target){err="That page does not exist.";target=overview;}
 el.innerHTML=appFrame(await target());
 bind();
