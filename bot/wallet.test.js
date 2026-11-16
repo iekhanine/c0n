@@ -12,15 +12,15 @@ test("Personal wallet embed has actual Discord fields and no escaped newline str
  const data=personalWalletCard({balance:350,earned:700});
  const card=data.embeds[0].toJSON();
  assert.match(card.title,/RESIDENT WALLET/);
- assert.equal(card.fields[0].value,"**350 Dollars**");
- assert.equal(card.fields[1].value,"700 Dollars");
+ assert.equal(card.fields[0].value,"**$350**");
+ assert.equal(card.fields[1].value,"$700");
  assert.doesNotMatch(JSON.stringify(card),/\\\\n/);
  assert.deepEqual(data.allowedMentions,{parse:[]});
 });
 test("Treasury embeds format very large balances without numeric rounding",()=>{
  const data=compoundTreasuryCard({balance:"37000000000"});
  const card=data.embeds[0].toJSON();
- assert.equal(card.fields[0].value,"**37,000,000,000 Dollars**");
+ assert.equal(card.fields[0].value,"**$37,000,000,000**");
  assert.doesNotMatch(JSON.stringify(card),/\\\\n/);
 });
 test("Invalid currency values are rejected",()=>{
