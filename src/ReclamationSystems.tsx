@@ -78,7 +78,7 @@ export default function ReclamationSystems({game,run}:{game:GameView;run:(action
    {(game.sessions||[]).map(s=><div key={s.id} style={{padding:"10px 0"}}>
     <small>Active session · {s.id.slice(0,8)}</small>{" "}
     <button type="button" onClick={()=>void run("session.join",{id:s.id})}>Join session</button>{" "}
-    <button type="button" onClick={()=>void run("session.roll",{sessionId:s.id,sides:campaignRoll,count:1,modifier:campaignModifier,purpose:"Roleplaying check"})}>Roll d{campaignRoll}</button>
+    <button type="button" onClick={()=>void run("session.roll",{sessionId:s.id,sides:campaignRoll,count:1,modifier:campaignModifier,purpose:"Expedition field check"})}>Roll d{campaignRoll}</button>
    </div>)}
    {(game.sessions||[]).length>0&&<div style={{marginTop:8}}>Die <select value={campaignRoll} onChange={e=>setCampaignRoll(Number(e.target.value))}>{[4,6,8,10,12,20,100].map(n=><option key={n} value={n}>d{n}</option>)}</select>{" "} Modifier <input type="number" min={-100} max={100} style={{width:70}} value={campaignModifier} onChange={e=>setCampaignModifier(Number(e.target.value))}/></div>}
    {game.dungeonMaster&&<>
