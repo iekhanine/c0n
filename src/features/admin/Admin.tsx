@@ -104,15 +104,10 @@ export default function Admin() {
       <div
         className={`con-admin ${authorized ? "con-has-workspace" : "con-signin-page"}`}
       >
-        <header className="con-admin-header">
-          <a className="con-admin-brand" href="/">
+        <header className="con-admin-header showcase-header">
+          <a className="con-admin-brand showcase-brand" href="/" aria-label="Cult of nix0n home">
             <img src="/con-logo.png" alt="Cult of nix0n" />
-            <span>
-              <Editable id="admin.brand" />
-              <small>
-                <Editable id="admin.brand.subtitle" />
-              </small>
-            </span>
+            <span className="brand-name"><Editable id="brand" /></span>
           </a>
           <PublicNavigation />
           <div className="con-header-actions">
