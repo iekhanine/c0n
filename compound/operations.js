@@ -36,11 +36,13 @@ function opsRoleGate(g){
  return '<div class="ops-alert"><strong>Personnel registration required</strong><p>Your membership is active, but your personnel record is not complete.</p><a class="btn primary" href="/operations/registration">Complete registration</a></div>';
 }
 async function opsHome(){
- const g=await opsLoad();
+ const [g,supplies]=await Promise.all([opsLoad(),opsFacilityRequest("state").catch(()=>null)]);
  const gate=opsRoleGate(g);
  return head("Compound operations","Active assignments, restoration progress, supplies, and personnel records. Every operation has a dedicated section.")+
  '<div class="ops-overview">'+opsCard("IDENTITY",g.character?.name||g.assignedName||"Not registered",g.character?"Level "+g.character.level:"Complete your personnel intake","/operations/registration")+
- opsCard("AVAILABLE FUNDS",opsMoney(g.wallet),"Your current Reclamation account","/operations/finance")+
+ opsCard("RECLAMATION ACCOUNT",opsMoney(g.wallet),"Construction, trade and campaign funds","/operations/finance")+
+ opsCard("WORKSHOP WAGES",opsMoney(me?.workshop_balance),"Completed Discord Workshop earnings","/operations/finance")+
+ (supplies?opsCard("FACILITY ALLOWANCE",opsMoney(supplies.wallet?.credits),"Separate requisition balance","/supplies"):"")+
  opsCard("CURRENT WORK ORDERS",g.orders.filter(o=>o.status==="in_progress").length,"Assignments currently underway","/operations/work-orders")+
  opsCard("RESTORATION",g.projects.filter(p=>p.state==="active").length+" ACTIVE","Live restoration phases","/operations/restoration")+'</div>'+
  gate+
@@ -128,11 +130,15 @@ async function opsCampaigns(){
  '<div class="ops-list">'+(g.sessions||[]).map(c=>'<article class="ops-job"><strong>Session '+opsTxt(c.id.slice(0,8))+'</strong><button class="btn" data-ops-submit="session.join" data-id="'+opsTxt(c.id)+'">Join session</button></article>').join("")+'</div>');
 }
 async function opsFinance(){
- const g=await opsLoad();return head("Resident finances","Track your holdings and approved transfers.")+
- opsCard("PERSONAL BALANCE",opsMoney(g.wallet),"Cash on file in your Compound account","/operations/work-orders")+
+ const [g,facility]=await Promise.all([opsLoad(),opsFacilityRequest("state").catch(()=>null)]);
+ return head("Resident finances","Your existing accounts are shown together, while their underlying ledgers remain separate.")+
+ '<div class="ops-overview">'+
+ opsCard("RECLAMATION ACCOUNT",opsMoney(g.wallet),"Resident trade, projects and expedition balance","/operations/work-orders")+
+ opsCard("WORKSHOP WAGES",opsMoney(me?.workshop_balance),"Discord contract earnings tracked separately")+
+ (facility?opsCard("FACILITY ALLOWANCE",opsMoney(facility.wallet?.credits),"Separate requisition account","/supplies"):"")+'</div>'+
  (g.character?opsSection("RESIDENT TRANSFERS","Transfer funds","Transfers are subject to the settlement transaction tax.",
  '<form data-ops-action="credits.transfer" class="ops-form ops-form-grid">'+opsField("RECIPIENT DISCORD ID","recipient","text","",[],'required pattern="[0-9]{17,20}"')+opsField("AMOUNT ($)","amount","number",100,[],'min="1" max="100000000" required')+'<button class="btn primary" type="submit">Send funds</button></form>'):"")+
- opsSection("ACCOUNT SERVICES","Other balances","The communal treasury and personal holdings are separate.",'<p>Use <code>/wallet</code> on Discord for your resident account. Mention the bot with <code>@cultofnixon wallet</code> to inspect the communal treasury.</p>');
+ opsSection("ACCOUNT SERVICES","Separate records","No balances have been combined or converted. Cross-account transfers are not yet supported.",'<p>Use <code>/wallet</code> on Discord to check Workshop wages. Mention the bot with <code>@cultofnixon wallet</code> to inspect the communal treasury. The Facility allowance, Workshop wages, and Reclamation account currently follow separate ledgers.</p>');
 }
 async function opsOverseerWork(){
  const g=await opsLoad();if(!g.overseer)throw Error("Overseer access required.");
