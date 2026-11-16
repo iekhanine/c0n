@@ -13,7 +13,7 @@ test("Claim instructions identify member, warehouse goods, lore, location, and s
  objective:"Repair the eastern supports",supplies:{toolkit:1,lumber:4},
  location:"the eastern shelter",due_at:"2026-11-15T18:30:00Z",credits:350,xp:35});
  for(const fragment of ["<@999999999999999994>","4 × lumber","1 × tool kit",
- "the eastern shelter","350 Compound Dollars","35","Overseer"]) assert.ok(message.includes(fragment),fragment);
+ "the eastern shelter","$350","35","Overseer"]) assert.ok(message.includes(fragment),fragment);
 });
 test("Reminder uniquely identifies timed job and buttons provide yes/no",()=>{
  const a={post_id:id,discord_id:"999999999999999994",due_at:"2026-11-15T18:30:00Z",
