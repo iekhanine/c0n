@@ -31,14 +31,18 @@ export function mapProfileRow(r){
   },stats:{
     xp:r.xp,level:r.level,health:r.health,stamina:r.stamina,
     skill:r.skill,charisma:r.charisma,intellect:r.intellect,luck:r.luck
-  }};
+  },active_job:r.active_job_title?{
+    title:r.active_job_title,location:r.active_job_location,
+    state:r.active_job_state,due_at:r.active_job_due_at,
+    channel_id:r.active_job_channel_id
+  }:null};
 }
 export async function fetchReadOnlyProfile(id){
   if(!/^\d{17,20}$/.test(String(id)))throw Error("Invalid Discord ID");
   const db=database();
   if(!db) return null;
   const {rows}=await db.query(
-    "SELECT discord_id,display_name,avatar,apartment,member_no,codename,member_joined_at,xp,level,health,stamina,skill,charisma,intellect,luck FROM con.bot_public_profiles WHERE discord_id=$1",
+    "SELECT discord_id,display_name,avatar,apartment,member_no,codename,member_joined_at,xp,level,health,stamina,skill,charisma,intellect,luck,active_job_title,active_job_location,active_job_state,active_job_due_at,active_job_channel_id FROM con.bot_public_profiles WHERE discord_id=$1",
     [String(id)]
   );
   return mapProfileRow(rows[0]);
@@ -70,4 +74,17 @@ export async function workshopDatabaseCall(kind,args){
   }else throw Error("Unsupported Workshop database action");
   const result=await db.query(sql,values);
   return result.rows[0]?.payload;
+}
+
+/** These functions are callable only by the bot's restricted database role. */
+export async function fetchResidentWallet(discordId){
+ if(!/^\d{17,20}$/.test(String(discordId)))throw Error("Invalid Discord user.");
+ const db=database();if(!db)throw Error("Wallet database unavailable.");
+ const {rows}=await db.query("SELECT con.bot_workshop_wallet($1) wallet",[String(discordId)]);
+ return rows[0]?.wallet||null;
+}
+export async function fetchCompoundTreasury(){
+ const db=database();if(!db)throw Error("Treasury database unavailable.");
+ const {rows}=await db.query("SELECT con.bot_workshop_treasury() treasury");
+ return rows[0]?.treasury||null;
 }
