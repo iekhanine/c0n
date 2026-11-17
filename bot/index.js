@@ -22,6 +22,7 @@ import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
 import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./workshop-assignments.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
 import {isTreasuryMention,personalWalletCard,compoundTreasuryCard} from "./wallet.js";
+import {isGuideMention,newcomerGuideCard} from "./guide.js";
 import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
@@ -629,6 +630,11 @@ async function main() {
 
     if (m.guildId === guildId && !m.author.bot && !m.webhookId)
       recordParticipation(participationEvent("message", m.id, m.channelId, m.author.id, m.createdTimestamp));
+    if(m.guildId===guildId&&!m.author.bot&&m.mentions.has(client.user)&&
+       isGuideMention(m.content,client.user.id)){
+      run(()=>m.reply(newcomerGuideCard()));
+      return;
+    }
     if(m.guildId===guildId&&!m.author.bot&&m.mentions.has(client.user)&&
        isTreasuryMention(m.content,client.user.id)){
       run(async()=>{
