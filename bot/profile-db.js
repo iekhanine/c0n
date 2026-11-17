@@ -88,3 +88,27 @@ export async function fetchCompoundTreasury(){
  const {rows}=await db.query("SELECT con.bot_workshop_treasury() treasury");
  return rows[0]?.treasury||null;
 }
+
+/**
+ * The bot's restricted database role can only lease and acknowledge completed
+ * construction reminders using two narrow functions. No table write grants.
+ */
+export async function projectImageDatabaseCall(kind,args={}){
+ const db=database();
+ if(!db)throw Error("Construction reminder database unavailable");
+ if(kind==="claim"){
+  const {rows}=await db.query("select con.bot_project_image_claim() as reminder");
+  return rows[0]?.reminder||null;
+ }
+ if(kind==="ack"){
+  if(!/^[0-9a-f-]{36}$/i.test(String(args.project_id))||
+     !/^[0-9a-f-]{36}$/i.test(String(args.lease_token))||
+     !/^\d{17,20}$/.test(String(args.message_id)))throw Error("Invalid image reminder acknowledgment");
+  const {rows}=await db.query(
+   "select con.bot_project_image_ack($1::uuid,$2::uuid,$3::text) as acknowledged",
+   [args.project_id,args.lease_token,args.message_id]
+  );
+  return rows[0]?.acknowledged===true;
+ }
+ throw Error("Unsupported image reminder action");
+}
