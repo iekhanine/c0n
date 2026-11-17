@@ -9,7 +9,9 @@ async function opsRequest(action,data){
   headers:data?{"Content-Type":"application/json"}:undefined,
   body:data?JSON.stringify(data):undefined});
  const payload=await r.json().catch(()=>({error:"The Compound cannot be reached."}));
- if(!r.ok)throw Error(payload.error||"The operation could not be completed.");
+ if(!r.ok)throw Error(payload?.error||"The operation could not be completed.");
+ if(payload===null||typeof payload!=="object"||Array.isArray(payload))
+  throw Error("Invalid response from Compound operations.");
  return payload;
 }
 const opsMoney=n=>"$"+Number(n||0).toLocaleString("en-US");
@@ -30,7 +32,26 @@ function opsField(label,name,kind,value,options,attrs=""){
 const opsAttributes=["strength","intelligence","charisma","agility","endurance","perception"];
 const opsProfessions=[["carpenter","Carpentry"],["metalworker","Metalworking"],["medic","Medical"],["farmer","Agriculture"],["engineer","Engineering"],["scavenger","Scavenging"]];
 const opsCompletion=[["timer","Timed work"],["quiz","Field verification"],["dice","Skill check"],["collaborative","Collaborative task"],["dm_approval","Overseer approval"]];
-async function opsLoad(){opsState=await opsRequest("state");return opsState;}
+function opsArray(value){return Array.isArray(value)?value.filter(item=>item&&typeof item==="object"):[];}
+function opsRecord(value){return value&&typeof value==="object"&&!Array.isArray(value)?value:{};}
+function normalizeOpsState(value){
+ const o=opsRecord(value);
+ return {...o,
+  settings:opsRecord(o.settings),
+  tasks:opsArray(o.tasks),projects:opsArray(o.projects),
+  orders:opsArray(o.orders),recipes:opsArray(o.recipes),
+  crafting:opsArray(o.crafting),storage:opsArray(o.storage),
+  campaigns:opsArray(o.campaigns),sessions:opsArray(o.sessions),
+  overseer:o.overseer?{
+    ...opsRecord(o.overseer),
+    taskTemplates:opsArray(o.overseer.taskTemplates),
+    employment:opsArray(o.overseer.employment),
+    members:opsArray(o.overseer.members),
+    pendingAwards:opsArray(o.overseer.pendingAwards)
+  }:null
+ };
+}
+async function opsLoad(){opsState=normalizeOpsState(await opsRequest("state"));return opsState;}
 function opsRoleGate(g){
  if(g.character||g.overseer)return "";
  return '<div class="ops-alert"><strong>Personnel registration required</strong><p>Your membership is active, but your personnel record is not complete.</p><a class="btn primary" href="/operations/registration">Complete registration</a></div>';
@@ -201,7 +222,15 @@ async function opsFacilityRequest(action,data){
   headers:data?{"Content-Type":"application/json"}:undefined,
   body:data?JSON.stringify(data):undefined});
  const result=await r.json().catch(()=>({error:"Supply service is not available"}));
- if(!r.ok)throw Error(result.error||"Supply request failed");
+ if(!r.ok)throw Error(result?.error||"Supply request failed");
+ if(!data){
+  const state=opsRecord(result);
+  return {...state,
+   requests:opsArray(state.requests),assignments:opsArray(state.assignments),
+   catalog:opsArray(state.catalog),duties:opsArray(state.duties),
+   members:opsArray(state.members),grants:opsArray(state.grants)
+  };
+ }
  return result;
 }
 async function opsSupplies(){
@@ -288,7 +317,7 @@ function bindOperations(){
   finally{opsPending=false;}
  }));
  const registration=window.opsRegistration;
- if(registration){
+ if(registration?.values&&typeof registration.values==="object"){
   const update=()=>{
    const remaining=registration.points-Object.values(registration.values).reduce((total,v)=>total+v-registration.base,0);
    const display=document.getElementById("ops-points-left");if(display)display.textContent=remaining;
