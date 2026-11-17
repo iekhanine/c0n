@@ -30,12 +30,23 @@ const num=v=>Number(v||0).toLocaleString();
 let me=null,flash="",err="";
 const sections=[
  {name:"RESIDENT SERVICES",links:[["/","Overview"],["/apartments","Apartment building"],["/profile","Resident profile"],["/requests","Housing requests"],["/guide","Field guide"]]},
- {name:"COMPOUND OPERATIONS",links:[["/operations","Operations overview"],["/operations/registration","Personnel registration"],["/operations/work-orders","Work orders"],["/operations/restoration","Restoration milestones"],["/operations/inventory","Stockroom & fabrication"],["/supplies","Supply requisitions"],["/supplies","Supply requisitions"],["/operations/campaigns","Campaigns & expeditions"],["/operations/finance","Resident finances"]]},
+ {name:"COMPOUND OPERATIONS",links:[["/operations","Operations overview"],["/operations/registration","Personnel registration"],["/operations/work-orders","Work orders"],["/operations/restoration","Restoration milestones"],["/operations/inventory","Stockroom & fabrication"],["/supplies","Supply requisitions"],["/operations/campaigns","Campaigns & expeditions"],["/operations/finance","Resident finances"]]},
  {name:"OVERSEER / COMMAND",overseer:true,links:[["/overseer/work-orders","Work-order administration"],["/overseer/campaigns","Expedition oversight"],["/overseer/finance","Financial administration"],["/overseer/supplies","Supply administration"],["/admin/progression","Progression controls"]]},
  {name:"OVERSEER / PERSONNEL",admin:true,links:[["/admin/residents","Resident directory"],["/admin/apartments","Housing management"],["/admin/requests","Housing approvals"],["/admin/rules","XP & activity policy"],["/admin/audit","Accountability log"]]},
  {name:"WEBSITE & ACCESS",links:[["https://cultofnixon.com/membership","Membership & invite codes"],["https://cultofnixon.com/admin","Website administration"],["https://cultofnixon.com/admin/discord","Discord administration"]]}
 ];
-async function call(action,body){const method=body?"POST":"GET";const resp=await fetch(API+"?action="+encodeURIComponent("compound_"+action),{method,credentials:"include",cache:"no-store",headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined});let data=await resp.json().catch(()=>({error:"Could not read server response"}));if(!resp.ok)throw new Error(data.error||"Request failed");return data;}
+async function call(action,body){
+ const method=body?"POST":"GET";
+ const resp=await fetch(API+"?action="+encodeURIComponent("compound_"+action),{
+  method,credentials:"include",cache:"no-store",
+  headers:body?{"Content-Type":"application/json"}:undefined,
+  body:body?JSON.stringify(body):undefined
+ });
+ const data=await resp.json().catch(()=>({error:"Could not read server response"}));
+ if(!resp.ok){const failure=new Error(data?.error||"Request failed");failure.status=resp.status;throw failure;}
+ if(!data||typeof data!=="object")throw new Error("Invalid Compound response for "+action);
+ return data;
+}
 function path(){return location.pathname.replace(/\/$/,"")||"/"}
 function head(title,description){return '<header class="page-head"><div class="eyebrow">C0N / THE COMPOUND</div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></header>'}
 function table(headers,rows){return '<div class="tablewrap"><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join("")+'</tr></thead><tbody>'+rows.join("")+'</tbody></table></div>'}
@@ -173,7 +184,10 @@ if(path()==="/guide"){el.innerHTML=newcomerGuide();return;}
 if(publicId){try{el.innerHTML=await publicProfile(publicId);}catch(e){el.innerHTML='<div class="public-sheet"><div class="empty">'+esc(e.message)+'</div></div>';}updateJobCountdowns();return;}
 
 try{
-me=await call("me");const routes={"/":overview,"/apartments":apartments,"/profile":profile,"/requests":requests,
+ me=await call("me");
+ if(!me?.user?.id)throw Object.assign(new Error("Sign in required"),{status:401});
+ if(!me?.profile)throw new Error("Your resident record is not available.");
+ const routes={"/":overview,"/apartments":apartments,"/profile":profile,"/requests":requests,
  "/operations":opsHome,"/operations/registration":opsRegistration,
  "/operations/work-orders":opsWorkOrders,"/operations/restoration":opsRestoration,
  "/operations/inventory":opsInventory,"/supplies":opsSupplies,"/operations/campaigns":opsCampaigns,
@@ -189,7 +203,24 @@ if(!target){err="That page does not exist.";target=overview;}
 el.innerHTML=appFrame(await target());
 bind();
 if(typeof bindOperations==='function')bindOperations();
-}catch(e){if(String(e.message).includes("Sign in"))login("");else login(e.message);}
+}catch(e){
+ console.error("Compound page load failed",{
+  path:path(),
+  status:e?.status||"client_error",
+  message:String(e?.message||"Unknown error").slice(0,240),
+  stack:typeof e?.stack==="string"?e.stack.slice(0,950):undefined
+ });
+ if(e?.status===401){login("");return;}
+ const message=String(e?.message||"The requested section could not be loaded.");
+ if(me?.user?.id){
+  el.innerHTML=appFrame('<section class="panel space" role="alert"><div class="eyebrow">COMPOUND OPERATIONS</div>'+
+   '<h1>Unable to open this section</h1><p>'+esc(message)+'</p>'+
+   '<div class="row"><a class="btn primary" href="/">Return to overview</a>'+
+   '<a class="btn" href="https://cultofnixon.com/">Community website</a></div></section>');
+ }else{
+  login("The Compound service is unavailable. Try again or return to the community website.");
+ }
+}
 }
 async function perform(action,body){try{await call(action,body);flash="Saved successfully.";err="";await render();}catch(e){err=e.message;flash="";await render();}}
 function openResidentStats(id){
