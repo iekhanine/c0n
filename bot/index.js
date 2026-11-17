@@ -23,6 +23,7 @@ import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./worksh
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
 import {isTreasuryMention,personalWalletCard,compoundTreasuryCard} from "./wallet.js";
 import {isGuideMention,newcomerGuideCard} from "./guide.js";
+import {pollBuildImageReminders} from "./project-images.js";
 import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
@@ -315,6 +316,14 @@ async function main() {
       heartbeatBusy = false;
     }
   }
+  let projectImageBusy=false;
+  async function checkProjectImageNotifications(){
+    if(state!=="ready"||!client.isReady()||projectImageBusy)return;
+    projectImageBusy=true;
+    try{await pollBuildImageReminders(client);}
+    catch(e){console.warn("Overseer image reminder unavailable",{code:e.code||"delivery",message:String(e.message||"").slice(0,120)});}
+    finally{projectImageBusy=false;}
+  }
   let workshopReminderBusy=false;
   async function checkWorkshopReminders(){
     if(state!=="ready"||!guild||workshopReminderBusy)return;
@@ -538,6 +547,7 @@ async function main() {
       state = "ready";
       run(rotateWorkshop);
       run(checkWorkshopReminders);
+      run(checkProjectImageNotifications);
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
       run(reconcileWelcomeReactions);
       run(checkProgress);
@@ -783,12 +793,14 @@ async function main() {
     controlTimer = setInterval(() => run(commands), 5000),
     workshopTimer = setInterval(() => run(rotateWorkshop), 12000),
     workshopReminderTimer = setInterval(() => run(checkWorkshopReminders), 15000),
+    projectImageTimer = setInterval(() => run(checkProjectImageNotifications), 30000),
     statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId}))); }, 15 * 60 * 1000);
   const shutdown = async () => {
     state = "stopping";
     clearInterval(controlTimer);
     clearInterval(workshopTimer);
     clearInterval(workshopReminderTimer);
+    clearInterval(projectImageTimer);
     clearInterval(statsTimer);
     clearInterval(progressTimer);
     clearInterval(membershipTimer);
