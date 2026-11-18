@@ -20,7 +20,7 @@ test("posts only question with @here and stable internal marker",()=>{
  assert.doesNotMatch(post.content,/THIRTY PLUS|UTC|new question appears|30 minutes|Charisma|Talk about it/i);
  assert.match(post.content,/^@here\n\n/);
  assert.match(post.content,/restart your life at 18/);
- assert.match(post.content,/truth-rotation:51/);
+ assert.doesNotMatch(post.content,/truth-rotation|Question \d+\/|Life & Regrets/);
 
 
  assert.deepEqual(post.allowedMentions,{parse:["everyone"]});
