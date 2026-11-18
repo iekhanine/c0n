@@ -165,7 +165,7 @@ export async function reconcileCompoundProgress(db,userId) {
  WHERE r.discord_id=$1 ON CONFLICT(source_key) DO NOTHING`,[userId]);
  return (await db.query(`SELECT
  COALESCE(sum(xp_delta) FILTER(WHERE source IN ('message','reaction')),0)::integer AS activity_xp,
- COALESCE(sum(charisma_delta) FILTER(WHERE source IN ('message','reaction')),0)::integer AS charisma_earned
+ COALESCE(sum(charisma_delta) FILTER(WHERE source IN ('message','reaction','thirty_plus')),0)::integer AS charisma_earned
  FROM con.compound_progress_events WHERE discord_id=$1`,[userId])).rows[0];
 }
 async function profile(db,user) {
