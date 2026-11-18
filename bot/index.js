@@ -24,6 +24,7 @@ import { buildProfileCard, buildPreviewCard } from "./profile.js";
 import {isTreasuryMention,personalWalletCard,compoundTreasuryCard} from "./wallet.js";
 import {isGuideMention,newcomerGuideCard} from "./guide.js";
 import {pollBuildImageReminders} from "./project-images.js";
+import {ensureThirtyPlusChannel,postThirtyPlusQuestion,recordThirtyPlusAnswer} from "./thirty-plus.js";
 import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
@@ -316,6 +317,18 @@ async function main() {
       heartbeatBusy = false;
     }
   }
+  let thirtyPlusChannel=null,thirtyPlusBusy=false,thirtyPlusRetryAt=0;
+  async function checkThirtyPlusQuestions(){
+    if(state!=="ready"||!guild||thirtyPlusBusy||Date.now()<thirtyPlusRetryAt)return;
+    thirtyPlusBusy=true;
+    try{
+      if(!thirtyPlusChannel)thirtyPlusChannel=await ensureThirtyPlusChannel(guild);
+      await postThirtyPlusQuestion(guild,thirtyPlusChannel);
+    }catch(e){
+      console.warn("Thirty Plus rotation unavailable",{code:e.code||"rotation",message:String(e.message||"").slice(0,180)});
+      thirtyPlusRetryAt=Date.now()+5*60*1000;
+    }finally{thirtyPlusBusy=false;}
+  }
   let projectImageBusy=false;
   async function checkProjectImageNotifications(){
     if(state!=="ready"||!client.isReady()||projectImageBusy)return;
@@ -548,6 +561,7 @@ async function main() {
       run(rotateWorkshop);
       run(checkWorkshopReminders);
       run(checkProjectImageNotifications);
+      run(checkThirtyPlusQuestions);
       run(async () => { await repairBotCategoryAccess(); await ensureInitiatedCompoundAccess(); await auditCategoryPermissions(); });
       run(reconcileWelcomeReactions);
       run(checkProgress);
@@ -632,6 +646,10 @@ async function main() {
     return buildPreviewCard(user);
   }
   client.on(Events.MessageCreate, (m) => {
+    if(m.guildId===guildId&&thirtyPlusChannel&&m.channelId===thirtyPlusChannel.id&&!m.author.bot&&!m.webhookId){
+      run(()=>recordThirtyPlusAnswer(m,thirtyPlusChannel.id));
+    }
+
     if(m.guildId===guildId&&!m.author.bot&&/^\s*accept\s*$/i.test(m.content||"")&&
        ["1571523929208651928","1571523950033248266","1571523971344765108","1571523993230385203",
         "1571524012801130546","1571524033768456337","1571524055063068762","1571524075765899464"].includes(m.channelId)){
@@ -794,6 +812,7 @@ async function main() {
     workshopTimer = setInterval(() => run(rotateWorkshop), 12000),
     workshopReminderTimer = setInterval(() => run(checkWorkshopReminders), 15000),
     projectImageTimer = setInterval(() => run(checkProjectImageNotifications), 30000),
+    thirtyPlusTimer = setInterval(() => run(checkThirtyPlusQuestions), 60000),
     statsTimer = setInterval(() => { if (state === "ready" && guild) run(() => updateStatsMessage(guild, client.user.id, SITE, () => send({kind:"server_stats",guild_id:guildId}))); }, 15 * 60 * 1000);
   const shutdown = async () => {
     state = "stopping";
@@ -801,6 +820,7 @@ async function main() {
     clearInterval(workshopTimer);
     clearInterval(workshopReminderTimer);
     clearInterval(projectImageTimer);
+    clearInterval(thirtyPlusTimer);
     clearInterval(statsTimer);
     clearInterval(progressTimer);
     clearInterval(membershipTimer);
