@@ -12,11 +12,8 @@ export function questionPost({seq,index}){
    throw Error("Invalid Compound question rotation");
  const q=thirtyPlusQuestion(index-1);
  return {
-  content:"📖 **THE COMPOUND**\n"+
-   "**Question "+q.number+"/"+THIRTY_PLUS_QUESTIONS.length+" · "+q.category+"**\n\n"+
-   "## "+q.text+"\n\n"+
-   "||truth-rotation:"+seq+"||",
-  allowedMentions:{parse:[]}
+  content:"@here\n\n"+q.text+"\n\n||truth-rotation:"+seq+"||",
+  allowedMentions:{parse:["everyone"]}
  };
 }
 export function shouldRecordTruthAnswer(message,channelId){
@@ -68,6 +65,9 @@ export async function postThirtyPlusQuestion(guild,channel,logger=console){
  if(next.channel_id!==channel.id||!Number.isSafeInteger(Number(next.seq)))
   throw Error("Question rotation channel mismatch");
  const seq=Number(next.seq),post=questionPost({seq,index:Number(next.index)});
+ const me=await guild.members.fetchMe();
+ if(!channel.permissionsFor(me)?.has(PermissionFlagsBits.MentionEveryone))
+  logger.warn("Compound question @here requires Mention Everyone permission on the bot's channel role");
  const marker="truth-rotation:"+seq;
  // A previous send might have succeeded while its acknowledgment timed out.
  const recent=await channel.messages.fetch({limit:50});
