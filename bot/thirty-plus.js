@@ -2,7 +2,9 @@ import {ChannelType,PermissionFlagsBits} from "discord.js";
 import {thirtyPlusDatabaseCall} from "./profile-db.js";
 import {THIRTY_PLUS_QUESTIONS,thirtyPlusQuestion} from "./thirty-plus-questions.js";
 
-export const THIRTY_PLUS_CHANNEL_NAME="campfire-questions";
+export const THIRTY_PLUS_CHANNEL_NAME="ᴄᴀᴍᴘꜰɪʀᴇ-ǫᴜᴇꜱᴛɪᴏɴꜱ";
+const EXISTING_CHANNEL_ID="1572439945279184986";
+const PLAIN_CHANNEL_NAME="campfire-questions";
 const LEGACY_CHANNEL_NAME="30-plus-truths";
 const PARENT_CATEGORY_ID="903106349850849371";
 const TOPIC="The Compound's conversation circle. One life question at a time. You can skip anything. Replies may earn Charisma; answers are retained for 30 days.";
@@ -27,7 +29,9 @@ export async function ensureThirtyPlusChannel(guild,logger=console){
  const category=guild.channels.cache.get(PARENT_CATEGORY_ID);
  if(!category||category.type!==ChannelType.GuildCategory||category.guildId!==guild.id)
   throw Error("Compound category unavailable. Cannot create Thirty Plus outside the assigned Compound section.");
- let channel=guild.channels.cache.find(c=>(c.name===THIRTY_PLUS_CHANNEL_NAME||c.name===LEGACY_CHANNEL_NAME)&&c.type===ChannelType.GuildText&&c.parentId===category.id);
+ let channel=guild.channels.cache.get(EXISTING_CHANNEL_ID);
+ if(channel && (channel.type!==ChannelType.GuildText||channel.parentId!==category.id))throw Error("Existing Compound questions channel moved or is not a text channel");
+ if(!channel)channel=guild.channels.cache.find(c=>(c.name===THIRTY_PLUS_CHANNEL_NAME||c.name===PLAIN_CHANNEL_NAME||c.name===LEGACY_CHANNEL_NAME)&&c.type===ChannelType.GuildText&&c.parentId===category.id);
  if(!channel){
   const self=await guild.members.fetchMe();
   if(!category.permissionsFor(self)?.has(PermissionFlagsBits.ManageChannels))
@@ -38,10 +42,6 @@ export async function ensureThirtyPlusChannel(guild,logger=console){
   });
   logger.info("Compound conversation channel created",{channel_id:channel.id});
  }
- if(channel.name===LEGACY_CHANNEL_NAME){
-  await channel.setName(THIRTY_PLUS_CHANNEL_NAME,"Rename existing conversation channel without losing messages");
- }
- if(channel.topic!==TOPIC)await channel.setTopic(TOPIC,"Simplify Compound conversation channel description");
  if(!channel.permissionsFor(await guild.members.fetchMe())?.has([PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory]))
   throw Error("Bot cannot read/post in the Thirty Plus channel");
  const bound=await thirtyPlusDatabaseCall("bind",{guild_id:guild.id,channel_id:channel.id});
