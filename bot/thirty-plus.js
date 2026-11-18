@@ -2,22 +2,19 @@ import {ChannelType,PermissionFlagsBits} from "discord.js";
 import {thirtyPlusDatabaseCall} from "./profile-db.js";
 import {THIRTY_PLUS_QUESTIONS,thirtyPlusQuestion} from "./thirty-plus-questions.js";
 
-export const THIRTY_PLUS_CHANNEL_NAME="30-plus-truths";
+export const THIRTY_PLUS_CHANNEL_NAME="campfire-questions";
+const LEGACY_CHANNEL_NAME="30-plus-truths";
 const PARENT_CATEGORY_ID="903106349850849371";
-const TOPIC="Thirty Plus: one adult-life question every 30 minutes. Share only what you're comfortable with. Replies may earn up to 8 Charisma a day. Replies are logged in C0N for 30 days. No personal identifiers, please.";
+const TOPIC="The Compound's conversation circle. One life question at a time. You can skip anything. Replies may earn Charisma; answers are retained for 30 days.";
 const safeString=s=>String(s??"");
 export function questionPost({seq,index}){
  if(!Number.isSafeInteger(seq)||seq<0||!Number.isInteger(index)||index<1||index>THIRTY_PLUS_QUESTIONS.length)
-   throw Error("Invalid Thirty Plus rotation");
+   throw Error("Invalid Compound question rotation");
  const q=thirtyPlusQuestion(index-1);
  return {
-  content:"📖 **THE COMPOUND · THIRTY PLUS**\n"+
-   "**Question "+q.number+"/50 · "+q.category+"**\n\n"+
-   "## "+q.text+"\n\n"+
-   "Talk about it like you're sitting around the campfire. No need to overthink it. "+
-   "You can skip any question. Don't share secrets or identifying details you wouldn't want posted publicly.\n\n"+
-   "✨ One meaningful reply per question can earn **+1 Charisma**, up to **8 per UTC day**. "+
-   "A new question appears in about 30 minutes.\n"+
+  content:"📖 **THE COMPOUND**\\n"+
+   "**Question "+q.number+"/"+THIRTY_PLUS_QUESTIONS.length+" · "+q.category+"**\\n\\n"+
+   "## "+q.text+"\\n\\n"+
    "||truth-rotation:"+seq+"||",
   allowedMentions:{parse:[]}
  };
@@ -33,7 +30,7 @@ export async function ensureThirtyPlusChannel(guild,logger=console){
  const category=guild.channels.cache.get(PARENT_CATEGORY_ID);
  if(!category||category.type!==ChannelType.GuildCategory||category.guildId!==guild.id)
   throw Error("Compound category unavailable. Cannot create Thirty Plus outside the assigned Compound section.");
- let channel=guild.channels.cache.find(c=>c.name===THIRTY_PLUS_CHANNEL_NAME&&c.type===ChannelType.GuildText&&c.parentId===category.id);
+ let channel=guild.channels.cache.find(c=>(c.name===THIRTY_PLUS_CHANNEL_NAME||c.name===LEGACY_CHANNEL_NAME)&&c.type===ChannelType.GuildText&&c.parentId===category.id);
  if(!channel){
   const self=await guild.members.fetchMe();
   if(!category.permissionsFor(self)?.has(PermissionFlagsBits.ManageChannels))
@@ -42,8 +39,12 @@ export async function ensureThirtyPlusChannel(guild,logger=console){
    name:THIRTY_PLUS_CHANNEL_NAME,type:ChannelType.GuildText,parent:category.id,
    topic:TOPIC,reason:"Owner approved 30+ life questions and Charisma participation"
   });
-  logger.info("Thirty Plus Discord channel created",{channel_id:channel.id});
+  logger.info("Compound conversation channel created",{channel_id:channel.id});
  }
+ if(channel.name===LEGACY_CHANNEL_NAME){
+  await channel.setName(THIRTY_PLUS_CHANNEL_NAME,"Rename existing conversation channel without losing messages");
+ }
+ if(channel.topic!==TOPIC)await channel.setTopic(TOPIC,"Simplify Compound conversation channel description");
  if(!channel.permissionsFor(await guild.members.fetchMe())?.has([PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory]))
   throw Error("Bot cannot read/post in the Thirty Plus channel");
  const bound=await thirtyPlusDatabaseCall("bind",{guild_id:guild.id,channel_id:channel.id});
@@ -65,7 +66,7 @@ export async function postThirtyPlusQuestion(guild,channel,logger=console){
   guild_id:guild.id,seq,lease_token:next.lease_token,message_id:message.id
  });
  if(done!==true)throw Error("Failed to acknowledge Thirty Plus prompt");
- logger.info("Thirty Plus question posted",{question:Number(next.index),sequence:seq,channel_id:channel.id});
+ logger.info("Compound question posted",{question:Number(next.index),sequence:seq,channel_id:channel.id});
  return true;
 }
 export async function recordThirtyPlusAnswer(message,channelId,logger=console){
