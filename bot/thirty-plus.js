@@ -12,9 +12,9 @@ export function questionPost({seq,index}){
    throw Error("Invalid Compound question rotation");
  const q=thirtyPlusQuestion(index-1);
  return {
-  content:"📖 **THE COMPOUND**\\n"+
-   "**Question "+q.number+"/"+THIRTY_PLUS_QUESTIONS.length+" · "+q.category+"**\\n\\n"+
-   "## "+q.text+"\\n\\n"+
+  content:"📖 **THE COMPOUND**\n"+
+   "**Question "+q.number+"/"+THIRTY_PLUS_QUESTIONS.length+" · "+q.category+"**\n\n"+
+   "## "+q.text+"\n\n"+
    "||truth-rotation:"+seq+"||",
   allowedMentions:{parse:[]}
  };
