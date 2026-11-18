@@ -14,16 +14,16 @@ test("cycles 1,000 distinct adult-life prompts without repeating early",()=>{
  assert.deepEqual(thirtyPlusQuestion(1999),thirtyPlusQuestion(999));
  assert.equal(THIRTY_PLUS_QUESTIONS.filter(q=>q.category==="The Hard Questions").length,10);
 });
-test("posts a single question with stable marker, safety and no mass pings",()=>{
+test("posts only question with @here and stable internal marker",()=>{
  const post=questionPost({seq:51,index:2});
- assert.match(post.content,/Question 2\/1000/);
+ assert.doesNotMatch(post.content,/Question 2\/1000/);
  assert.doesNotMatch(post.content,/THIRTY PLUS|UTC|new question appears|30 minutes|Charisma|Talk about it/i);
- assert.match(post.content,/^📖 \*\*THE COMPOUND\*\*/);
+ assert.match(post.content,/^@here\n\n/);
  assert.match(post.content,/restart your life at 18/);
  assert.match(post.content,/truth-rotation:51/);
 
 
- assert.deepEqual(post.allowedMentions,{parse:[]});
+ assert.deepEqual(post.allowedMentions,{parse:["everyone"]});
  assert.throws(()=>questionPost({seq:-1,index:2}));
 });
 test("accepts meaningful natural conversation without accepting spam or bot messages",()=>{
