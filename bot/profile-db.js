@@ -112,3 +112,41 @@ export async function projectImageDatabaseCall(kind,args={}){
  }
  throw Error("Unsupported image reminder action");
 }
+
+/**
+ * Narrow, audited Thirty Plus operations available only to the bot's database role.
+ * Do not grant the bot direct access to resident answers or progression tables.
+ */
+export async function thirtyPlusDatabaseCall(kind,args={}){
+ const db=database();
+ if(!db)throw Error("Thirty Plus database connection unavailable");
+ const guild=String(args.guild_id||"");
+ if(!/^\d{17,20}$/.test(guild))throw Error("Invalid Discord server");
+ const snow=v=>/^\d{17,20}$/.test(String(v||""));
+ let sql,values;
+ if(kind==="bind"){
+  if(!snow(args.channel_id))throw Error("Invalid channel");
+  sql="select con.bot_thirty_plus_bind($1,$2) as result";
+  values=[guild,args.channel_id];
+ }else if(kind==="claim"){
+  sql="select con.bot_thirty_plus_claim($1) as result";
+  values=[guild];
+ }else if(kind==="active"){
+  sql="select con.bot_thirty_plus_active($1) as result";
+  values=[guild];
+ }else if(kind==="ack"){
+  if(!Number.isSafeInteger(args.seq)||args.seq<0||
+     !/^[0-9a-f-]{36}$/i.test(String(args.lease_token))||
+     !snow(args.message_id))throw Error("Invalid question acknowledgment");
+  sql="select con.bot_thirty_plus_ack($1,$2,$3::uuid,$4) as result";
+  values=[guild,args.seq,args.lease_token,args.message_id];
+ }else if(kind==="answer"){
+  if(!snow(args.channel_id)||!snow(args.user_id)||!snow(args.message_id)||
+     typeof args.answer!=="string"||args.answer.length>1500||args.answer.length<25||
+     !Number.isSafeInteger(args.created_at))throw Error("Invalid conversation reply");
+  sql="select con.bot_thirty_plus_answer($1,$2,$3,$4,$5,$6::timestamptz) as result";
+  values=[guild,args.channel_id,args.user_id,args.message_id,args.answer,new Date(args.created_at).toISOString()];
+ }else throw Error("Unsupported Thirty Plus operation");
+ const {rows}=await db.query(sql,values);
+ return rows[0]?.result??null;
+}
