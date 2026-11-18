@@ -12,7 +12,7 @@ export function questionPost({seq,index}){
    throw Error("Invalid Compound question rotation");
  const q=thirtyPlusQuestion(index-1);
  return {
-  content:"@here\n\n"+q.text+"\n\n||truth-rotation:"+seq+"||",
+  content:"@here\n\n"+q.text,
   allowedMentions:{parse:["everyone"]}
  };
 }
@@ -71,7 +71,7 @@ export async function postThirtyPlusQuestion(guild,channel,logger=console){
  const marker="truth-rotation:"+seq;
  // A previous send might have succeeded while its acknowledgment timed out.
  const recent=await channel.messages.fetch({limit:50});
- let message=recent.find(m=>m.author?.id===guild.client.user.id&&m.content?.includes(marker));
+ let message=recent.find(m=>m.author?.id===guild.client.user.id && (m.content===post.content || m.content?.includes(marker)));
  if(!message)message=await channel.send(post);
  const done=await thirtyPlusDatabaseCall("ack",{
   guild_id:guild.id,seq,lease_token:next.lease_token,message_id:message.id
