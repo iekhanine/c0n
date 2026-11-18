@@ -48,7 +48,18 @@ export async function ensureThirtyPlusChannel(guild,logger=console){
  if(!channel.permissionsFor(await guild.members.fetchMe())?.has([PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory]))
   throw Error("Bot cannot read/post in the Thirty Plus channel");
  const bound=await thirtyPlusDatabaseCall("bind",{guild_id:guild.id,channel_id:channel.id});
- if(bound!==true)throw Error("Thirty Plus database channel binding failed");
+ if(bound!==true)throw Error("Compound question channel binding failed");
+ // Update the already-posted prompt in place; don't reset its timer or reward history.
+ try{
+  const active=await thirtyPlusDatabaseCall("active",{guild_id:guild.id});
+  if(active?.message_id&&Number.isSafeInteger(Number(active.seq))){
+   const existing=await channel.messages.fetch(active.message_id);
+   if(existing.author?.id===guild.client.user.id){
+    const updated=questionPost({seq:Number(active.seq),index:Number(active.index)});
+    if(existing.content!==updated.content)await existing.edit(updated);
+   }
+  }
+ }catch(e){logger.warn("Current conversation message refresh unavailable",{code:e.code||"edit"});}
  return channel;
 }
 export async function postThirtyPlusQuestion(guild,channel,logger=console){
