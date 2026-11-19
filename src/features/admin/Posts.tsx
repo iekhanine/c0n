@@ -92,6 +92,7 @@ export default function Posts({
   const [destination, setDestination] = useState(""),
     [website, setWebsite] = useState(canWebsite),
     [messageId, setMessageId] = useState("");
+  const [crosspostToFollowers, setCrosspostToFollowers] = useState(false);
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
@@ -128,6 +129,24 @@ export default function Posts({
       window.clearInterval(timer);
     };
   }, []);
+  async function crosspostDelivery(delivery: Delivery) {
+    if (!delivery.message_id) return;
+    await run(async () => {
+      const result = await botCommand<{ already_published: boolean }>(
+        "messages.crosspost",
+        {
+          channel_id: delivery.channel_id,
+          message_id: delivery.message_id,
+          reason: "Publish C0N announcement to following Discord servers",
+        },
+      );
+      setNotice(
+        result.already_published
+          ? "Already published to following servers."
+          : "Announcement published to following servers.",
+      );
+    });
+  }
   async function pinDelivery(delivery: Delivery, pinned: boolean) {
     await run(async () => {
       const { id } = await api<{ id: string }>("pin", "POST", {
@@ -259,6 +278,7 @@ export default function Posts({
     );
     setDirty(false);
     setMessageId("");
+    setCrosspostToFollowers(false);
     setImageName("");
     setNotice("");
   }
@@ -321,13 +341,30 @@ export default function Posts({
         setDestination(webhookId);
       }
       try {
-        const result = await api<{ notice: string }>("publish", "POST", {
+        const result = await api<{ notice: string; message_id?: string }>("publish", "POST", {
           post_id: p.id,
           version: p.version,
           website,
           webhook_id: webhookId || undefined,
         });
         setNotice(result.notice);
+        if (crosspostToFollowers && result.message_id && webhookId) {
+          const available = await api<{ webhooks: Hook[] }>("webhooks");
+          const target = available.webhooks.find((h) => h.id === webhookId);
+          if (!target) throw new Error("Discord post succeeded, but the channel could not be found for crossposting.");
+          try {
+            const receipt = await botCommand<{ already_published: boolean }>(
+              "messages.crosspost",
+              { channel_id: target.channel_id, message_id: result.message_id,
+                reason: "Publish this C0N transmission to following servers" },
+            );
+            setNotice(receipt.already_published
+              ? "Discord post saved. Already published to followers."
+              : "Discord post saved and published to following servers.");
+          } catch (err) {
+            throw new Error(`Discord post saved, but follower crossposting was not confirmed: ${err instanceof Error ? err.message : "unknown error"}`);
+          }
+        }
       } finally {
         const all = await load();
         setSelected(all.find((row) => row.id === p.id) || p);
@@ -550,6 +587,18 @@ export default function Posts({
                           ))}
                       </select>
                     </label>
+                    {kind === "update" && destination && (
+                      <label className="con-check">
+                        <input
+                          type="checkbox"
+                          checked={crosspostToFollowers}
+                          disabled={busy}
+                          onChange={(e) => setCrosspostToFollowers(e.target.checked)}
+                        />
+                        Publish this announcement to following servers
+                        <small>Only works for Discord Announcement channels. The bot checks permissions and prevents duplicate crossposts.</small>
+                      </label>
+                    )}
                     {owner && (
                       <button
                         type="button"
@@ -914,6 +963,14 @@ export default function Posts({
                       </div>
                       {d.message_id && d.state === "sent" && can("publish") && (
                         <div>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void crosspostDelivery(d)}
+                            title="Publish this message to servers following its Discord announcement channel"
+                          >
+                            Publish to followers
+                          </button>
                           <button
                             type="button"
                             disabled={busy}

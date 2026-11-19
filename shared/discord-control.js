@@ -2,6 +2,7 @@
 export const CONTROL_OPERATIONS = [
   "overview",
   "messages.pin",
+  "messages.crosspost",
   "channels.list",
   "channels.create",
   "channels.edit",
@@ -87,6 +88,10 @@ export function controlInput(op, input = {}) {
     bad("Unknown Discord command.");
   const p = {};
   if (op === "reaction_roles.inspect" || op === "reaction_roles.prepare") {
+    p.channel_id = id(input.channel_id);
+    p.message_id = id(input.message_id);
+  }
+  if (op === "messages.crosspost") {
     p.channel_id = id(input.channel_id);
     p.message_id = id(input.message_id);
   }

@@ -1,4 +1,4 @@
-import { PermissionFlagsBits as P } from "discord.js";
+import { PermissionFlagsBits as P, MessageFlags } from "discord.js";
 import { controlInput, readOperation } from "../shared/discord-control.js";
 const fail = (message) => {
   throw Object.assign(Error(message), { safe: true });
@@ -43,7 +43,9 @@ const channelView = (c) => ({
     : [],
 });
 const required = (op) =>
-  op === "messages.pin"
+  op === "messages.crosspost"
+    ? P.ManageMessages
+    : op === "messages.pin"
     ? (P.PinMessages ?? P.ManageMessages)
     : op === "channels.permissions"
       ? P.ManageRoles
@@ -70,7 +72,7 @@ const botRequired = (op) =>
   // Pin Messages can be granted at channel/category scope without being
   // granted at server level. The messages.pin handler checks the effective
   // permission for both the actor and bot on the target channel.
-  op === "messages.pin" ||
+  op === "messages.pin" || op === "messages.crosspost" ||
   (readOperation(op) && !op.startsWith("bans.") && !op.startsWith("webhooks."))
     ? null
     : required(op);
@@ -182,6 +184,25 @@ export async function executeControl(guild, command) {
       })),
       message_id: message.id,
     };
+  }
+  if (op === "messages.crosspost") {
+    const c = await guild.channels.fetch(p.channel_id);
+    if (!c || c.guildId !== guild.id || c.type !== 5)
+      fail("Crossposting requires an announcement channel.");
+    const needed = [P.ViewChannel, P.ReadMessageHistory, P.ManageMessages];
+    if (!c.permissionsFor(actor)?.has(needed))
+      fail("You need View Channel, Read Message History, and Manage Messages in this announcement channel.");
+    if (!c.permissionsFor(me)?.has([...needed, P.SendMessages]))
+      fail("The bot needs View Channel, Read Message History, Manage Messages, and Send Messages.");
+    const message = await c.messages.fetch(p.message_id);
+    if (message.flags.has(MessageFlags.Crossposted))
+      return { message_id: message.id, channel_id: c.id, already_published: true };
+    if (message.flags.has(MessageFlags.IsCrosspost))
+      fail("This is a received crosspost, not an original announcement.");
+    if (!message.crosspost)
+      fail("This message cannot be published to followers.");
+    await message.crosspost();
+    return { message_id: message.id, channel_id: c.id, already_published: false };
   }
   if (op === "messages.pin") {
     const c = await guild.channels.fetch(p.channel_id);
