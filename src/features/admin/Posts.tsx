@@ -128,6 +128,24 @@ export default function Posts({
       window.clearInterval(timer);
     };
   }, []);
+  async function crosspostDelivery(delivery: Delivery) {
+    if (!delivery.message_id) return;
+    await run(async () => {
+      const result = await botCommand<{ already_published: boolean }>(
+        "messages.crosspost",
+        {
+          channel_id: delivery.channel_id,
+          message_id: delivery.message_id,
+          reason: "Publish C0N announcement to following Discord servers",
+        },
+      );
+      setNotice(
+        result.already_published
+          ? "Already published to following servers."
+          : "Announcement published to following servers.",
+      );
+    });
+  }
   async function pinDelivery(delivery: Delivery, pinned: boolean) {
     await run(async () => {
       const { id } = await api<{ id: string }>("pin", "POST", {
@@ -914,6 +932,14 @@ export default function Posts({
                       </div>
                       {d.message_id && d.state === "sent" && can("publish") && (
                         <div>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void crosspostDelivery(d)}
+                            title="Publish this message to servers following its Discord announcement channel"
+                          >
+                            Publish to followers
+                          </button>
                           <button
                             type="button"
                             disabled={busy}
