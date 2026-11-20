@@ -20,7 +20,7 @@ export async function handleHeist(interaction) {
     const message=outcome.succeeded
       ? "💰 **THE HEIST SUCCEEDED**\n<@"+interaction.user.id+"> stole **"+money(outcome.amount)+"** from <@"+target.id+">."
       : "🚨 **THE HEIST FAILED**\n<@"+interaction.user.id+"> got caught trying to rob <@"+target.id+">. Restitution paid: **"+money(outcome.penalty)+"**.";
-    await interaction.editReply({content:message+"\nNext attempt in 2 hours. Victim protected for 30 minutes.",allowedMentions:{users:[interaction.user.id,target.id]}});
+    await interaction.editReply({content:message+"\nCooldown: "+outcome.attacker_cooldown_minutes+" min · Victim protection: "+outcome.victim_protection_minutes+" min.",allowedMentions:{users:[interaction.user.id,target.id]}});
   } catch(e) {
     const known=/cooldown|protection|too little cash|need Compound wallets|Invalid heist/i.test(e.message||"");
     await interaction.editReply({content:known?e.message:"The heist couldn't be processed. No money was moved.",allowedMentions:{parse:[]}});
