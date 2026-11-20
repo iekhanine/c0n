@@ -26,7 +26,7 @@ import {isTreasuryMention,personalWalletCard,compoundTreasuryCard} from "./walle
 import {isGuideMention,newcomerGuideCard} from "./guide.js";
 import {pollBuildImageReminders} from "./project-images.js";
 import {ensureThirtyPlusChannel,postThirtyPlusQuestion,recordThirtyPlusAnswer} from "./thirty-plus.js";
-import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury } from "./profile-db.js";
+import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury, inspectMemberWallet, sendTreasuryDollars, registerTreasuryOwner } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
 if (new URL(SITE).origin !== "https://cultofnixon.com")
@@ -492,6 +492,8 @@ async function main() {
         throw Error("Configure the server ID in C0N Admin → Discord bot.");
       guild = await client.guilds.fetch(config.guild_id);
       await guild.fetch();
+      // Register the real Discord guild owner for treasury authorization.
+      await registerTreasuryOwner(guild.id,guild.ownerId);
       await refreshWelcome();
       await heartbeat();
       const snapshot = randomUUID();
@@ -553,7 +555,19 @@ async function main() {
       });
       await guild.commands.create({
         name:"wallet",
-        description:"Check your personal Compound Dollars balance",
+        description:"Check your Compound Dollars balance (owner can inspect a member)",
+        options:[{name:"member",description:"Owner-only lookup: view another resident's wallet",type:6,required:false}],
+      });
+      await guild.commands.create({
+        name:"send",
+        description:"Owner only: send Compound Treasury Dollars to a resident",
+        // Discord server permissions hide the command from non-admin members;
+        // the handler independently restricts execution to the guild owner.
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+        options:[
+          {name:"member",description:"Recipient",type:6,required:true},
+          {name:"amount",description:"Whole Compound Dollars to send, maximum $1,000,000",type:4,required:true,min_value:1,max_value:1000000},
+        ],
       });
       // Trivia channels are managed by staff; do not auto-create on restart.
       client.user.setActivity("cultofnixon.com", {
@@ -713,12 +727,44 @@ async function main() {
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="wallet"){
       run(async()=>{
         await i.deferReply({flags:MessageFlags.Ephemeral});
+        const target=i.options.getUser("member");
+        if(target && i.user.id!==guild.ownerId)
+          return i.editReply({content:"Only the server owner can inspect another resident's wallet.",allowedMentions:{parse:[]}});
+        if(target?.bot)
+          return i.editReply({content:"Bots don't have resident wallets.",allowedMentions:{parse:[]}});
         try{
-          const wallet=await fetchResidentWallet(i.user.id);
-          return i.editReply(personalWalletCard(wallet));
+          const wallet=target?await inspectMemberWallet(target.id):await fetchResidentWallet(i.user.id);
+          const payload=personalWalletCard(wallet);
+          if(target) payload.embeds[0].setDescription("Private owner inspection: <@"+target.id+">");
+          return i.editReply(payload);
         }catch(e){
-          console.warn("Personal wallet lookup unavailable",{code:e.code||"unavailable"});
-          return i.editReply({content:"Your Compound wallet is temporarily unavailable.",allowedMentions:{parse:[]}});
+          console.warn("Wallet lookup unavailable",{code:e.code||"unavailable"});
+          return i.editReply({content:"Wallet unavailable. Verify the member is active and the database is connected.",allowedMentions:{parse:[]}});
+        }
+      });
+      return;
+    }
+    if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="send"){
+      run(async()=>{
+        await i.deferReply({flags:MessageFlags.Ephemeral});
+        if(i.user.id!==guild.ownerId)
+          return i.editReply({content:"Only the server owner can issue treasury payments.",allowedMentions:{parse:[]}});
+        const member=i.options.getUser("member",true);
+        const amount=i.options.getInteger("amount",true);
+        if(member.bot)
+          return i.editReply({content:"Treasury payments can only go to human residents.",allowedMentions:{parse:[]}});
+        try {
+          const result=await sendTreasuryDollars(i.user.id,member.id,amount,i.id);
+          const amountString=BigInt(amount).toLocaleString("en-US");
+          return i.editReply({content:
+            result.status==="already_processed"
+              ?"This treasury payment was already processed. No additional funds were sent."
+              :"✅ Sent **$"+amountString+"** from the Compound Treasury to <@"+member.id+">. Transaction: \`"+result.transaction_id+"\`",
+            allowedMentions:{parse:[]}});
+        }catch(e){
+          console.warn("Treasury payment denied",{code:e.code||"unavailable"});
+          const safe=/Insufficient Compound Treasury funds|Recipient must be an active Compound member|Treasury payments restricted to the owner|Invalid treasury transfer request/.test(e.message||"");
+          return i.editReply({content:safe?e.message:"Treasury payment could not be confirmed. Check the transaction audit before retrying.",allowedMentions:{parse:[]}});
         }
       });
       return;
