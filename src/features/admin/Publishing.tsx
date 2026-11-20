@@ -22,6 +22,7 @@ import {
 import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
+import HeistSettingsPanel from "./HeistSettings";
 import {NavigationEditor} from "../../PublicNavigation";
 import DiscordFontTool from "./DiscordFontTool";
 import ProjectApprovals from "./ProjectApprovals";
@@ -45,6 +46,7 @@ type Tab =
   | "database"
   | "discord"
   | "games"
+  | "heist"
   | "navigation"
   | "audit"
   | "projectReports"
@@ -74,6 +76,7 @@ export default function Publishing({
           permissions.includes("website.publish")),
       discord: owner,
       games: owner,
+      heist: owner,
       navigation: owner,
       font: owner,
       approvals: owner || (permissions.includes("projects.publish") && permissions.includes("website.publish")),
@@ -88,7 +91,7 @@ export default function Publishing({
     })[tab];
   const initialPage = (): Tab => {
     const slug = window.location.pathname.replace(/\/$/, "").split("/")[2] || "overview";
-    const match = (["overview", "update", "project", "approvals", "categories", "reports", "projectReports", "webhooks", "staff", "database", "discord", "games", "navigation", "font", "audit"] as Tab[]).find(t => t === slug);
+    const match = (["overview", "update", "project", "approvals", "categories", "reports", "projectReports", "webhooks", "staff", "database", "discord", "games", "heist", "navigation", "font", "audit"] as Tab[]).find(t => t === slug);
     return match || "overview";
   };
   const [tab, setTab] = useState<Tab>(initialPage);
@@ -131,7 +134,7 @@ export default function Publishing({
       ["navigation", "Site navigation", ListOrdered], ["audit", "Content history", History],
       ["projectReports", "Project reports", BarChart3], ["reports", "Publishing reports", BarChart3]
     ] },
-    { title: "COMPOUND & OVERSEER", items: [["games", "Operations directory", Gamepad2]] },
+    { title: "COMPOUND & OVERSEER", items: [["games", "Operations directory", Gamepad2], ["heist", "The Heist", Wallet]] },
     { title: "DISCORD BOT", items: [
       ["discord", "Bot configuration", Radio], ["webhooks", "Publishing channels", Hash],
       ["font", "Text generator", Type]
@@ -261,6 +264,8 @@ export default function Publishing({
         <ContentAudit />
       ) : tab === "discord" ? (
         <DiscordExplorer />
+      ) : tab === "heist" ? (
+        <HeistSettingsPanel />
       ) : tab === "games" ? (
         <div className="con-database-panel"><h2>Compound and Overseer administration</h2><p>Field operations, resident records, and Overseer policy have dedicated workspaces under the Compound domain.</p><div className="con-button-row"><a className="con-primary" href="https://thecompound.cultofnixon.com/operations">Open operations</a><a className="con-primary" href="https://thecompound.cultofnixon.com/overseer/work-orders">Manage work orders</a><a className="con-primary" href="https://thecompound.cultofnixon.com/overseer/finance">Financial administration</a></div></div>
       ) : tab === "navigation" ? (
