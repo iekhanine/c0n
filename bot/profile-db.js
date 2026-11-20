@@ -163,3 +163,26 @@ export async function heistDatabaseCall(attacker,victim,key){
   );
   return rows[0]?.outcome;
 }
+
+/** Privileged owner-only operations. Caller must verify guild.ownerId before invoking. */
+export async function registerTreasuryOwner(guildId,ownerId){
+  if(!/^\d{17,20}$/.test(String(guildId))||!/^\d{17,20}$/.test(String(ownerId)))throw Error("Invalid owner");
+  const db=database(); if(!db)throw Error("Treasury database unavailable");
+  const {rows}=await db.query("select con.bot_treasury_register_owner($1,$2) as ok",[guildId,ownerId]);
+  return rows[0]?.ok===true;
+}
+export async function inspectMemberWallet(memberId){
+  if(!/^\d{17,20}$/.test(String(memberId)))throw Error("Invalid member");
+  const db=database(); if(!db)throw Error("Wallet database unavailable");
+  const {rows}=await db.query("select con.bot_wallet_inspect($1) as wallet",[memberId]);
+  return rows[0]?.wallet;
+}
+export async function sendTreasuryDollars(actor,target,amount,interactionId){
+  if(!/^\d{17,20}$/.test(String(actor)) || !/^\d{17,20}$/.test(String(target)) ||
+    !/^\d{17,20}$/.test(String(interactionId)) || !Number.isSafeInteger(amount) || amount<1 || amount>1000000)
+    throw Error("Invalid treasury payment");
+  const db=database(); if(!db)throw Error("Treasury database unavailable");
+  const {rows}=await db.query("select con.bot_treasury_send($1,$2,$3,$4) as transfer",
+     [actor,target,amount,"send:"+interactionId]);
+  return rows[0]?.transfer;
+}
