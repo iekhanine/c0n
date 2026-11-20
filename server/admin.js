@@ -71,12 +71,52 @@ export async function adminHandler(req, res) {
       throw new AppError(403, "Invalid request origin.");
     const staff = await requireStaff(req, res);
     if (!staff) return;
-    if (!canAccess(staff, action, req.method))
+    if (!(action === "heist-settings" && staff.owner === true) && !canAccess(staff, action, req.method))
       throw new AppError(
         403,
         "Your access level does not permit this operation.",
       );
     const db = database();
+    if (action === "heist-settings") {
+      if (!staff.owner) throw new AppError(403, "Only the owner can configure The Heist.");
+      if (req.method === "GET") {
+        const { rows } = await db.query("select value from con.game_settings where key='heist'");
+        if (!rows[0]) throw new AppError(503, "Heist database migration has not been applied.");
+        return json(res, 200, { settings: rows[0].value });
+      }
+      expectMethod(req, "POST");
+      const input = bodyOf(req);
+      const ranges = {
+        success_percent: [0, 100], steal_percent: [1, 100],
+        maximum_theft: [1, 1000000], failure_penalty: [0, 1000000],
+        attacker_cooldown_minutes: [0, 10080],
+        victim_protection_minutes: [0, 10080],
+        minimum_target_balance: [1, 1000000],
+      };
+      if (typeof input.enabled !== "boolean" ||
+          Object.keys(input).sort().join(",") !== ["enabled", ...Object.keys(ranges)].sort().join(","))
+        throw new AppError(400, "Invalid heist settings payload.");
+      for (const [key, [min, max]] of Object.entries(ranges)) {
+        if (!Number.isSafeInteger(input[key]) || input[key] < min || input[key] > max)
+          throw new AppError(400, key + " must be between " + min + " and " + max + ".");
+      }
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const previous = await client.query("select value from con.game_settings where key='heist' for update");
+        if (!previous.rowCount) throw new AppError(503, "Heist migration is missing.");
+        await client.query("update con.game_settings set value=$1::jsonb,updated_at=now() where key='heist'",[JSON.stringify(input)]);
+        await client.query(
+          "insert into con.game_audit(actor,action,entity,entity_id,before_state,after_state) values($1,'heist.settings.update','settings','heist',$2::jsonb,$3::jsonb)",
+          [staff.user.id,JSON.stringify(previous.rows[0].value),JSON.stringify(input)]
+        );
+        await client.query("COMMIT");
+        return json(res,200,{settings:input});
+      } catch(error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally { client.release(); }
+    }
     if (action === "status") {
       expectMethod(req, "GET");
       return json(res, 200, await databaseStatus());
