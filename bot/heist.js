@@ -1,4 +1,3 @@
-import { MessageFlags } from "discord.js";
 import { heistDatabaseCall } from "./profile-db.js";
 
 export async function registerHeist(guild) {
