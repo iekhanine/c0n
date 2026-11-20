@@ -492,8 +492,6 @@ async function main() {
         throw Error("Configure the server ID in C0N Admin → Discord bot.");
       guild = await client.guilds.fetch(config.guild_id);
       await guild.fetch();
-      // Register the real Discord guild owner for treasury authorization.
-      await registerTreasuryOwner(guild.id,guild.ownerId);
       await refreshWelcome();
       await heartbeat();
       const snapshot = randomUUID();
@@ -514,6 +512,8 @@ async function main() {
         guild_id: guildId,
         snapshot_id: snapshot,
       });
+      try { await registerTreasuryOwner(guild.id,guild.ownerId); }
+      catch(e) { console.warn("Treasury owner registration unavailable", {code:e.code||"unavailable"}); }
       await guild.commands.create({
         name: "con",
         description: "Your Cult of nix0n community",
