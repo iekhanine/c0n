@@ -29,7 +29,7 @@ begin
    raise exception 'Invalid treasury transfer request'; end if;
  -- Defense in depth: the Discord guild owner is the sole authorized issuer.
  -- The ID is saved in an owner-managed config record, not supplied by the slash command.
- if p_actor is distinct from (select value from con.game_settings where key='treasury_owner_discord_id') #>> '{}' then
+ if p_actor is distinct from (select value #>> '{}' from con.game_settings where key='treasury_owner_discord_id') then
    raise exception 'Treasury payments restricted to the owner'; end if;
  if not exists (
   select 1 from con.discord_members d join con.discord_settings s on s.id=true and s.guild_id=d.guild_id
@@ -63,3 +63,21 @@ end
 $$;
 revoke all on function con.bot_treasury_send(text,text,bigint,text) from public,anon,authenticated;
 grant execute on function con.bot_treasury_send(text,text,bigint,text) to con_bot_profile_reader;
+
+-- Called only by the trusted bot after resolving the actual Discord guild owner.
+create or replace function con.bot_treasury_register_owner(p_guild text,p_owner text)
+returns boolean language plpgsql security definer
+set search_path=pg_catalog,con,pg_temp as $$
+begin
+ if p_guild !~ '^[0-9]{17,20}$' or p_owner !~ '^[0-9]{17,20}$'
+    or p_guild is distinct from (select guild_id from con.discord_settings where id=true) then
+   raise exception 'Invalid Discord guild owner registration'; end if;
+ if not exists (select 1 from con.discord_members where guild_id=p_guild and discord_id=p_owner and active=true and not is_bot)
+ then raise exception 'Owner must be an active server member'; end if;
+ insert into con.game_settings(key,value) values('treasury_owner_discord_id',to_jsonb(p_owner))
+ on conflict(key) do update set value=excluded.value,updated_at=now();
+ return true;
+end
+$$;
+revoke all on function con.bot_treasury_register_owner(text,text) from public,anon,authenticated;
+grant execute on function con.bot_treasury_register_owner(text,text) to con_bot_profile_reader;
