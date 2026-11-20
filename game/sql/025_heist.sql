@@ -73,7 +73,7 @@ begin
  perform pg_advisory_xact_lock(hashtextextended('heist:'||greatest(p_attacker,p_victim),0));
 
  select h.* into previous from con.game_heists h where h.request_key=p_key;
- if found then return jsonb_build_object('status','already_processed','succeeded',previous.succeeded,'amount',previous.amount,'penalty',previous.penalty); end if;
+ if found then return jsonb_build_object('status','already_processed','succeeded',previous.succeeded,'amount',previous.amount,'penalty',previous.penalty,'attacker_cooldown_minutes',attacker_cooldown_minutes,'victim_protection_minutes',victim_protection_minutes); end if;
 
  if exists(select 1 from con.game_heists where attacker_discord_id=p_attacker and created_at>now_time-(attacker_cooldown_minutes * interval '1 minute'))
  then raise exception 'Your crew is on cooldown'; end if;
