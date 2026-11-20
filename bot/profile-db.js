@@ -150,3 +150,16 @@ export async function thirtyPlusDatabaseCall(kind,args={}){
  const {rows}=await db.query(sql,values);
  return rows[0]?.result??null;
 }
+
+/** Heists mutate currency only through a narrowly granted, audited SQL function. */
+export async function heistDatabaseCall(attacker,victim,key){
+  if(!/^\d{17,20}$/.test(String(attacker)) || !/^\d{17,20}$/.test(String(victim)) ||
+     !/^heist:\d{17,20}$/.test(String(key))) throw Error("Invalid heist request");
+  const db=database();
+  if(!db) throw Error("Heist database connection unavailable");
+  const {rows}=await db.query(
+    "select con.bot_heist_attempt($1,$2,$3) as outcome",
+    [attacker,victim,key]
+  );
+  return rows[0]?.outcome;
+}

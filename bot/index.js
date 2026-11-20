@@ -18,6 +18,7 @@ import { ensureWelcomePost, onboardingEligible, isFirstContactChannel } from "./
 import { updateStatsMessage } from "./server-stats.js";
 import { handleTrivia, registerTrivia } from "./trivia.js";
 import { handleDice, registerDice } from "./dice.js";
+import { handleHeist, registerHeist } from "./heist.js";
 import {runWorkshopJobs,handleWorkshopInteraction} from "./workshop-jobs.js";
 import {acceptWorkshopClaim,pollWorkshopReminders,answerWorkshop} from "./workshop-assignments.js";
 import { buildProfileCard, buildPreviewCard } from "./profile.js";
@@ -544,6 +545,7 @@ async function main() {
       });
       await registerTrivia(guild);
       await registerDice(guild);
+      await registerHeist(guild);
       await guild.commands.create({
         name:"profile",
         description:"View your Compound membership card and character stats",
@@ -702,6 +704,9 @@ async function main() {
       run(()=>handleWorkshopInteraction(i,send));return;
     }
 
+    if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="heist"){
+      run(()=>handleHeist(i));return;
+    }
     if(i.guildId===guildId&&i.isChatInputCommand()&&i.commandName==="roll"){
       run(()=>handleDice(i));return;
     }
