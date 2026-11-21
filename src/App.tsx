@@ -6,6 +6,8 @@ import CommunityFeed from "./CommunityFeed";
 import PublicNavigation from "./PublicNavigation";
 import MilitiaHub from "./MilitiaHub";
 import ArchivePage from "./ArchivePage";
+import CinematicHome from "./CinematicHome";
+import "./PublicTheme.css";
 import FeaturedStrip from "./FeaturedStrip";
 import { MembershipPage } from "./Membership";
 import {
@@ -130,9 +132,10 @@ export default function App() {
                 : path === "/"
                   ? "explore"
                   : "missing";
-  if (account === null || (account.user && membershipAccess === null))
+  const publicLanding = path === "/" || path === "/doctrine" || path === "/transmissions" || path === "/archive";
+  if (!publicLanding && (account === null || (account.user && membershipAccess === null)))
     return <div className="showcase con-locked-shell"><div className="con-lock-checking"><img src="/con-logo.png" alt="C0N"/><p>Checking access to The Compound…</p></div></div>;
-  if (membershipAccess !== true)
+  if (!publicLanding && membershipAccess !== true)
     return <div className="showcase con-locked-shell"><MembershipPage /></div>;
   return (
     <SiteTextProvider owner={account?.owner === true}>
@@ -157,18 +160,11 @@ export default function App() {
               {unread > 0 && <span className="con-inbox-badge">{unread > 99 ? "99+" : unread}</span>}
             </a>
           </div>}
-          <a
-            className="discord-invite"
-            href="https://discord.gg/dSHMeZ4ETJ"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Copy id="discord.join" />
-          </a>
+          <a className="showcase-access" href="/membership"><span>{membershipAccess ? "CLEARANCE" : "REQUEST ACCESS"}</span><ArrowRight size={15}/></a>
           <WebsiteEditToggle />
           {!account?.user ? (
             <a className="showcase-login" href="/api/auth/discord/login">
-              Login <ArrowRight size={16} />
+              MEMBER ENTRY <ArrowRight size={16} />
             </a>
           ) : (
             <div className="con-account-menu">
@@ -214,7 +210,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "militia" ? <MilitiaHub /> : page === "membership" ? (
+          {path === "/" ? <CinematicHome member={membershipAccess === true}/> : path === "/doctrine" ? <CinematicHome view="doctrine" member={membershipAccess === true}/> : path === "/transmissions" ? <CinematicHome view="transmissions" member={membershipAccess === true}/> : page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "militia" ? <MilitiaHub /> : page === "membership" ? (
             <MembershipPage />
           ) : page === "merch" ? (
             <MembershipPage merch />
@@ -247,11 +243,11 @@ export default function App() {
           ) : (
             <CommunityFeed page={page} />
           )}
-          <CopyRegion ids={["footer"]}>
+          {!publicLanding && <CopyRegion ids={["footer"]}>
             <footer>
               <Editable id="footer" />
             </footer>
-          </CopyRegion>
+          </CopyRegion>}
         </main>
       </div>
     </SiteTextProvider>
