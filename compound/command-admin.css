@@ -1,0 +1,187 @@
+/* C0N / THE COMPOUND — shared command-center design across ALL /admin/* and /overseer/* routes.
+   Presentation only: permission checks, forms, actions and API operations are unchanged. */
+html.compound-command-admin {
+ --bg:#101c29;--panel:#1e3040;--raised:#2a4050;--border:#68899a70;
+ --cream:#eef3f4;--muted:#b4c7d1;--green:#e5c282;--yellow:#e5bd76;--red:#f2a8a3;
+ color-scheme:dark;
+}
+html.compound-command-admin body {
+ background:radial-gradient(ellipse at 91% 16%,#628da64a,transparent 40%),
+ radial-gradient(ellipse at 9% 85%,#9f79473a,transparent 45%),
+ linear-gradient(142deg,#293a49,#101d2b 57%,#101923);
+ color:#e9f0f4;min-height:100vh;
+}
+html.compound-command-admin body::before {
+ content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+ background:linear-gradient(130deg,#13233120,#13233198),
+ repeating-linear-gradient(0deg,transparent 0 79px,#d2eaf006 80px);
+}
+html.compound-command-admin :is(.compound-global-header,.sidebar,.topbar,.ops-section,.ops-card,.ops-link,.ops-job,.panel,.stat-editor,.floor,.unit,.attribute,.stat-edit-row,.ops-attribute,.ops-points,.ops-alert,.ops-empty,.ops-form,.guide-step,.workshop-job) {
+ backdrop-filter:blur(12px);
+}
+html.compound-command-admin .compound-global-header{
+ background:linear-gradient(90deg,#24374aef,#142638f8);border-bottom:1px solid #91aabb64;
+ box-shadow:0 9px 30px #02091466;min-height:72px;height:72px;padding-inline:25px;
+}
+html.compound-command-admin .compound-global-brand{color:#f5e8d1;font-size:13px;letter-spacing:.15em}
+html.compound-command-admin .compound-global-brand img{width:43px;height:43px}
+html.compound-command-admin .compound-global-nav a{color:#d6e2e9;font-size:12px}
+html.compound-command-admin .compound-global-nav a:is(:hover,[aria-current="page"]){color:#f2d39b}
+html.compound-command-admin .compound-global-status{color:#bfd0db;border-color:#8aa5b35b}
+html.compound-command-admin .shell{grid-template-columns:244px minmax(0,1fr);min-height:calc(100vh - 72px)}
+html.compound-command-admin .sidebar{
+ top:72px;height:calc(100vh - 72px);padding:17px 11px 20px;
+ background:linear-gradient(170deg,#304554e8,#111f2cf8 89%);
+ border-right:1px solid #7595a56b;box-shadow:7px 0 35px #0209104c;
+}
+html.compound-command-admin .brand{padding:8px 10px 17px;border-bottom:1px solid #7e9cac55;gap:12px}
+html.compound-command-admin .brand img{width:48px;height:48px}
+html.compound-command-admin .brand strong{font-size:16px;letter-spacing:.055em;color:#f6f0e5}
+html.compound-command-admin .brand small{color:#e1c48e;font-size:10px}
+html.compound-command-admin .nav-label{
+ margin:17px 10px 6px;color:#e1c48e;font-size:10px;letter-spacing:.13em;
+}
+html.compound-command-admin .nav-link{
+ padding:8px 11px;min-height:35px;font-size:12px;line-height:1.3;
+ color:#d2e0e8;border-radius:7px;margin:1px 0;
+}
+html.compound-command-admin .nav-link:hover{
+ border-color:#8da7b644;background:#708fa42b;color:#fff;
+}
+html.compound-command-admin .nav-link[aria-current="page"]{
+ border:1px solid #dfbc78;background:linear-gradient(90deg,#bc8d4b4f,#8f74462e);
+ color:#ffebc3;box-shadow:inset 3px 0 #edc983;
+}
+html.compound-command-admin .side-bottom{font-size:10px;color:#aebfc8;padding-top:14px;margin:20px 10px}
+html.compound-command-admin .main{max-width:none;width:100%;padding:0 clamp(16px,2.4vw,38px) 65px}
+html.compound-command-admin .topbar{
+ min-height:65px;background:#1c304061;border-bottom:1px solid #9ab0bc55;
+ padding:0 7px;
+}
+html.compound-command-admin .topbar>span{
+ font:700 10px/1.5 'IBM Plex Mono',monospace;letter-spacing:.09em;
+ color:#e3c386;overflow-wrap:anywhere;
+}
+html.compound-command-admin .topbar .identity{color:#d6e2e8;font-size:12px}
+html.compound-command-admin .page-head{margin:24px 0 21px;padding:0 4px}
+html.compound-command-admin .eyebrow{color:#e4c388;font-size:10px;letter-spacing:.14em;font-weight:700}
+html.compound-command-admin .page-head h1{
+ font-size:clamp(23px,2.1vw,32px);letter-spacing:-.035em;
+ color:#f4f4ee;margin:7px 0 9px;
+}
+html.compound-command-admin .page-head p{font-size:13px;color:#bfd0d9;max-width:860px}
+html.compound-command-admin :is(.panel,.ops-section,.ops-card,.ops-job,.ops-link,.stat-editor,.floor,.workshop-job,.guide-step) {
+ background:linear-gradient(150deg,#2b4153e9,#182b3be9);
+ border:1px solid #8ca8b65b;border-radius:11px;
+ box-shadow:inset 0 1px #ffffff16,0 11px 25px #030b164a;
+}
+html.compound-command-admin .ops-section{padding:22px 24px 25px;margin-top:17px}
+html.compound-command-admin .ops-section-title{border-color:#819ead5e;margin-bottom:16px;padding-bottom:14px}
+html.compound-command-admin .ops-section-title small{font-size:10px;color:#e5c58c}
+html.compound-command-admin .ops-section-title h2{font-size:20px;color:#f3f3ec;margin:7px 0}
+html.compound-command-admin .ops-section-title p{font-size:12px;color:#bfd0da}
+html.compound-command-admin .panel{padding:20px}
+html.compound-command-admin :is(.panel h2,.ops-job-top strong,.ops-link strong){color:#f0f3ed}
+html.compound-command-admin :is(.panel p,.ops-card p,.ops-link span,.ops-job p){color:#c0cfd8}
+html.compound-command-admin .ops-card{padding:17px}
+html.compound-command-admin .ops-card .ops-value{color:#f0d49c;font-size:25px}
+html.compound-command-admin .ops-link{padding:17px;gap:7px}
+html.compound-command-admin .ops-link:hover{background:#35536a;border-color:#ddba75}
+html.compound-command-admin .ops-job{padding:17px;gap:11px}
+html.compound-command-admin .ops-job-top span{color:#e7c989}
+html.compound-command-admin .ops-meta{color:#bad1df;font-size:11px}
+html.compound-command-admin .stat{color:#ecc786}
+html.compound-command-admin :is(.attribute,.stat-edit-row,.ops-attribute,.ops-points){
+ background:linear-gradient(140deg,#334d5dbc,#1a2c3cda);
+ border:1px solid #7e9dae65;border-radius:9px;
+}
+html.compound-command-admin .attribute strong{color:#f0d093}
+html.compound-command-admin .meter{background:#14222f;border-radius:30px}
+html.compound-command-admin .meter>i{background:linear-gradient(90deg,#be9656,#f3cf8a)}
+html.compound-command-admin .ops-points strong{color:#f4d38f}
+html.compound-command-admin .ops-points span{color:#ccdae0}
+html.compound-command-admin :is(.ops-field input,.ops-field select,.ops-field textarea,.field input,.field select,.shell input:not([type="checkbox"]):not([type="radio"]),.shell select,.shell textarea,.stat-edit-row input){
+ background:#102233;color:#f3f7f8;border:1px solid #7898a9a8;border-radius:7px;
+ min-height:42px;padding:10px 12px;box-shadow:inset 0 1px 5px #030c1340;
+}
+html.compound-command-admin :is(.ops-field input,.ops-field select,.ops-field textarea,.field input,.field select,.shell input,.shell textarea):focus-visible {
+ outline:2px solid #e9c681;outline-offset:2px;border-color:#efcb8a;
+}
+html.compound-command-admin .ops-field>span{color:#d9c69e;font-size:10px}
+html.compound-command-admin :is(.btn,button){
+ background:#30485a;border:1px solid #718fa1;color:#e7f1f4;
+ border-radius:7px;font-size:12px;font-weight:650;min-height:37px;padding:9px 13px;
+}
+html.compound-command-admin :is(.btn,button):hover:not(:disabled){background:#46647a;border-color:#e6c17c}
+html.compound-command-admin :is(.btn.primary,button.primary){
+ background:#d3ae6a;border-color:#f0d393;color:#122233;
+}
+html.compound-command-admin :is(.btn.primary,button.primary):hover:not(:disabled){background:#efd08e}
+html.compound-command-admin :is(.btn.danger,button.danger){background:#4a2930;border-color:#b77679;color:#ffd2ce}
+html.compound-command-admin .tablewrap{
+ background:#192c3ccc;border:1px solid #7c9caa71;border-radius:10px;
+ box-shadow:0 9px 26px #030b1844;
+}
+html.compound-command-admin table{font-size:12px}
+html.compound-command-admin th{
+ background:#344a5cc9;color:#e5c887;font:700 10px 'IBM Plex Mono',monospace;
+ border-bottom:1px solid #91abbb73;letter-spacing:.08em;
+}
+html.compound-command-admin td{border-bottom:1px solid #7d99a946;color:#e6eef2;line-height:1.5}
+html.compound-command-admin th,html.compound-command-admin td{padding:11px 12px}
+html.compound-command-admin tbody tr:hover{background:#6b93a21c}
+html.compound-command-admin .table-actions{gap:6px}
+html.compound-command-admin .table-actions button{min-height:31px;padding:6px 9px;font-size:11px}
+html.compound-command-admin .notice{
+ border-radius:8px;background:#294034a8;border:1px solid #75b48d9a;color:#d8f4e1;
+ font-size:13px;box-shadow:0 4px 16px #040c1b35;
+}
+html.compound-command-admin .notice.error{background:#4c2b30b8;border-color:#ba7e83;color:#ffe0dc}
+html.compound-command-admin :is(.ops-alert,.ops-empty,.empty){border-radius:9px;background:#20364ac2;border:1px solid #7c96a85c;color:#dce6ed}
+html.compound-command-admin .ops-alert{border-color:#d4ad6c;background:#664d2c69}
+html.compound-command-admin :is(.tag,.ops-meta){letter-spacing:.045em}
+html.compound-command-admin .tag{
+ background:#b7955631;color:#efd5a1;border:1px solid #c9ad747d;border-radius:30px;font-size:10px;
+}
+html.compound-command-admin .history-entry{border-color:#84a0ae43}
+html.compound-command-admin .history-points{color:#ebc887}
+html.compound-command-admin .history-entry small{color:#b8cad4}
+html.compound-command-admin .stat-presets button{background:#2d4559;border-color:#849ba8;color:#eaf0f3}
+html.compound-command-admin .stat-presets button:hover{background:#4f6b7f}
+html.compound-command-admin .unit{background:#203547;border-color:#69899b;border-radius:9px}
+html.compound-command-admin .unit.occupied{background:#57472e73;border-color:#bd985c}
+html.compound-command-admin .unit.mine{border-color:#e8c37f;box-shadow:inset 0 0 0 1px #e8c37f}
+html.compound-command-admin .floor-head{color:#e4c58c}
+html.compound-command-admin .ops-material{border-color:#819ca653}
+html.compound-command-admin .ops-material progress{accent-color:#dab573}
+html.compound-command-admin .ops-asset{border-color:#8ca9b647}
+html.compound-command-admin .ops-points{padding:13px 18px}
+html.compound-command-admin button:focus-visible,html.compound-command-admin a:focus-visible{
+ outline:2px solid #e8c688;outline-offset:3px;
+}
+@media(max-width:1100px){
+ html.compound-command-admin .shell{grid-template-columns:210px minmax(0,1fr)}
+ html.compound-command-admin .sidebar{padding:13px 8px}
+ html.compound-command-admin .main{padding:0 17px 35px}
+ html.compound-command-admin .nav-link{font-size:11px}
+ html.compound-command-admin .ops-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+ html.compound-command-admin .shell{grid-template-columns:1fr}
+ html.compound-command-admin .sidebar{position:static;height:auto;padding:12px;border-right:0;border-bottom:1px solid #7493a168}
+ html.compound-command-admin .sidebar nav{display:flex!important;overflow-x:auto;gap:3px}
+ html.compound-command-admin .sidebar nav>div{flex:0 0 auto}
+ html.compound-command-admin .nav-label{margin:7px 8px 4px}
+ html.compound-command-admin .nav-link{white-space:nowrap}
+ html.compound-command-admin .side-bottom{display:none}
+ html.compound-command-admin .main{padding:0 15px 38px}
+}
+@media(max-width:650px){
+ html.compound-command-admin .compound-global-header{height:auto;min-height:66px;flex-wrap:wrap;padding:10px 12px;gap:9px}
+ html.compound-command-admin .compound-global-nav{gap:10px}
+ html.compound-command-admin .ops-section{padding:15px}
+ html.compound-command-admin .ops-form-grid{grid-template-columns:1fr}
+ html.compound-command-admin .topbar{flex-wrap:wrap;gap:6px;padding:9px 4px}
+ html.compound-command-admin .ops-job-top{flex-wrap:wrap}
+ html.compound-command-admin .table-actions button{min-height:32px}
+}
