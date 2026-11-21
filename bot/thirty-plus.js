@@ -9,13 +9,27 @@ const LEGACY_CHANNEL_NAME="30-plus-truths";
 const PARENT_CATEGORY_ID="903106349850849371";
 const TOPIC="The Compound's conversation circle. One life question at a time. You can skip anything. Replies may earn Charisma; answers are retained for 30 days.";
 const safeString=s=>String(s??"");
+// Interleave subject areas so the 50 similarly worded prompts in each topic
+// cannot appear back-to-back. Stable across restarts and repeated cycles.
+export const CAMPFIRE_ORDER=(()=>{
+ const groups=new Map();
+ THIRTY_PLUS_QUESTIONS.forEach((q,i)=>{
+  if(!groups.has(q.category))groups.set(q.category,[]);
+  groups.get(q.category).push(i);
+ });
+ const result=[], buckets=[...groups.values()];
+ for(let offset=0;result.length<THIRTY_PLUS_QUESTIONS.length;offset++)
+  for(const bucket of buckets)if(offset<bucket.length)result.push(bucket[offset]);
+ return Object.freeze(result);
+})();
+
 export function questionPost({seq,index}){
  if(!Number.isSafeInteger(seq)||seq<0||!Number.isInteger(index)||index<1||index>THIRTY_PLUS_QUESTIONS.length)
    throw Error("Invalid Compound question rotation");
- const q=thirtyPlusQuestion(index-1);
+ const q=thirtyPlusQuestion(CAMPFIRE_ORDER[index-1]);
  return {
-  content:"@here\n\n"+q.text,
-  allowedMentions:{parse:["everyone"]}
+  content:q.text,
+  allowedMentions:{parse:[]}
  };
 }
 export function shouldRecordTruthAnswer(message,channelId){
