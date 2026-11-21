@@ -79,6 +79,15 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
       setVaultNotice("Vault background updated. Refresh the access page to see it.");setVaultFile(null);
     }catch(e){setVaultNotice((e as Error).message);}finally{setVaultBusy(false);}
   }
+  const [enteringCircle,setEnteringCircle]=useState(false);
+  async function enterCircle(){
+    setEnteringCircle(true);setError("");
+    try {
+      const result=await request<{url:string}>("inner_circle");
+      if(!result.url.startsWith("https://"))throw Error("Private entry is unavailable.");
+      window.location.assign(result.url);
+    } catch(e){setError(e instanceof Error?e.message:"Private entry is unavailable.");setEnteringCircle(false);}
+  }
   const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);setNotice("Copied to clipboard.");}catch{setError("Copy failed. Select and copy the text manually.");}};
   if (signedIn === null) {
     return <div className="vault-screen vault-loading"><img src="/con-logo.png" alt="C0N" /></div>;
@@ -109,6 +118,11 @@ export function MembershipPage({merch=false}:{merch?:boolean}){
           </div>
           <p className="con-member-muted">This is your digital C0N card. Apple Wallet and Samsung Wallet passes will be added after issuer enrollment. A membership number alone is not proof of identity.</p>
         </section>
+        {member.active&&<section className="con-member-panel con-inner-circle">
+          <div className="con-member-section-head"><div><span className="con-member-eyebrow">CLEARANCE VERIFIED / INNER SANCTUM</span><h2>The Inner Circle</h2></div><LockKeyhole size={25}/></div>
+          <p>Your initiation has been recorded. The next door is visible only to active members. Its location is not disclosed to visitors.</p>
+          <button className="con-inner-circle-entry" type="button" onClick={()=>void enterCircle()} disabled={enteringCircle}>{enteringCircle?"OPENING THE DOOR":"ENTER THE INNER CIRCLE"} <ArrowRight size={16}/></button>
+        </section>}
         {member.active&&<section className="con-member-panel"><div className="con-member-section-head"><div><span className="con-member-eyebrow">DISTRIBUTION</span><h2>Issue digital invitations</h2></div><Gift/></div><p>Each one-use link connects a new member to your account. You have {Math.max(0,member.invite_allowance-(counts?.unused||0))} invitations available. Redeemed or revoked codes return their slot.</p>
           {isOwner && <button type="button" className="con-test-invite" disabled={busy} onClick={()=>void createTestInvitation()}>Generate one-use test code</button>}
           <form className="con-member-form" onSubmit={issue}>
