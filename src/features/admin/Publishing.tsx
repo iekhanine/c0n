@@ -23,6 +23,7 @@ import { adminApi as api } from "./adminApi";
 import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
 import HeistSettingsPanel from "./HeistSettings";
+import CommandCenter from "./CommandCenter";
 import {NavigationEditor} from "../../PublicNavigation";
 import DiscordFontTool from "./DiscordFontTool";
 import ProjectApprovals from "./ProjectApprovals";
@@ -237,14 +238,7 @@ export default function Publishing({
         </p>
       )}
       {tab === "overview" ? (
-        <div className="con-admin-overview"><h2>Control center</h2><p>Each section has one purpose. Choose where you need to work without hunting through unrelated menus.</p><div className="con-admin-systems">
-          <a href="/admin/update"><strong>Community website</strong><span>Posts, projects, navigation, moderation and content history</span></a>
-          <a href="https://thecompound.cultofnixon.com/operations"><strong>Compound operations</strong><span>Work orders, restoration, inventory and expedition progress</span></a>
-          {owner&&<a href="https://thecompound.cultofnixon.com/overseer/work-orders"><strong>Overseer command</strong><span>Contracts, operations, treasury, payroll and settlement oversight</span></a>}
-          {owner&&<a href="/membership"><strong>Member invitations</strong><span>Issue, review and revoke newcomer access codes</span></a>}
-          <a href="/admin/discord"><strong>Discord bot</strong><span>Bot configuration, channel connections and tools</span></a>
-          <a href="/admin/staff"><strong>System access</strong><span>Staff approvals, permissions and database health</span></a>
-        </div></div>
+        <CommandCenter owner={owner} />
       ) : !permissions.length ? (
         <div className="con-surface con-tool-empty">
           Your account is approved, but no tools have been enabled. Ask an
