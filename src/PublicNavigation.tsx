@@ -3,22 +3,22 @@ import {useSiteContent} from "./SiteText";
 import {SITE_COPY} from "../shared/site-copy.js";
 import "./PublicNavigation.css";
 
-type NavId="compound"|"archive"|"militia";
-const keys:NavId[]=["compound","archive","militia"];
-const hrefs:Record<NavId,string>={compound:"https://thecompound.cultofnixon.com/",archive:"/archive",militia:"/militia"};
-const nameKeys:Record<NavId,string>={compound:"nav.compound",archive:"nav.archive",militia:"nav.militia"};
+type NavId="compound"|"transmissions"|"archive"|"membership";
+const keys:NavId[]=["compound","transmissions","archive","membership"];
+const hrefs:Record<NavId,string>={compound:"https://thecompound.cultofnixon.com/",transmissions:"/transmissions",archive:"/archive",membership:"/membership"};
+const labels:Record<NavId,string>={compound:"THE COMPOUND",transmissions:"TRANSMISSIONS",archive:"ARCHIVE",membership:"MEMBERSHIP"};
 const setting="layout.nav.order";
 function parse(value:string|undefined):NavId[]{
  try{
   const items=JSON.parse(value||"");
-  if(Array.isArray(items)&&items.length===keys.length&&keys.every(k=>items.includes(k))&&new Set(items).size===keys.length)return items as NavId[];
+  if(Array.isArray(items)) { const valid=items.filter((x:unknown)=>keys.includes(x as NavId)) as NavId[]; if(valid.length>=2) return [...valid,...keys.filter(k=>!valid.includes(k))]; }
  }catch{}
  return keys;
 }
 export default function PublicNavigation(){
  const {entries}=useSiteContent();
  const order=parse(entries[setting]?.value??SITE_COPY[setting]);
- return <nav aria-label="Community" className="con-public-nav">{order.map(key=><a key={key} aria-current={(key==="compound"?location.hostname==="thecompound.cultofnixon.com":location.pathname===hrefs[key])?"page":undefined} href={hrefs[key]}>{entries[nameKeys[key]]?.removed?"":entries[nameKeys[key]]?.value??SITE_COPY[nameKeys[key]]}</a>)}</nav>;
+ return <nav aria-label="Community" className="con-public-nav">{order.map(key=><a key={key} aria-current={(key==="compound"?location.hostname==="thecompound.cultofnixon.com":location.pathname===hrefs[key])?"page":undefined} href={hrefs[key]}>{entries[nameKeys[key]]?.removed?"":entries[nameKeys[key]]?.value??labels[key]}</a>)}</nav>;
 }
 export function NavigationEditor(){
  const {owner,entries,ready,change}=useSiteContent();
