@@ -2,7 +2,7 @@ import {useEffect,useState} from "react";
 import {ArrowRight,ArrowUpRight,BookOpen,Box,Building2,FileText,KeyRound,Radio,Shield,Signal,Users,Wallet,Wrench} from "lucide-react";
 import "./CinematicHome.css";
 
-type CommunityStats={connected?:boolean;member_count?:number};
+type CommunityStats={active_members:number};
 type ArchiveRecord={id:string;title:string;subtitle?:string;body?:string;collection:string;published:boolean};
 const sectors=[
  {label:"RESIDENCY",desc:"A place within the Compound. An identity within the record.",icon:Building2,href:"https://thecompound.cultofnixon.com/apartments"},
@@ -15,7 +15,7 @@ export default function CinematicHome({view="home",member=false}:{view?:"home"|"
  const [records,setRecords]=useState<ArchiveRecord[]>([]);
  useEffect(()=>{
   const c=new AbortController();
-  void fetch("/api/discord-bot?action=public",{cache:"no-store",signal:c.signal}).then(r=>r.ok?r.json():null).then(d=>{if(d)setCommunity(d)}).catch(()=>{});
+  void fetch("/api/membership?action=public",{cache:"no-store",signal:c.signal}).then(r=>r.ok?r.json():null).then(d=>{if(d)setCommunity(d)}).catch(()=>{});
   void fetch("/api/site-content?action=archive_list",{cache:"no-store",signal:c.signal}).then(r=>r.ok?r.json():null).then(d=>{
    if(Array.isArray(d?.records))setRecords(d.records.filter((x:ArchiveRecord)=>x.published));
   }).catch(()=>{});
@@ -46,10 +46,10 @@ export default function CinematicHome({view="home",member=false}:{view?:"home"|"
    <div className="signal-briefing"><div className="signal-briefing-copy">{doctrine}</div>
     <div className="signal-briefing-info">
      <div className="signal-stats">
-      <div><Users size={23}/><strong>{typeof community?.member_count==="number"?community.member_count.toLocaleString():"—"}</strong><span>REGISTERED PERSONNEL</span><small>{community?.connected?"FIELD LINK ACTIVE":"LIVE COUNT UNAVAILABLE"}</small></div>
+      <div><Users size={23}/><strong>{typeof community?.active_members==="number"?community.active_members.toLocaleString():"—"}</strong><span>REGISTERED PERSONNEL</span><small>{community?"VERIFIED REGISTRY":"LIVE COUNT UNAVAILABLE"}</small></div>
       <div><Radio size={23}/><strong>{records.length?records.length.toLocaleString():"—"}</strong><span>PUBLIC RECORDS</span><small>ARCHIVE INDEX</small></div>
       <div><KeyRound size={23}/><strong>CODE</strong><span>ACCESS PROTOCOL</span><small>INVITATION REQUIRED</small></div>
-      <div><Signal size={23}/><strong>{community?.connected?"LIVE":"—"}</strong><span>NETWORK STATUS</span><small>CONTINUITY MONITOR</small></div>
+      <div><Signal size={23}/><strong>{community?"LIVE":"—"}</strong><span>REGISTRY STATUS</span><small>MEMBERSHIP SERVICE</small></div>
      </div>{transmissions}
     </div>
    </div>
