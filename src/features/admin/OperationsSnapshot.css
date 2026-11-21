@@ -26,3 +26,17 @@
 @media(max-width:1450px){.ops-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1050px){.ops-lower{grid-template-columns:1fr}}
 @media(max-width:680px){.ops-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-quick,.ops-events{grid-template-columns:1fr}.ops-snapshot>header{flex-wrap:wrap}}
+
+.ops-roster{border-top:1px solid #8da4b644;padding:12px 13px 15px}
+.ops-roster-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.ops-roster-head b{display:flex;align-items:center;gap:8px;font-size:11px;color:#e6c381;letter-spacing:.05em}
+.ops-roster-head a{display:flex;align-items:center;gap:6px;color:#c2dce9;font-size:11px}
+.ops-roster-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ops-roster-grid>a{display:flex;align-items:center;gap:9px;border:1px solid #7895a555;border-radius:7px;background:#182b3b8a;text-decoration:none;color:#e3edf2;min-width:0;padding:8px}
+.ops-roster-grid>a:hover{border-color:#e1ba75;background:#31495c}
+.ops-avatar{width:29px;height:29px;flex:0 0 29px;display:grid;place-items:center;border-radius:50%;background:#637d90;color:#fff;font-weight:800}
+.ops-roster-grid strong{display:block;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-roster-grid small{display:block;font-size:10px;color:#a9bfcb}
+.ops-roster-grid p{font-size:11px;color:#b5c6d1}
+@media(max-width:1050px){.ops-roster-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.ops-roster-grid{grid-template-columns:1fr}}
