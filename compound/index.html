@@ -58,7 +58,7 @@ function compoundGlobalHeader(){
  '<a href="/" aria-current="page">THE COMPOUND</a>'+
  '<a href="https://cultofnixon.com/archive">ARCHIVE</a>'+
  '<a href="https://cultofnixon.com/militia">MILITIA</a>'+
- '<a href="https://cultofnixon.com/membership">DISCORD</a>'+
+ '<a href="https://cultofnixon.com/membership">ACCESS</a>'+
  '</nav><div class="compound-global-status">'+esc(name)+' <span class="tag">'+(me?.is_overseer?'OVERSEER':me?.is_admin?'STAFF':'RESIDENT')+'</span></div></header>';
 }
 function appFrame(content){
@@ -72,7 +72,7 @@ document.getElementById("app").innerHTML='<div class="login"><img src="https://c
 function attr(key,value){return '<div class="attribute"><strong>'+num(value)+'</strong><span>'+esc(key)+'</span>'+(key==="XP"?'':'<div class="meter"><i style="width:'+Math.max(0,Math.min(100,Number(value)))+'%"></i></div>')+'</div>'}
 async function overview(){const a=await call("apartments"),r=await call("requests");let home=me.home?.apartment_id||"The Unhoused";return head("Welcome to The Compound","Your resident overview, progression and active housing status.")+
  '<div class="grid"><div class="panel"><div class="eyebrow">YOUR APARTMENT</div><div class="stat">'+esc(home)+'</div><p>Permanent until an approved move</p><a href="/apartments" class="btn">View the building</a></div><div class="panel"><div class="eyebrow">EXPERIENCE POINTS</div><div class="stat">'+num(me.profile.xp)+'</div><p>Level '+num(me.profile.level)+'</p><a href="/profile" class="btn">Character sheet</a></div><div class="panel"><div class="eyebrow">HOUSING REQUESTS</div><div class="stat">'+num(r.requests.filter(x=>x.status==="pending"&&x.requester_id===me.user.id).length)+'</div><p>Requests awaiting decisions</p><a href="/requests" class="btn">View requests</a></div><div class="panel"><div class="eyebrow">OCCUPIED UNITS</div><div class="stat">'+a.apartments.filter(x=>x.occupants.length).length+' / 32</div><p>Real resident assignments</p><a href="/apartments" class="btn">Browse floors</a></div></div>'+
- '<div class="panel space"><h2>Community systems</h2><p>The Compound is an independent operational space within the Cult of nix0n. Each has its own management tools and access rules.</p><div class="row"><a class="btn" href="https://cultofnixon.com/">Community website</a><a class="btn" href="https://cultofnixon.com/admin/discord">Signal administration</a></div></div>';
+ '<div class="panel space"><h2>Community systems</h2><p>The Compound operates under its own rules, records and access controls.</p><div class="row"><a class="btn" href="https://cultofnixon.com/">Community website</a><a class="btn" href="https://cultofnixon.com/admin/discord">Signal administration</a></div></div>';
 }
 function apartmentButton(a){const people=a.occupants;let label=people.length?people.map(p=>p.name).join(", "):"Vacant";let own=people.some(p=>p.id===me.user.id);return '<button class="unit '+(own?'mine ':people.length?'occupied':'')+'" data-action="apartment" data-id="'+esc(a.id)+'"><strong>'+esc(a.id)+'</strong><small>'+esc(label)+'</small><small>'+num(people.length)+' / '+num(a.capacity)+' residents'+(a.locked?' · Locked':'')+'</small></button>';}
 async function apartments(){const d=await call("apartments");window._apartments=d.apartments;return head("The apartment building","Select an apartment to claim a vacant home or submit a transfer or roommate request.")+'<div class="building">'+[4,3,2,1].map(f=>'<section class="floor"><div class="floor-head">FLOOR '+f+'</div><div class="units">'+d.apartments.filter(a=>a.floor===f).map(apartmentButton).join("")+'</div></section>').join("")+'</div>';}
@@ -157,7 +157,7 @@ function newcomerGuide(){
  '<div class="panel space"><h2>Important Workshop rules</h2>'+
  '<p>Jobs are first come, first served. A claimed objective cannot be accepted by someone else. New objectives rotate daily, staggered between channels. Just chatting in a Workshop channel does not complete a job or award its contracted salary.</p>'+
  '<p>The Compound treasury and each resident’s accounts are recorded separately.</p>'+
- '<div class="guide-actions"><a class="btn primary" href="https://discord.gg/dSHMeZ4ETJ">Request access</a><a class="btn" href="/">The Compound</a></div></div></div>';
+ '<div class="guide-actions"><a class="btn primary" href="https://cultofnixon.com/membership">Request access</a><a class="btn" href="/">The Compound</a></div></div></div>';
 }
 async function publicProfile(id){
  const response=await fetch(API+"?action=compound_public_profile&id="+encodeURIComponent(id),{credentials:"include",cache:"no-store"});
