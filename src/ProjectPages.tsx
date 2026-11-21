@@ -91,7 +91,7 @@ export function VoteButton({
       </button>
       {error && (
         <span className="vote-error" role="alert">
-          {error} <a href="/api/auth/discord/login">Discord sign-in</a>
+          {error} <a href="/api/auth/discord/login">Member sign-in</a>
         </span>
       )}
     </span>
@@ -255,7 +255,7 @@ export function ProjectPage({ id }: { id: string }) {
           </form>
         ) : (
           <a href="/api/auth/discord/login">
-            Sign in with Discord to vote and comment
+            Enter with your membership to vote and comment
           </a>
         )}
         {data.comments.map((c) => (
@@ -412,20 +412,14 @@ export function MemberProjects() {
       <section className="member-workspace">
         <h1>Your project workspace</h1>
         <p>
-          Sign in with Discord to create a project page and submit it to the
+          Enter with a membership to create a project page and submit it to the
           community showcase.
         </p>
         <a className="rail-button" href="/api/auth/discord/login">
-          Sign in with Discord
+          Member sign-in
         </a>
         <p>
-          <a
-            href="https://discord.gg/dSHMeZ4ETJ"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Join our Discord ↗
-          </a>
+          <a href="/membership">Request access</a>
         </p>
       </section>
     );
@@ -451,7 +445,7 @@ export function MemberProjects() {
         <div role="alert" className="workspace-error">
           {error}
           {error.includes("Sign in") && (
-            <a href="/api/auth/discord/login">Sign in with Discord</a>
+            <a href="/api/auth/discord/login">Member sign-in</a>
           )}
           {owner && (
             <button disabled={busy} onClick={() => void setup()}>
