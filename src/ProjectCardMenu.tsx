@@ -170,7 +170,7 @@ export default function ProjectCardMenu({
               </label>
               <small>
                 Reports are private and visible only to the moderation team.
-                Sign in with Discord to submit.
+                Member authorization required to submit.
               </small>
               {error && (
                 <p role="alert">
