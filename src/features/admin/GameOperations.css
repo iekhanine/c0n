@@ -1,0 +1,26 @@
+.con-game-command{color:#e6eef4;display:grid;gap:18px}
+.cgc-header{display:flex;justify-content:space-between;align-items:center;gap:20px}
+.cgc-eyebrow{display:flex;gap:7px;align-items:center;color:#e6c17c;letter-spacing:.12em;font-size:10px;font-weight:800}
+.con-admin .cgc-header h2{font-size:27px;margin:7px 0}
+.cgc-header p{font-size:13px;max-width:780px;color:#b9cbd5;margin:0}
+.con-admin .cgc-header button{white-space:nowrap;background:#30465a;border:1px solid #668299}
+.cgc-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.cgc-stats>div,.cgc-module{background:linear-gradient(145deg,#304658e6,#1a2c3bea);border:1px solid #85a0ae66;box-shadow:inset 0 1px #ffffff14,0 9px 23px #030b1640;border-radius:10px}
+.cgc-stats>div{padding:21px}
+.cgc-stats span,.cgc-stats small{display:block;color:#b8c9d4;font-size:12px}
+.cgc-stats strong{display:block;color:#eed195;font-size:30px;margin:7px 0;font-weight:750}
+.cgc-stats small{font-size:10px}
+.cgc-section-label{display:flex;align-items:center;gap:9px;font-size:12px;letter-spacing:.08em;font-weight:750;color:#ebd29b;margin-top:5px}
+.cgc-section-label small{margin-left:auto;color:#b7c9d4;font-size:11px;font-weight:400;letter-spacing:0}
+.cgc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cgc-module{display:grid;grid-template-columns:46px minmax(0,1fr) 17px;gap:15px;align-items:start;padding:20px;color:#eef2f3;text-decoration:none;transition:background .15s,border-color .15s}
+.cgc-module:hover{background:#314b61;border-color:#e4b963}
+.cgc-module-icon{height:42px;width:42px;display:grid;place-items:center;background:#98805c3c;border-radius:10px;color:#f0c67e}
+.cgc-module strong{font-size:16px}
+.cgc-module p{margin:5px 0;color:#bdced6;font-size:12px}
+.cgc-module small{color:#e4c48c;font-size:10px;letter-spacing:.05em}
+.cgc-module>svg{color:#afc3d0}
+.cgc-warning{padding:12px 16px;border:1px solid #b48c5a;background:#5a3d2644;color:#f0d4a8;border-radius:7px}
+.cgc-notice{display:flex;gap:9px;align-items:center;color:#b7c8d1;font-size:12px}
+@media(max-width:1000px){.cgc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.cgc-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.cgc-header{flex-direction:column;align-items:flex-start}.cgc-section-label{flex-wrap:wrap}.cgc-section-label small{width:100%;margin-left:0}}
