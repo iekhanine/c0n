@@ -10,7 +10,7 @@ import { MemberPostHighlights } from "./MemberPostHighlights";
 const LAYOUT_KEY = "layout.discord.sidebar";
 type Section = "overview" | "channels" | "activity" | "members" | "builders" | "posts";
 const options: { id: Section; label: string }[] = [
-  { id: "overview", label: "Server overview" },
+  { id: "overview", label: "Personnel overview" },
   { id: "channels", label: "Most active channels" },
   { id: "activity", label: "Recent activity" },
   { id: "members", label: "Fresh faces" },
@@ -64,20 +64,20 @@ export default function DiscordSidebar() {
   }
   const cards: Record<Section, { label: string; content: React.ReactNode; icon: React.ReactNode }> = {
     overview: {
-      label: "Server overview", icon: <Gamepad2 size={18}/>,
+      label: "Personnel overview", icon: <Gamepad2 size={18}/>,
       content: <div className="discord-overview-compact">
         <div className="discord-overview-count"><strong>{discord?.member_count ?? "—"}</strong><span>members</span></div>
         <DiscordStatus data={discord}/>
-        <a href="https://discord.gg/dSHMeZ4ETJ" target="_blank" rel="noreferrer">Join C0N <ArrowUpRight size={13}/></a>
+        <a href="/membership">Request clearance <ArrowUpRight size={13}/></a>
       </div>,
     },
     channels: { label: "Most active channels", icon: <MessageCircle size={17}/>, content: <DiscordChannels data={discord}/> },
-    activity: { label: "Recent server activity", icon: <Activity size={17}/>, content: <DiscordActivity data={discord}/> },
+    activity: { label: "Recent activity", icon: <Activity size={17}/>, content: <DiscordActivity data={discord}/> },
     members: { label: "Fresh faces", icon: <Users size={17}/>, content: <DiscordMembers data={discord}/> },
     builders: { label: "Active members", icon: <Zap size={17}/>, content: <DiscordBuilders data={discord}/> },
     posts: { label: "Top member posts", icon: <MessageCircle size={17}/>, content: <MemberPostHighlights/> },
   };
-  return <aside className="showcase-rail con-discord-sidebar" aria-label="Discord community overview">
+  return <aside className="showcase-rail con-discord-sidebar" aria-label="Member activity overview">
     {owner && editing && <section className="rail-card con-sidebar-editor">
       <div className="con-sidebar-edit-head">
         <strong>Site layout</strong>
