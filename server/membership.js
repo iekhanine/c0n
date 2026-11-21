@@ -68,7 +68,7 @@ export async function hasActiveMembership(user, db = database()) {
 export async function requireMembership(req, res) {
   const session = await readSession(req);
   if (!session?.user) {
-    json(res,401,{error:"An invitation and Discord sign-in are required."});
+    json(res,401,{error:"An invitation and verified account are required."});
     return false;
   }
   try {
@@ -100,7 +100,7 @@ export async function membershipHandler(req,res,dbFactory=database) {
     const user = session?.user;
     const url = new URL(req.url,ORIGIN);
     const action = url.searchParams.get("action") || "me";
-    if (!user && action !== "public") return json(res,401,{error:"Sign in with Discord to continue."});
+    if (!user && action !== "public") return json(res,401,{error:"Verify your identity to continue."});
     const db = dbFactory(); await setup(db);
     if (user) await ensureFounder(db,user);
     await backfillIdentity(db);
@@ -110,6 +110,17 @@ export async function membershipHandler(req,res,dbFactory=database) {
       const counts = (await db.query("SELECT count(*)::int AS issued,count(*) FILTER (WHERE redeemed_by IS NOT NULL)::int AS redeemed,count(*) FILTER (WHERE redeemed_by IS NULL AND revoked_at IS NULL)::int AS unused FROM con.membership_invites WHERE issuer_id=$1",[user.id])).rows[0];
       const inviter = member.inviter_id ? (await db.query("SELECT member_no,display_name FROM con.memberships WHERE user_id=$1",[member.inviter_id])).rows[0] : null;
       return json(res,200,{member:{...member,member_no:Number(member.member_no),founding:Number(member.member_no)<=100,invited_by:inviter ? {member_no:Number(inviter.member_no),name:inviter.display_name} : null},counts});
+    }
+    if (action === "inner_circle" && req.method === "GET") {
+      const member = (await db.query("SELECT active FROM con.memberships WHERE user_id=$1", [user.id])).rows[0];
+      if (member?.active !== true) return json(res,403,{error:"Verified membership required."});
+      // The private destination is never bundled into public site code.
+      // Existing invitation can be rotated using the INNER_CIRCLE_INVITE_URL secret.
+      const invite = process.env.INNER_CIRCLE_INVITE_URL || "https://discord.gg/dSHMeZ4ETJ";
+      if (!/^https:\/\/(?:discord\.gg|discord\.com\/invite)\/[A-Za-z0-9_-]+$/.test(invite))
+        return json(res,503,{error:"Private entry is not configured."});
+      res.setHeader("Cache-Control","private, no-store");
+      return json(res,200,{url:invite});
     }
     if (action === "invites" && req.method === "GET") {
       const member=(await db.query("SELECT member_no,active FROM con.memberships WHERE user_id=$1",[user.id])).rows[0];
