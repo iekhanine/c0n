@@ -64,8 +64,8 @@ export function DiscordStatus({ data }: { data: DiscordData | null }) {
     <p>
       <span className={`discord-status-dot ${data?.connected ? "live" : ""}`} />
       {data?.configured
-        ? `${data.member_count || 0} server members · ${data.connected ? "Connected" : "Sync paused"}`
-        : "Discord connection is being prepared."}
+        ? `${data.member_count || 0} registered personnel · ${data.connected ? "Connected" : "Sync paused"}`
+        : "The signal is being established."}
     </p>
   );
 }
@@ -81,7 +81,7 @@ export function DiscordMembers({ data }: { data: DiscordData | null }) {
     </div>
   ) : (
     <p className="discord-activity-empty">
-      Member arrivals will appear after the bot connects.
+      New arrivals will appear once the signal is established.
     </p>
   );
 }
@@ -98,7 +98,7 @@ export function DiscordBuilders({ data }: { data: DiscordData | null }) {
     </>
   ) : (
     <p className="discord-activity-empty">
-      Member activity starts counting when selected channels are connected.
+      Member activity is recorded as participation becomes available.
     </p>
   );
 }
@@ -117,7 +117,7 @@ export function DiscordChannels({ data }: { data: DiscordData | null }) {
     </>
   ) : (
     <p className="discord-activity-empty">
-      Selected channels will appear here as people post.
+      Active sectors will appear as members participate.
     </p>
   );
 }
@@ -136,8 +136,8 @@ export function DiscordActivity({ data }: { data: DiscordData | null }) {
   ) : (
     <p className="discord-activity-empty">
       {data?.connected
-        ? "No activity recorded in the selected channels yet. Message text stays in Discord."
-        : "Live activity will appear after the bot connects. Message text stays in Discord."}
+        ? "No activity recorded in the selected channels yet. Private conversations remain in their original location."
+        : "Live activity will appear when the signal is restored. Private conversations remain in their original location."}
     </p>
   );
 }
