@@ -580,6 +580,43 @@ export async function discordBotHandler(
       );
       return json(res, 200, { ok: true });
     }
+    if (action === "operations_summary" && req.method === "GET") {
+      // Read-only owner dashboard; counts are explicitly scoped and never imply
+      // the bot's cached channel snapshot is the entire Discord guild.
+      const s = await settings(db);
+      if (!s?.guild_id) fail(409, "Connect a Discord server first.");
+      const [members, games, history] = await Promise.all([
+        db.query(`SELECT
+          count(*) FILTER (WHERE active AND NOT is_bot)::int AS active_humans,
+          count(*) FILTER (WHERE active AND is_bot)::int AS active_bots,
+          count(*) FILTER (WHERE active)::int AS cached_members
+          FROM con.discord_members WHERE guild_id=$1`, [s.guild_id]),
+        db.query(`SELECT
+          (SELECT count(*)::int FROM con.compound_profiles) AS residents,
+          (SELECT count(*)::int FROM con.compound_trivia_results) AS trivia_results,
+          (SELECT count(*)::int FROM con.game_heists) AS heists,
+          (SELECT count(*)::int FROM con.game_work_orders) AS work_orders`),
+        db.query(`SELECT id, operation, actor_name, state, error, created_at,
+          finished_at FROM con.discord_commands WHERE guild_id=$1
+          ORDER BY created_at DESC LIMIT 12`, [s.guild_id]),
+      ]);
+      const channels = Array.isArray(s.channels) ? s.channels : [];
+      return json(res, 200, {
+        guild_id: s.guild_id,
+        member_count: s.member_count ?? null,
+        cached_members: members.rows[0].cached_members,
+        active_humans: members.rows[0].active_humans,
+        active_bots: members.rows[0].active_bots,
+        bot_channel_snapshot_count: channels.length,
+        channel_snapshot_at: s.last_heartbeat ?? null,
+        last_heartbeat: s.last_heartbeat ?? null,
+        residents: games.rows[0].residents,
+        trivia_results: games.rows[0].trivia_results,
+        heists: games.rows[0].heists,
+        work_orders: games.rows[0].work_orders,
+        commands: history.rows,
+      });
+    }
     if (action === "status" && req.method === "GET")
       return json(res, 200, {
         ...safeSettings(await settings(db)),
