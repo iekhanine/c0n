@@ -20,7 +20,7 @@
 .stat-editor-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .stat-preview{color:var(--green);font-family:'IBM Plex Mono',monospace}
 .workshop-job{margin-top:20px;padding:22px;border:1px solid #64865f;background:#15231a;border-radius:5px}.workshop-job h2{margin:8px 0}.workshop-job .countdown{font:700 24px 'IBM Plex Mono',monospace;color:var(--green)}.guide-steps{display:grid;gap:14px;counter-reset:guide}.guide-step{padding:20px;border:1px solid var(--border);background:var(--panel)}.guide-step h2{margin:0 0 8px;font-size:18px}.guide-step p{color:var(--muted);margin:0}.guide-step code{color:var(--green)}.guide-head{max-width:850px;margin:44px auto 26px}.guide-content{max-width:850px;margin:0 auto 55px;padding:0 18px}.guide-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:23px}
-</style><link rel="stylesheet" href="/operations.css"></head><body><div id="app" class="load">Connecting to Cult of nix0n…</div>
+</style><link rel="stylesheet" href="/operations.css"><link rel="stylesheet" href="/command-admin.css"></head><body><div id="app" class="load">Connecting to Cult of nix0n…</div>
 <script src="/operations.js"></script>
 <script>
 "use strict";
@@ -178,6 +178,7 @@ async function publicProfile(id){
  activeJobPanel(data.active_job)+'</main>';
 }
 async function render(){
+document.documentElement.classList.toggle("compound-command-admin", /^\/(?:admin|overseer)(?:\/|$)/.test(path()));
 const el=document.getElementById("app");el.className="";el.innerHTML='<div class="load">Loading…</div>';
 const publicId=path().match(/^\/u\/(\d{17,20})$/)?.[1];
 if(path()==="/guide"){el.innerHTML=newcomerGuide();return;}
