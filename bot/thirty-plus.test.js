@@ -45,3 +45,13 @@ test("interleaves categories without repeating themes consecutively",()=>{
  const cats=CAMPFIRE_ORDER.map(i=>THIRTY_PLUS_QUESTIONS[i].category);
  for(let i=1;i<cats.length;i++)assert.notEqual(cats[i],cats[i-1]);
 });
+
+test("Campfire bank does not contain broken generated sentence patterns",()=>{
+ const bad=/if you faced|dealing with dealing|what would you approach differently if|what's a particular moment involving/i;
+ for(const q of THIRTY_PLUS_QUESTIONS){
+  assert.doesNotMatch(q.text,bad);
+  assert.ok(q.text.endsWith("?"),q.text);
+ }
+ assert.ok(THIRTY_PLUS_QUESTIONS.some(q=>q.text==="What's a piece of technology you resisted using but now love?"));
+ assert.ok(THIRTY_PLUS_QUESTIONS.some(q=>q.text==="Have you ever felt jealous of someone else's success, even while being happy for them?"));
+});
