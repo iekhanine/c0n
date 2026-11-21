@@ -24,6 +24,8 @@ import type { StorageStatus } from "./adminApi";
 import DiscordExplorer from "./DiscordExplorer";
 import HeistSettingsPanel from "./HeistSettings";
 import CommandCenter from "./CommandCenter";
+import GameOperations from "./GameOperations";
+import "./OperationsTheme.css";
 import {NavigationEditor} from "../../PublicNavigation";
 import DiscordFontTool from "./DiscordFontTool";
 import ProjectApprovals from "./ProjectApprovals";
@@ -128,14 +130,14 @@ export default function Publishing({
     setError("");
   }
   const groups: { title: string; items: [Tab, string, typeof Radio][] }[] = [
-    { title: "COMMAND CENTER", items: [["overview", "Overview", BarChart3]] },
+    { title: "COMMAND CENTER", items: [["overview", "Command center", BarChart3], ["games", "Game administration", Gamepad2]] },
     { title: "COMMUNITY WEBSITE", items: [
       ["update", "Transmissions", Radio], ["project", "Featured projects", Terminal],
       ["approvals", "Project approvals", CheckSquare], ["categories", "Creator categories", Layers],
       ["navigation", "Site navigation", ListOrdered], ["audit", "Content history", History],
       ["projectReports", "Project reports", BarChart3], ["reports", "Publishing reports", BarChart3]
     ] },
-    { title: "COMPOUND & OVERSEER", items: [["games", "Operations directory", Gamepad2], ["heist", "The Heist", Wallet]] },
+    { title: "COMPOUND & OVERSEER", items: [["heist", "Heist rules", Wallet]] },
     { title: "DISCORD BOT", items: [
       ["discord", "Bot configuration", Radio], ["webhooks", "Publishing channels", Hash],
       ["font", "Text generator", Type]
@@ -182,6 +184,14 @@ export default function Publishing({
           </div>;
         })}
         {owner && <>
+          <div className="con-nav-group">
+            <span className="con-sidebar-label">SERVER MANAGEMENT</span>
+            <a className="con-owner-direct" href="/admin/discord/members"><Users size={18}/> Member directory</a>
+            <a className="con-owner-direct" href="/admin/discord/bans"><Shield size={18}/> Bans & unbans</a>
+            <a className="con-owner-direct" href="/admin/discord/roles"><KeyRound size={18}/> Role assignments</a>
+            <a className="con-owner-direct" href="/admin/discord/channels"><Hash size={18}/> Channels & categories</a>
+            <a className="con-owner-direct" href="/admin/discord/history"><History size={18}/> Moderation audit</a>
+          </div>
           <div className="con-nav-group">
             <span className="con-sidebar-label">OVERSEER / FIELD COMMAND</span>
             <a className="con-owner-direct" href="https://thecompound.cultofnixon.com/operations"><Building2 size={18}/> Operations overview <ExternalLink size={12}/></a>
@@ -261,7 +271,7 @@ export default function Publishing({
       ) : tab === "heist" ? (
         <HeistSettingsPanel />
       ) : tab === "games" ? (
-        <div className="con-database-panel"><h2>Compound and Overseer administration</h2><p>Field operations, resident records, and Overseer policy have dedicated workspaces under the Compound domain.</p><div className="con-button-row"><a className="con-primary" href="https://thecompound.cultofnixon.com/operations">Open operations</a><a className="con-primary" href="https://thecompound.cultofnixon.com/overseer/work-orders">Manage work orders</a><a className="con-primary" href="https://thecompound.cultofnixon.com/overseer/finance">Financial administration</a></div></div>
+        <GameOperations />
       ) : tab === "navigation" ? (
         <NavigationEditor />
       ) : tab === "database" || !status?.initialized || status.needs_upgrade ? (
