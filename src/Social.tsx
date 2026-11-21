@@ -768,7 +768,7 @@ export function InboxPage() {
   }
   return <section className="con-inbox-page">
     <header><span className="con-community-kicker">YOUR ACTIVITY</span><h1>Inbox</h1><p>Replies to posts you've asked to follow.</p></header>
-    {!user && <p><a href="/api/auth/discord/login">Sign in with Discord to see your notifications.</a></p>}
+    {!user && <p><a href="/api/auth/discord/login">Sign in to view your confidential correspondence.</a></p>}
     {loading && user && <p>Loading notifications…</p>}
     {error && <p role="alert" className="social-error">{error}</p>}
     {!loading && !items.length && !error && <p>No replies yet. Your inbox is all caught up.</p>}
@@ -1036,7 +1036,7 @@ function ProfileEditor({
         <label className="social-discord-privacy">
           <input type="checkbox" checked={draft.show_discord_name === true}
             onChange={e=>change("show_discord_name",e.target.checked)}/>
-          Show my Discord username publicly on my profile
+          Display my linked account handle publicly
         </label>
         <p className="social-identity-note">Your assigned codename stays unique. Your chosen display name is optional.</p>
         <div className="portfolio-editor-section">
