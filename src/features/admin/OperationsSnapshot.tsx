@@ -5,7 +5,8 @@ type OpEvent={id:string;operation:string;actor_name:string;state:string;created_
 type Summary={
  member_count:number|null;active_humans:number;active_bots:number;cached_members:number;
  bot_channel_snapshot_count:number;channel_snapshot_at:string|null;last_heartbeat:string|null;
- residents:number;trivia_results:number;heists:number;work_orders:number;
+ residents:number;trivia_results:number;heists:number;work_orders:number;game_admins:number;
+ recent_members:{discord_id:string;name:string;joined_at:string|null}[];
  commands:OpEvent[];
 };
 export default function OperationsSnapshot(){
@@ -26,7 +27,7 @@ export default function OperationsSnapshot(){
   {label:"Compound residents",value:data?.residents,description:"Database resident profiles",icon:Gamepad2,to:"/admin/games"},
   {label:"Recorded heists",value:data?.heists,description:"Heist sessions in database",icon:Zap,to:"/admin/heist"},
   {label:"Trivia results",value:data?.trivia_results,description:"Recorded trivia results",icon:Activity,to:"/admin/games"},
-  {label:"Work orders",value:data?.work_orders,description:"Existing game work orders",icon:Bot,to:"/admin/games"}
+  {label:"Game admins",value:data?.game_admins,description:"Enabled dungeon masters",icon:Bot,to:"/admin/games"}
  ];
  return <section className="ops-snapshot" aria-label="Discord and game operations">
   <header><h3><Activity size={17}/> SERVER & GAME OPERATIONS</h3><span>{data?.last_heartbeat? `Bot heartbeat: ${new Date(data.last_heartbeat).toLocaleString()}`:"Server snapshot not yet available"}</span></header>
@@ -42,6 +43,7 @@ export default function OperationsSnapshot(){
     <div className="ops-events">{data?.commands?.length?data.commands.slice(0,4).map(e=><a href="/admin/discord/history" key={e.id}><span><b>{e.operation.replaceAll("."," / ")}</b><small>{e.actor_name} · {e.state}</small></span><time>{new Date(e.created_at).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</time></a>):<p>No recent Discord commands recorded.</p>}</div>
    </div>
   </div>
+  <div className="ops-roster"><div className="ops-roster-head"><b><Users size={16}/> RECENT MEMBERS</b><a href="/admin/discord/members">Open full user list <ArrowUpRight size={14}/></a></div><div className="ops-roster-grid">{data?.recent_members?.length?data.recent_members.slice(0,8).map(m=><a href="/admin/discord/members" key={m.discord_id}><span className="ops-avatar">{(m.name||"?").slice(0,1).toUpperCase()}</span><span><strong>{m.name}</strong><small>{m.joined_at?new Date(m.joined_at).toLocaleDateString():"Join date unknown"}</small></span></a>):<p>Member roster loading or unavailable.</p>}</div></div>
   {error&&<p className="ops-error">Live operations data unavailable: {error}. Existing Discord controls remain accessible.</p>}
  </section>;
 }
