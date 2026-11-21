@@ -1,0 +1,47 @@
+/* Public world design for the Cult of nix0n. Auth and admin systems remain unchanged. */
+body.showcase-page{background:#0b1116;color:#efece3;color-scheme:dark}
+body.showcase-page #root{max-width:none;width:100%;border:0}
+.showcase{--lime:#e6c589;--muted:#bfc6c9;--signal-paper:#e9e5dc;background:linear-gradient(155deg,#111920,#090e13);font-family:Georgia,'Times New Roman',serif;color:#eae8e2}
+.showcase *{box-sizing:border-box}
+.showcase :focus-visible{outline:2px solid #e8c789;outline-offset:3px}
+.showcase :is(h1,h2,h3){font-family:Georgia,'Times New Roman',serif;color:#f0ebe2;font-weight:400}
+.showcase .showcase-header{background:#090e12eF;border-bottom:1px solid #91836d70;min-height:77px;padding:9px clamp(16px,3.5vw,58px);gap:24px;box-shadow:0 5px 24px #0009;position:relative;z-index:30}
+.showcase .showcase-brand img{height:46px;width:46px;object-fit:contain}
+.showcase .brand-group{display:flex;align-items:center;gap:11px}
+.showcase .brand-name{font:400 clamp(15px,1.7vw,23px) Georgia,serif;letter-spacing:.13em;text-transform:uppercase;color:#efe4d3;white-space:nowrap}
+.showcase .showcase-header nav{margin-left:auto;gap:clamp(10px,2.3vw,36px);align-items:center}
+.showcase .showcase-header nav a{font:700 11px 'Segoe UI',system-ui,sans-serif;letter-spacing:.105em;color:#d5d5d1;white-space:nowrap}
+.showcase .showcase-header nav a:hover,.showcase .showcase-header nav a[aria-current="page"]{color:#e7bf78}
+.showcase .showcase-access,.showcase .showcase-login{display:inline-flex;align-items:center;gap:10px;white-space:nowrap;border:1px solid #d0ad70;background:#211f1a;color:#ead4a4!important;padding:10px 16px;min-height:38px;border-radius:2px;font:700 10px 'Segoe UI',sans-serif;letter-spacing:.1em}
+.showcase .showcase-access:hover,.showcase .showcase-login:hover{background:#4c3c24}
+.showcase .showcase-login{display:none}
+.showcase .showcase-main{max-width:none;padding:0;margin:0}
+.showcase .showcase-main>footer{padding:22px max(20px,4vw);max-width:none;border-top:1px solid #967e5748;color:#afa99c;font:11px 'Segoe UI',sans-serif}
+.showcase .con-header-actions{margin:0}
+.showcase .con-account-trigger{border:1px solid #7e775e;background:#161d22;color:#f0e9dc;border-radius:4px}
+.showcase .con-account-dropdown{border:1px solid #ae8e60;background:#131f27}
+.showcase .con-account-dropdown a,.showcase .con-account-dropdown button{font:12px 'Segoe UI',sans-serif;color:#ddd}
+.showcase .con-inbox-badge{background:#9c703c}
+.showcase .con-archive,.showcase .con-militia-hub,.showcase .con-membership-page,.showcase .reference-layout,.showcase .page-introduction,.showcase .member-workspace,.showcase .con-social,.showcase .con-project-page,.showcase .con-profile,.showcase .con-inbox{--lime:#e6c589;--muted:#bfc6c9}
+.showcase :is(.project-card,.rail-card,.con-feed-row,.con-member-panel,.con-pass-section,.con-archive-reader,.con-archive-admin,.member-workspace,.con-social-card,.con-inbox-panel,.con-archive-reader aside,.con-archive-reader article,.con-digital-pass,.con-social-panel){
+ background:linear-gradient(145deg,#26343dd9,#111d26ea);border-color:#8f93874f;border-radius:7px;box-shadow:inset 0 1px #fff1
+}
+.showcase :is(.project-card,.rail-card,.con-feed-row,.con-member-panel,.con-pass-section,.con-archive-reader,.con-social-panel):hover{border-color:#9b885f85}
+.showcase :is(.project-tag,.con-member-eyebrow,.con-archive-kicker,.eyebrow,.con-featured-eyebrow){color:#dfbf82}
+.showcase :is(.page-introduction,.con-archive,.con-militia-hub,.member-workspace,.con-membership-page){padding-inline:clamp(18px,3vw,50px)}
+.showcase :is(.con-member-panel,.con-pass-section){border:1px solid #8f93875d}
+.showcase :is(.con-member-form button,.con-member-action){background:linear-gradient(#e6cb95,#bd9c62);color:#161b20!important;border:1px solid #e4bf80;border-radius:3px}
+.showcase :is(input:not([type="checkbox"]),select,textarea){background:#111f2b;border:1px solid #788893a6;color:#f4f0e7;border-radius:4px}
+.showcase :is(.con-pass-top span,.con-pass-identity strong,.con-pass-identity>span,.con-member-status){color:#e4c388}
+.showcase .con-digital-pass{background:radial-gradient(circle at 85% 12%,#b69a5541,transparent 40%),linear-gradient(135deg,#26333a,#0b1219);border-color:#c8a76b}
+.showcase :is(.showcase-grid,.reference-layout,.con-membership-layout){color:#ece7dd}
+.showcase .project-preview{background:#1b2b34}
+.showcase .con-filter-trigger{background:#283b47;color:#ecd8b4;border-color:#8b927f}
+.showcase .discord-overview-compact a{color:#e9c88e}
+.showcase .con-archive-head{color:#e9c988}
+.showcase .con-archive-reader{background:#14212c}
+.showcase .vault-screen{--lime:#e6c589;color:#f1e7d4}
+.showcase .vault-continue{background:#bb9758}
+.showcase .vault-screen .vault-logo{filter:drop-shadow(0 5px 20px #a68a4d44)}
+@media(max-width:1100px){.showcase .showcase-header{flex-wrap:wrap;gap:10px}.showcase .showcase-header nav{order:3;width:100%;justify-content:center;padding:5px 0}.showcase .con-account-menu{margin-left:auto}}
+@media(max-width:680px){.showcase .showcase-header{min-height:64px;padding:9px 12px}.showcase .brand-name{font-size:15px;letter-spacing:.05em}.showcase .showcase-brand img{width:38px;height:38px}.showcase .showcase-header nav{justify-content:flex-start;overflow-x:auto;gap:18px}.showcase .showcase-header nav a{font-size:10px}.showcase .showcase-access{margin-left:auto;padding:8px 10px}.showcase .showcase-access span{display:none}}
