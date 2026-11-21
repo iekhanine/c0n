@@ -137,6 +137,6 @@ export default function CharacterRegistration({assignedName,isOverseer,points,ba
    </div>
   </form>
   <button type="button" className="con-registration-about" onClick={()=>setShowInfo(!showInfo)} aria-expanded={showInfo}><Info size={15}/> How does character registration work? <ChevronDown size={14}/></button>
-  {showInfo&&<p className="con-registration-about-copy">Your Discord membership determines your codename. This form only sets your initial profession and six game attributes. Registration is required for normal residents before accessing the game's job, crafting and campaign systems. The Overseer can return later without losing access to site administration.</p>}
+  {showInfo&&<p className="con-registration-about-copy">Your membership record determines your codename. This form only sets your initial profession and six game attributes. Registration is required for normal residents before accessing the game's job, crafting and campaign systems. The Overseer can return later without losing access to site administration.</p>}
  </div>;
 }
