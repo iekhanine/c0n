@@ -104,6 +104,11 @@ export async function membershipHandler(req,res,dbFactory=database) {
     const db = dbFactory(); await setup(db);
     if (user) await ensureFounder(db,user);
     await backfillIdentity(db);
+    if (action === "public" && req.method === "GET") {
+      const result = await db.query("SELECT count(*)::int AS active_members FROM con.memberships WHERE active=true");
+      res.setHeader("Cache-Control","public, max-age=60");
+      return json(res,200,{active_members:result.rows[0].active_members});
+    }
     if (action === "me" && req.method === "GET") {
       const member = (await db.query("SELECT member_no,display_name,codename,public_slug,inviter_id,joined_at,active,invite_allowance FROM con.memberships WHERE user_id=$1",[user.id])).rows[0];
       if (!member) return json(res,200,{member:null});
