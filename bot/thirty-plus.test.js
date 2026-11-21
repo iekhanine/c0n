@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {THIRTY_PLUS_QUESTIONS,thirtyPlusQuestion} from "./thirty-plus-questions.js";
-import {questionPost,shouldRecordTruthAnswer} from "./thirty-plus.js";
+import {questionPost,shouldRecordTruthAnswer,CAMPFIRE_ORDER} from "./thirty-plus.js";
 
 test("cycles 1,000 distinct adult-life prompts without repeating early",()=>{
  assert.equal(THIRTY_PLUS_QUESTIONS.length,1000);
@@ -19,11 +19,11 @@ test("posts only question with @here and stable internal marker",()=>{
  assert.doesNotMatch(post.content,/Question 2\/1000/);
  assert.doesNotMatch(post.content,/THIRTY PLUS|UTC|new question appears|30 minutes|Charisma|Talk about it/i);
  assert.match(post.content,/^@here\n\n/);
- assert.match(post.content,/restart your life at 18/);
+ assert.ok(post.content.endsWith("?"));
  assert.doesNotMatch(post.content,/truth-rotation|Question \d+\/|Life & Regrets/);
 
 
- assert.deepEqual(post.allowedMentions,{parse:["everyone"]});
+ assert.deepEqual(post.allowedMentions,{parse:[]});
  assert.throws(()=>questionPost({seq:-1,index:2}));
 });
 test("accepts meaningful natural conversation without accepting spam or bot messages",()=>{
@@ -37,4 +37,11 @@ test("accepts meaningful natural conversation without accepting spam or bot mess
  assert.equal(shouldRecordTruthAnswer({...input,webhookId:"1570103248453509283"},channel),false);
  assert.equal(shouldRecordTruthAnswer({...input,content:"yes"},channel),false);
  assert.equal(shouldRecordTruthAnswer({...input,content:"/wallet show my cash"},channel),false);
+});
+
+test("interleaves categories without repeating themes consecutively",()=>{
+ assert.equal(CAMPFIRE_ORDER.length,1000);
+ assert.equal(new Set(CAMPFIRE_ORDER).size,1000);
+ const cats=CAMPFIRE_ORDER.map(i=>THIRTY_PLUS_QUESTIONS[i].category);
+ for(let i=1;i<cats.length;i++)assert.notEqual(cats[i],cats[i-1]);
 });
