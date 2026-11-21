@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { adminApi, type StorageStatus } from "./adminApi";
 import "./CommandCenter.css";
+import OperationsSnapshot from "./OperationsSnapshot";
 
 type Delivery={id:string;state:string;updated_at:string;last_error:string|null;title:string;kind:string;channel_name:string};
 type Report={summary:{website_posts:number;active_channels:number;delivered:number;attention:number};deliveries:Delivery[]};
@@ -49,6 +50,7 @@ export default function CommandCenter({owner}:{owner:boolean}){
    <div className="cc-top-actions"><span className={`cc-status ${active?"cc-good":"cc-warn"}`}><span className="cc-status-dot"/>{health===null?"Checking systems":active?"Storage operational":"Storage needs attention"}</span><button type="button" onClick={()=>void load()} disabled={loading}><RefreshCw size={15} className={loading?"cc-spin":""}/> Refresh</button></div>
   </div>
   {error&&<p className="cc-error" role="status"><CircleAlert size={15}/>{error}</p>}
+  {owner&&<OperationsSnapshot />}
   <div className="cc-metrics">
    <Meter label="Website posts" value={stats?.website_posts??null} max={Math.max(stats?.website_posts??1,10)} icon={FileText} detail="Publishing inventory"/>
    <Meter label="Publishing webhooks" value={stats?.active_channels??null} max={Math.max(stats?.active_channels??1,10)} icon={Hash} detail="Enabled delivery endpoints"/>
@@ -86,6 +88,6 @@ export default function CommandCenter({owner}:{owner:boolean}){
    <Panel heading="Publishing snapshot" icon={Radio}><div className="cc-snapshot"><div><span>Website posts</span><strong>{stats?.website_posts??"—"}</strong></div><div><span>Publishing webhooks</span><strong>{stats?.active_channels??"—"}</strong></div><div><span>Delivered</span><strong>{stats?.delivered??"—"}</strong></div><div><span>Attention</span><strong>{stats?.attention??"—"}</strong></div></div><a className="cc-card-cta" href="/admin/update">Create transmission <ArrowUpRight size={15}/></a></Panel>
    <Panel heading="Operations" icon={Clock3}><div className="cc-links"><a href="/admin/audit"><FileText size={17}/>Content history<ChevronRight size={15}/></a><a href="/admin/discord/history"><Activity size={17}/>Discord action history<ChevronRight size={15}/></a><a href="/admin/heist"><Gamepad2 size={17}/>Heist settings<ChevronRight size={15}/></a>{owner&&<a href="https://thecompound.cultofnixon.com/operations"><ExternalLink size={17}/>Compound operations<ChevronRight size={15}/></a>}</div></Panel>
   </div>
-  <div className="cc-footnote">LIVE DATA FROM C0N PUBLISHING API · No simulated activity or fabricated counts · Other admin pages retain their current design.</div>
+  <div className="cc-footnote">LIVE DATA FROM C0N · Publishing, Discord and game summaries show only available records.</div>
  </div>;
 }
