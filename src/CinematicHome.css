@@ -93,3 +93,14 @@
 @media(max-width:1200px){.signal-briefing{grid-template-columns:1fr}.signal-briefing .signal-doctrine{max-width:800px}.signal-record-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:800px){.signal-hero{min-height:530px}.signal-hero-copy h1{letter-spacing:.07em}.signal-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.signal-record-grid{grid-template-columns:1fr}.signal-record{min-height:142px;grid-template-columns:28% 1fr}.signal-compound,.signal-initiation{grid-template-columns:1fr}.signal-compound{gap:24px}.signal-hero-bottom{font-size:8px}}
 @media(max-width:520px){.signal-hero{min-height:520px}.signal-hero-copy{padding:45px 15px 95px}.signal-hero-copy h1{font-size:48px;letter-spacing:.04em}.signal-emblem{width:75px;height:75px}.signal-emblem img{width:60px;height:60px}.signal-hero-bottom{flex-direction:column;gap:5px}.signal-section-header{align-items:start;flex-direction:column}.signal-stats>div{padding:12px}.signal-stats strong{font-size:25px}.signal-ID-card{transform:none}}
+
+/* Public-domain White House portrait supplies the archival mural in the visual reference.
+   The fictional Compound architecture is deliberately illustrated rather than passing off a real facility. */
+.signal-hero-art::before{
+ content:"";position:absolute;z-index:1;pointer-events:none;left:-2%;top:-8%;width:45%;height:110%;
+ background-image:linear-gradient(90deg,#15222a25,#121b25 90%),url("https://upload.wikimedia.org/wikipedia/commons/e/eb/Portrait_of_President_Nixon_-_NARA_-_194402.jpg");
+ background-size:cover;background-position:center 18%;
+ filter:grayscale(1) contrast(1.4) sepia(.15);opacity:.43;
+ mask-image:linear-gradient(90deg,#000 0%,#000 52%,transparent 100%);
+}
+@media(max-width:760px){.signal-hero-art::before{width:70%;opacity:.24}}
