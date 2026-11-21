@@ -75,7 +75,7 @@ export default function VaultEntrance({ code, setCode, onContinue, busy = false,
         </form>
         {error ? <p role="alert" className="vault-error">{error}</p> : null}
         {!authenticated && (
-          <a className="vault-returning" href="/api/auth/discord/login" aria-label="Existing member Discord sign in" title="Existing member sign in with Discord">◈</a>
+          <a className="vault-returning" href="/api/auth/discord/login" aria-label="Returning member sign in" title="Return to your membership">◈</a>
         )}
       </div>
     </main>
