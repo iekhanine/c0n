@@ -134,6 +134,10 @@ export async function thirtyPlusDatabaseCall(kind,args={}){
  }else if(kind==="active"){
   sql="select con.bot_thirty_plus_active($1) as result";
   values=[guild];
+ }else if(kind==="interval"){
+  if(!Number.isInteger(args.minutes)||args.minutes<5||args.minutes>1440)throw Error("Interval must be 5–1440 minutes");
+  sql="select con.bot_thirty_plus_set_interval($1,$2) as result";
+  values=[guild,args.minutes];
  }else if(kind==="ack"){
   if(!Number.isSafeInteger(args.seq)||args.seq<0||
      !/^[0-9a-f-]{36}$/i.test(String(args.lease_token))||
