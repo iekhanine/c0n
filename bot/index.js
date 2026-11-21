@@ -26,6 +26,7 @@ import {isTreasuryMention,personalWalletCard,compoundTreasuryCard} from "./walle
 import {isGuideMention,newcomerGuideCard} from "./guide.js";
 import {pollBuildImageReminders} from "./project-images.js";
 import {ensureThirtyPlusChannel,postThirtyPlusQuestion,recordThirtyPlusAnswer} from "./thirty-plus.js";
+import {thirtyPlusDatabaseCall} from "./profile-db.js";
 import { fetchReadOnlyProfile, fetchResidentWallet, fetchCompoundTreasury, inspectMemberWallet, sendTreasuryDollars, registerTreasuryOwner } from "./profile-db.js";
 import { reconcileVerifiedMembers } from "./membership-roles.js";
 const SITE = process.env.CON_SITE_URL || "https://cultofnixon.com";
