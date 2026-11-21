@@ -33,7 +33,7 @@ const sections=[
  {name:"COMPOUND OPERATIONS",links:[["/operations","Operations overview"],["/operations/registration","Personnel registration"],["/operations/work-orders","Work orders"],["/operations/restoration","Restoration milestones"],["/operations/inventory","Stockroom & fabrication"],["/supplies","Supply requisitions"],["/operations/campaigns","Campaigns & expeditions"],["/operations/finance","Resident finances"]]},
  {name:"OVERSEER / COMMAND",overseer:true,links:[["/overseer/work-orders","Work-order administration"],["/overseer/campaigns","Expedition oversight"],["/overseer/finance","Financial administration"],["/overseer/supplies","Supply administration"],["/admin/progression","Progression controls"]]},
  {name:"OVERSEER / PERSONNEL",admin:true,links:[["/admin/residents","Resident directory"],["/admin/apartments","Housing management"],["/admin/requests","Housing approvals"],["/admin/rules","XP & activity policy"],["/admin/audit","Accountability log"]]},
- {name:"WEBSITE & ACCESS",links:[["https://cultofnixon.com/membership","Membership & invite codes"],["https://cultofnixon.com/admin","Website administration"],["https://cultofnixon.com/admin/discord","Discord administration"]]}
+ {name:"WEBSITE & ACCESS",links:[["https://cultofnixon.com/membership","Membership & invite codes"],["https://cultofnixon.com/admin","Website administration"],["https://cultofnixon.com/admin/discord","Signal bridge controls"]]}
 ];
 async function call(action,body){
  const method=body?"POST":"GET";
@@ -58,7 +58,7 @@ function compoundGlobalHeader(){
  '<a href="/" aria-current="page">THE COMPOUND</a>'+
  '<a href="https://cultofnixon.com/archive">ARCHIVE</a>'+
  '<a href="https://cultofnixon.com/militia">MILITIA</a>'+
- '<a href="https://discord.gg/dSHMeZ4ETJ" target="_blank" rel="noopener">DISCORD</a>'+
+ '<a href="https://cultofnixon.com/membership">DISCORD</a>'+
  '</nav><div class="compound-global-status">'+esc(name)+' <span class="tag">'+(me?.is_overseer?'OVERSEER':me?.is_admin?'STAFF':'RESIDENT')+'</span></div></header>';
 }
 function appFrame(content){
@@ -67,16 +67,16 @@ return compoundGlobalHeader()+'<div class="shell"><aside class="sidebar"><a clas
 }
 function login(error){
 document.getElementById("app").className="";
-document.getElementById("app").innerHTML='<div class="login"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div class="eyebrow">CULT OF NIX0N / THE COMPOUND</div><h1>Enter The Compound</h1><p>Sign in with your existing Discord identity. Apartment assignments, personnel records, and approvals are preserved in the Compound registry.</p><a class="btn primary" href="https://cultofnixon.com/api/auth/discord/login?next=compound">Continue with Discord</a><p class="hint">You will authorize through cultofnixon.com and return here automatically. Existing C0N session holders can simply refresh.</p>'+(error?'<p class="notice error">'+esc(error)+'</p>':'')+'</div>';
+document.getElementById("app").innerHTML='<div class="login"><img src="https://cultofnixon.com/con-logo.png" alt="C0N"><div class="eyebrow">CULT OF NIX0N / THE COMPOUND</div><h1>Enter The Compound</h1><p>Present your verified membership identity. Apartment assignments, personnel records, and approvals are preserved in the Compound registry.</p><a class="btn primary" href="https://cultofnixon.com/api/auth/discord/login?next=compound">CONTINUE TO VERIFICATION</a><p class="hint">You will authorize through cultofnixon.com and return here automatically. Existing C0N session holders can simply refresh.</p>'+(error?'<p class="notice error">'+esc(error)+'</p>':'')+'</div>';
 }
 function attr(key,value){return '<div class="attribute"><strong>'+num(value)+'</strong><span>'+esc(key)+'</span>'+(key==="XP"?'':'<div class="meter"><i style="width:'+Math.max(0,Math.min(100,Number(value)))+'%"></i></div>')+'</div>'}
 async function overview(){const a=await call("apartments"),r=await call("requests");let home=me.home?.apartment_id||"The Unhoused";return head("Welcome to The Compound","Your resident overview, progression and active housing status.")+
  '<div class="grid"><div class="panel"><div class="eyebrow">YOUR APARTMENT</div><div class="stat">'+esc(home)+'</div><p>Permanent until an approved move</p><a href="/apartments" class="btn">View the building</a></div><div class="panel"><div class="eyebrow">EXPERIENCE POINTS</div><div class="stat">'+num(me.profile.xp)+'</div><p>Level '+num(me.profile.level)+'</p><a href="/profile" class="btn">Character sheet</a></div><div class="panel"><div class="eyebrow">HOUSING REQUESTS</div><div class="stat">'+num(r.requests.filter(x=>x.status==="pending"&&x.requester_id===me.user.id).length)+'</div><p>Requests awaiting decisions</p><a href="/requests" class="btn">View requests</a></div><div class="panel"><div class="eyebrow">OCCUPIED UNITS</div><div class="stat">'+a.apartments.filter(x=>x.occupants.length).length+' / 32</div><p>Real resident assignments</p><a href="/apartments" class="btn">Browse floors</a></div></div>'+
- '<div class="panel space"><h2>Community systems</h2><p>The Compound is distinct from the community website and Discord bot. Each has its own management tools and access rules.</p><div class="row"><a class="btn" href="https://cultofnixon.com/">Community website</a><a class="btn" href="https://cultofnixon.com/admin/discord">Discord bot admin</a></div></div>';
+ '<div class="panel space"><h2>Community systems</h2><p>The Compound is an independent operational space within the Cult of nix0n. Each has its own management tools and access rules.</p><div class="row"><a class="btn" href="https://cultofnixon.com/">Community website</a><a class="btn" href="https://cultofnixon.com/admin/discord">Signal administration</a></div></div>';
 }
 function apartmentButton(a){const people=a.occupants;let label=people.length?people.map(p=>p.name).join(", "):"Vacant";let own=people.some(p=>p.id===me.user.id);return '<button class="unit '+(own?'mine ':people.length?'occupied':'')+'" data-action="apartment" data-id="'+esc(a.id)+'"><strong>'+esc(a.id)+'</strong><small>'+esc(label)+'</small><small>'+num(people.length)+' / '+num(a.capacity)+' residents'+(a.locked?' · Locked':'')+'</small></button>';}
 async function apartments(){const d=await call("apartments");window._apartments=d.apartments;return head("The apartment building","Select an apartment to claim a vacant home or submit a transfer or roommate request.")+'<div class="building">'+[4,3,2,1].map(f=>'<section class="floor"><div class="floor-head">FLOOR '+f+'</div><div class="units">'+d.apartments.filter(a=>a.floor===f).map(apartmentButton).join("")+'</div></section>').join("")+'</div>';}
-async function profile(){const p=me.profile;const data=await call("history");return head("Character profile","Real statistics linked to your Discord account.")+'<div class="panel"><div class="row"><div><div class="eyebrow">RESIDENT</div><h2 style="font-size:27px">'+esc(me.user.name)+'</h2><p>Discord ID: '+esc(me.user.id)+'</p></div><span class="tag">LEVEL '+num(p.level)+'</span></div><div class="attributes">'+[["XP",p.xp],["Health",p.health],["Stamina",p.stamina],["Skill",p.skill],["Charisma",p.charisma],["Intellect",p.intellect],["Luck",p.luck]].map(x=>attr(...x)).join("")+'</div><p class="hint space">Discord activity XP: '+num(p.activity_xp)+' · Trivia XP: '+num(p.trivia_xp)+' · Staff adjustments: '+num(p.manual_xp)+'</p></div>'+
+async function profile(){const p=me.profile;const data=await call("history");return head("Character profile","Real statistics linked to your membership identity.")+'<div class="panel"><div class="row"><div><div class="eyebrow">RESIDENT</div><h2 style="font-size:27px">'+esc(me.user.name)+'</h2><p>Member ID: '+esc(me.user.id)+'</p></div><span class="tag">LEVEL '+num(p.level)+'</span></div><div class="attributes">'+[["XP",p.xp],["Health",p.health],["Stamina",p.stamina],["Skill",p.skill],["Charisma",p.charisma],["Intellect",p.intellect],["Luck",p.luck]].map(x=>attr(...x)).join("")+'</div><p class="hint space">Discord activity XP: '+num(p.activity_xp)+' · Trivia XP: '+num(p.trivia_xp)+' · Staff adjustments: '+num(p.manual_xp)+'</p></div>'+
  '<section class="panel space"><h2>My progression history</h2><p class="hint">Your latest 100 recorded awards. Each entry shows why your character received its XP or attributes.</p>'+
  (data.events.length?'<div class="history-list">'+data.events.map(e=>'<div class="history-entry"><div><strong>'+esc(e.description)+'</strong><small>'+esc(new Date(e.occurred_at).toLocaleString())+(e.details?.channel_id?' · Channel ID '+esc(e.details.channel_id):'')+'</small></div><span class="history-points">'+(e.xp_delta>=0?'+':'')+num(e.xp_delta)+' XP'+(e.charisma_delta?' · +'+num(e.charisma_delta)+' Charisma':'')+(e.intellect_delta?' · +'+num(e.intellect_delta)+' Intellect':'')+'</span></div>').join("")+'</div>':'<div class="empty">No recorded progression yet.</div>')+'</section>'}
 const statusTag=s=>'<span class="tag">'+esc(s.toUpperCase())+'</span>';
@@ -91,16 +91,16 @@ function statsEditor(p){
    '<input type="number" required id="stat-'+field+'" name="'+field+'" min="0" max="'+max+'" step="1" value="'+Number(p[field]||0)+'"></label>'+
    '<div class="stat-presets" aria-label="'+label+' presets">'+presets.map(v=>'<button type="button" data-stat-preset="'+field+'" data-value="'+v+'">'+v+'</button>').join("")+'</div></div>';
  }).join("");
- return '<div class="stat-editor"><div class="stat-editor-head"><div><div class="eyebrow">OVERSEER / STAT CONTROLS</div><h2>Edit '+esc(p.display_name)+'</h2><small>Discord ID: '+esc(p.discord_id)+'</small></div><button type="button" data-action="close-stats">Close</button></div>'+
+ return '<div class="stat-editor"><div class="stat-editor-head"><div><div class="eyebrow">OVERSEER / STAT CONTROLS</div><h2>Edit '+esc(p.display_name)+'</h2><small>Member ID: '+esc(p.discord_id)+'</small></div><button type="button" data-action="close-stats">Close</button></div>'+
   '<p class="hint">Set exact values or use a preset. All seven statistics save together. Every changed value is recorded in the audit history.</p>'+
   '<form id="stats-batch-form" data-id="'+esc(p.discord_id)+'"><div class="stat-edit-grid">'+rows+'</div>'+
   '<div class="stat-editor-actions"><button class="primary" type="submit">Save character stats</button>'+
   '<span class="stat-preview" id="stats-level-preview" aria-live="polite">Level '+(1+Math.floor(Number(p.xp||0)/250))+'</span></div></form></div>';
 }
 async function residents(){const d=await call("residents");window._residents=d.residents;
- return head("Member directory","Discord-linked residents, permanent apartments, and Overseer stat controls.")+
+ return head("Member directory","Verified residents, permanent apartments, and Overseer stat controls.")+
  (me.is_overseer?'<div id="resident-stat-editor" hidden></div>':'')+
- table(["Member","Discord ID","Level","XP","Apartment","Actions"],d.residents.map(p=>
+ table(["Member","Member ID","Level","XP","Apartment","Actions"],d.residents.map(p=>
  '<tr><td>'+esc(p.display_name)+'</td><td>'+esc(p.discord_id)+'</td><td>'+num(p.level)+'</td><td>'+num(p.xp)+'</td><td>'+esc(p.apartment_id||"Unassigned")+'</td><td><div class="table-actions">'+
  (me.is_overseer?'<button data-action="edit-stats" data-id="'+esc(p.discord_id)+'">Edit stats</button>':'')+
  '<button data-action="place" data-id="'+esc(p.discord_id)+'">Assign vacant</button>'+
@@ -116,8 +116,8 @@ if(me.is_overseer)return head("Character progression","Test progression by setti
  '<div id="resident-stat-editor"></div></div>';
 return head("Character progression","Manage XP and character attributes. Every adjustment is audited.")+'<div class="panel"><h2>Edit resident statistics</h2><form id="stat-form" class="inline-form"><label class="field">Member<select name="discord_id" required>'+opts+'</select></label><label class="field">Attribute<select name="field"><option value="xp">XP</option><option value="health">Health</option><option value="stamina">Stamina</option><option value="skill">Skill</option><option value="charisma">Charisma</option><option value="intellect">Intellect</option><option value="luck">Luck</option></select></label><label class="field">New value<input type="number" min="0" max="1000000" name="value" required value="100"></label><button class="primary" type="submit">Save value</button></form><p class="hint space">All values except XP are limited to 0–100. XP can be 0–1,000,000.</p></div>'}
 async function rules(){const d=await call("rules");const r=d.rules;
-return head("XP & activity rules","Real Discord participation events feed character XP. Daily caps limit farming and spam.")+'<div class="panel"><h2>Activity XP policy</h2><form id="rules-form" class="inline-form">'+[["message_xp","XP per message"],["reaction_xp","XP per reaction"],["daily_message_cap","Daily message cap"],["daily_reaction_cap","Daily reaction cap"]].map(([name,label])=>'<label class="field">'+label+'<input required type="number" min="0" max="500" name="'+name+'" value="'+num(r[name])+'"></label>').join("")+'<button class="primary" type="submit">Save XP rules</button></form><p class="hint space">Existing participation events are counted once, from the connected C0N Discord server. The new policy takes effect when a character is refreshed.</p></div>'}
-async function audit(){const d=await call("audit");return head("Audit history","Recorded actions for apartment claims, transfers, approvals and progression changes.")+(d.events.length?table(["Date","Actor Discord ID","Event","Subject","Details"],d.events.map(e=>'<tr><td>'+esc(new Date(e.created_at).toLocaleString())+'</td><td>'+esc(e.actor_id)+'</td><td>'+esc(e.action)+'</td><td>'+esc(e.subject_id||"")+'</td><td><code>'+esc(JSON.stringify(e.details))+'</code></td></tr>')):'<div class="empty">No activity has been recorded.</div>')}
+return head("XP & activity rules","Verified participation events feed character XP. Daily caps limit farming and spam.")+'<div class="panel"><h2>Activity XP policy</h2><form id="rules-form" class="inline-form">'+[["message_xp","XP per message"],["reaction_xp","XP per reaction"],["daily_message_cap","Daily message cap"],["daily_reaction_cap","Daily reaction cap"]].map(([name,label])=>'<label class="field">'+label+'<input required type="number" min="0" max="500" name="'+name+'" value="'+num(r[name])+'"></label>').join("")+'<button class="primary" type="submit">Save XP rules</button></form><p class="hint space">Existing participation events are counted once, from the connected C0N Discord server. The new policy takes effect when a character is refreshed.</p></div>'}
+async function audit(){const d=await call("audit");return head("Audit history","Recorded actions for apartment claims, transfers, approvals and progression changes.")+(d.events.length?table(["Date","Actor ID","Event","Subject","Details"],d.events.map(e=>'<tr><td>'+esc(new Date(e.created_at).toLocaleString())+'</td><td>'+esc(e.actor_id)+'</td><td>'+esc(e.action)+'</td><td>'+esc(e.subject_id||"")+'</td><td><code>'+esc(JSON.stringify(e.details))+'</code></td></tr>')):'<div class="empty">No activity has been recorded.</div>')}
 function activeJobPanel(job){
  if(!job||!job.title)return '<section class="panel space"><h2>Current Workshop assignment</h2><p class="muted">No active job assigned.</p></section>';
  const due=new Date(job.due_at).getTime();
@@ -141,14 +141,14 @@ function updateJobCountdowns(){
 setInterval(updateJobCountdowns,1000);
 function newcomerGuide(){
  const stages=[
- ['1. Join the Compound','Join the Discord server and follow the server onboarding and role instructions. Workshop access depends on your server roles.'],
+ ['1. Join the Compound','Activate your invitation and follow the private onboarding instructions. Workshop access is granted after verification.'],
  ['2. Open a Workshop channel','Visit Job Board, Carpentry, Metalworking, Medical, Agriculture, Engineering, Scavenging, or Payroll. Read the pinned daily objective and reward before accepting.'],
  ['3. Type accept','Post the word accept by itself in the channel. The first resident to claim the current job gets it exclusively. Each member can hold only one unfinished job at a time.'],
  ['4. Receive your assignment','The Overseer bot issues tools and materials from the shared Compound stockroom and sends you a mission briefing, destination, salary, XP reward, and shift duration. Supplies are finite.'],
- ['5. Complete your shift','Follow the story objective at its listed Compound location. The timer starts when you accept. You can check the countdown on your public character profile, or use /profile in Discord.'],
+ ['5. Complete your shift','Follow the story objective at its listed Compound location. The timer starts when you accept. You can check the countdown on your public character profile.'],
  ['6. Answer the Overseer','Once your shift time has elapsed, the bot pings you. Select Yes, completed to confirm. Select Not yet to keep the assignment and receive another check-in 30 minutes later.'],
  ['7. Collect dollars and XP','Confirmation awards the stated salary and experience once. Reusable tools return to the stockroom. Your progression is on your public profile and in /profile.'],
- ['8. Check your money','Type /wallet in Discord to see your private Compound Dollars balance and lifetime Workshop earnings. Mention the bot with @cultofnixon wallet to check the Compound’s overall treasury.']
+ ['8. Check your money','Open your Compound finances to review personal earnings and the Treasury ledger.']
  ];
  return '<div class="guide-head"><div class="eyebrow">THE COMPOUND / FIELD MANUAL</div>'+
  '<h1>New Resident Field Guide</h1><p class="muted">Everything you need to know about joining the Workshop, accepting missions, earning XP and getting paid.</p></div>'+
@@ -157,7 +157,7 @@ function newcomerGuide(){
  '<div class="panel space"><h2>Important Workshop rules</h2>'+
  '<p>Jobs are first come, first served. A claimed objective cannot be accepted by someone else. New objectives rotate daily, staggered between channels. Just chatting in a Workshop channel does not complete a job or award its contracted salary.</p>'+
  '<p>The Compound treasury and each resident’s accounts are recorded separately.</p>'+
- '<div class="guide-actions"><a class="btn primary" href="https://discord.gg/dSHMeZ4ETJ">Join the Discord</a><a class="btn" href="/">The Compound</a></div></div></div>';
+ '<div class="guide-actions"><a class="btn primary" href="https://discord.gg/dSHMeZ4ETJ">Request access</a><a class="btn" href="/">The Compound</a></div></div></div>';
 }
 async function publicProfile(id){
  const response=await fetch(API+"?action=compound_public_profile&id="+encodeURIComponent(id),{credentials:"include",cache:"no-store"});
