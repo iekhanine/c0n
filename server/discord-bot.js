@@ -585,7 +585,7 @@ export async function discordBotHandler(
       // the bot's cached channel snapshot is the entire Discord guild.
       const s = await settings(db);
       if (!s?.guild_id) fail(409, "Connect a Discord server first.");
-      const [members, games, history] = await Promise.all([
+      const [members, games, history, recent, gameAdmins] = await Promise.all([
         db.query(`SELECT
           count(*) FILTER (WHERE active AND NOT is_bot)::int AS active_humans,
           count(*) FILTER (WHERE active AND is_bot)::int AS active_bots,
@@ -599,6 +599,10 @@ export async function discordBotHandler(
         db.query(`SELECT id, operation, actor_name, state, error, created_at,
           finished_at FROM con.discord_commands WHERE guild_id=$1
           ORDER BY created_at DESC LIMIT 12`, [s.guild_id]),
+        db.query(`SELECT discord_id, name, joined_at FROM con.discord_members
+          WHERE guild_id=$1 AND active AND NOT is_bot
+          ORDER BY joined_at DESC NULLS LAST LIMIT 8`, [s.guild_id]),
+        db.query(`SELECT count(*)::int AS total FROM con.game_dungeon_masters WHERE enabled`),
       ]);
       const channels = Array.isArray(s.channels) ? s.channels : [];
       return json(res, 200, {
@@ -614,6 +618,8 @@ export async function discordBotHandler(
         trivia_results: games.rows[0].trivia_results,
         heists: games.rows[0].heists,
         work_orders: games.rows[0].work_orders,
+        game_admins: gameAdmins.rows[0].total,
+        recent_members: recent.rows,
         commands: history.rows,
       });
     }
