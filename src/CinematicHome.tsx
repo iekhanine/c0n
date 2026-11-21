@@ -1,5 +1,5 @@
 import {useEffect,useState} from "react";
-import {ArrowRight,ArrowUpRight,BookOpen,Box,Building2,FileText,KeyRound,Layers3,Radio,Shield,Signal,Users,Wallet,Wrench} from "lucide-react";
+import {ArrowRight,ArrowUpRight,BookOpen,Box,Building2,FileText,KeyRound,Radio,Shield,Signal,Users,Wallet,Wrench} from "lucide-react";
 import "./CinematicHome.css";
 
 type CommunityStats={connected?:boolean;member_count?:number};
