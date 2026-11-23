@@ -37,10 +37,12 @@ import Channels from "./Channels";
 import Staff from "./Staff";
 import ProjectReports from "./ProjectReports";
 import Reports from "./Reports";
+import OpenLineAdmin from "./OpenLineAdmin";
 import "./Publishing.css";
 import "./Workflow.css";
 type Tab =
   | "overview"
+  | "openline"
   | "update"
   | "project"
   | "webhooks"
@@ -73,6 +75,7 @@ export default function Publishing({
 }) {
   const allowed = (tab: Tab) =>
     tab === "overview" ? true : ({
+      openline: owner,
       projectReports:
         owner ||
         (permissions.includes("projects.publish") &&
@@ -94,7 +97,7 @@ export default function Publishing({
     })[tab];
   const initialPage = (): Tab => {
     const slug = window.location.pathname.replace(/\/$/, "").split("/")[2] || "overview";
-    const match = (["overview", "update", "project", "approvals", "categories", "reports", "projectReports", "webhooks", "staff", "database", "discord", "games", "heist", "navigation", "font", "audit"] as Tab[]).find(t => t === slug);
+    const match = (["overview", "openline", "update", "project", "approvals", "categories", "reports", "projectReports", "webhooks", "staff", "database", "discord", "games", "heist", "navigation", "font", "audit"] as Tab[]).find(t => t === slug);
     return match || "overview";
   };
   const [tab, setTab] = useState<Tab>(initialPage);
@@ -132,7 +135,7 @@ export default function Publishing({
   const groups: { title: string; items: [Tab, string, typeof Radio][] }[] = [
     { title: "COMMAND CENTER", items: [["overview", "Command center", BarChart3], ["games", "Game administration", Gamepad2]] },
     { title: "COMMUNITY WEBSITE", items: [
-      ["update", "Transmissions", Radio], ["project", "Featured projects", Terminal],
+      ["openline", "CBN Open Line", Radio], ["update", "Transmissions", Radio], ["project", "Featured projects", Terminal],
       ["approvals", "Project approvals", CheckSquare], ["categories", "Creator categories", Layers],
       ["navigation", "Site navigation", ListOrdered], ["audit", "Content history", History],
       ["projectReports", "Project reports", BarChart3], ["reports", "Publishing reports", BarChart3]
@@ -247,7 +250,9 @@ export default function Publishing({
           {notice}
         </p>
       )}
-      {tab === "overview" ? (
+      {tab === "openline" ? (
+        <OpenLineAdmin />
+      ) : tab === "overview" ? (
         <CommandCenter owner={owner} />
       ) : !permissions.length ? (
         <div className="con-surface con-tool-empty">
