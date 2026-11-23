@@ -63,7 +63,7 @@ function equal(a,b) {
 }
 export default async function openLine(req,res) {
   try {
-    const action = new URL(req.url,ORIGIN).searchParams.get("action") || "";
+    const action = new URL(req.url,ORIGIN).searchParams.get("open_line") || "";
     if (!["GET","POST"].includes(req.method)) throw err(405,"Method not allowed");
     if (req.method === "POST" && req.headers.origin !== ORIGIN) throw err(403,"Invalid origin");
     const db = database();
