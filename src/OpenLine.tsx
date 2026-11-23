@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Send, RefreshCw, LockKeyhole, CheckCircle2 } from "lucide-react";
+import { Mic, Square, Send, LockKeyhole, CheckCircle2 } from "lucide-react";
 import "./OpenLine.css";
 
 type AudioFile = {data:string;mime:string};
