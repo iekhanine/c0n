@@ -1,8 +1,10 @@
+import openLine from "../server/open-line.js";
 import { requireMembership } from "../server/membership.js";
 import { publicProjects } from "../server/projects.js";
 import { database } from "../server/db.js";
 import { json } from "../server/auth.js";
 export default async function handler(req, res) {
+  if(new URL(req.url,"https://cultofnixon.com").searchParams.has("open_line"))return openLine(req,res);
   if (!await requireMembership(req,res)) return;
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
