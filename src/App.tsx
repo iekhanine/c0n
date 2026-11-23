@@ -139,6 +139,8 @@ export default function App() {
     return <div className="showcase con-locked-shell"><div className="con-lock-checking"><img src="/con-logo.png" alt="C0N"/><p>Checking access to The Compound…</p></div></div>;
   if (!publicLanding && membershipAccess !== true)
     return <div className="showcase con-locked-shell"><MembershipPage /></div>;
+  if (path === "/") return <OpenLine />;
+  if (path.startsWith("/reply/")) return <OpenLineReply />;
   return (
     <SiteTextProvider owner={account?.owner === true}>
       <div className={`showcase page-${page}`}>
