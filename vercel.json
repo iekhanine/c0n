@@ -14,6 +14,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/reply/:token",
+      "destination": "/index.html"
+    },
+    {
       "source": "/membership",
       "destination": "/index.html"
     },
