@@ -5,7 +5,7 @@ import "./OpenLine.css";
 type AudioFile = {data:string;mime:string};
 type Challenge = {choices:string[];sequence:string[];challenge:string};
 async function api(action:string,body?:object) {
-  const r=await fetch("/api/open-line?action="+action,{
+  const r=await fetch("/api/feed?open_line="+action,{
     method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},
     body:body?JSON.stringify(body):undefined,cache:"no-store"
   });
