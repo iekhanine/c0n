@@ -7,6 +7,8 @@ import PublicNavigation from "./PublicNavigation";
 import MilitiaHub from "./MilitiaHub";
 import ArchivePage from "./ArchivePage";
 import CinematicHome from "./CinematicHome";
+import OpenLine from "./OpenLine";
+import OpenLineReply from "./OpenLineReply";
 import "./PublicTheme.css";
 import FeaturedStrip from "./FeaturedStrip";
 import { MembershipPage } from "./Membership";
@@ -132,7 +134,7 @@ export default function App() {
                 : path === "/"
                   ? "explore"
                   : "missing";
-  const publicLanding = path === "/" || path === "/doctrine" || path === "/transmissions" || path === "/archive";
+  const publicLanding = path.startsWith("/reply/") || path === "/" || path === "/doctrine" || path === "/transmissions" || path === "/archive";
   if (!publicLanding && (account === null || (account.user && membershipAccess === null)))
     return <div className="showcase con-locked-shell"><div className="con-lock-checking"><img src="/con-logo.png" alt="C0N"/><p>Checking access to The Compound…</p></div></div>;
   if (!publicLanding && membershipAccess !== true)
@@ -210,7 +212,7 @@ export default function App() {
               </button>
             </p>
           )}
-          {path === "/" ? <CinematicHome member={membershipAccess === true}/> : path === "/doctrine" ? <CinematicHome view="doctrine" member={membershipAccess === true}/> : path === "/transmissions" ? <CinematicHome view="transmissions" member={membershipAccess === true}/> : page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "militia" ? <MilitiaHub /> : page === "membership" ? (
+          {path === "/" ? <OpenLine/> : path.startsWith("/reply/") ? <OpenLineReply/> : path === "/doctrine" ? <CinematicHome view="doctrine" member={membershipAccess === true}/> : path === "/transmissions" ? <CinematicHome view="transmissions" member={membershipAccess === true}/> : page === "featured-manage" ? (account?.owner ? <FeaturedStrip manage /> : <p>Restricted layout administration.</p>) : page === "archive" ? <ArchivePage /> : page === "archive-manage" ? (account?.owner ? <ArchivePage manage /> : <p>Restricted archive administration.</p>) : page === "militia" ? <MilitiaHub /> : page === "membership" ? (
             <MembershipPage />
           ) : page === "merch" ? (
             <MembershipPage merch />
