@@ -17,7 +17,7 @@ async function schema(db) {
   await db.query('CREATE SCHEMA IF NOT EXISTS con');
   await db.query('CREATE TABLE IF NOT EXISTS con.open_line_codes (email text PRIMARY KEY, code_hash text, expires_at timestamptz, attempts integer NOT NULL DEFAULT 0, last_sent_at timestamptz, created_at timestamptz NOT NULL DEFAULT now())');
   await db.query('CREATE TABLE IF NOT EXISTS con.open_line_grants (token_hash text PRIMARY KEY, email text NOT NULL, expires_at timestamptz NOT NULL, used_at timestamptz)');
-  await db.query('CREATE TABLE IF NOT EXISTS con.open_line_messages (id uuid PRIMARY KEY, email text NOT NULL, alias text NOT NULL DEFAULT \'\', mime text NOT NULL, audio bytea NOT NULL, status text NOT NULL DEFAULT \'new\', created_at timestamptz NOT NULL DEFAULT now(), response_mime text, response_audio bytea, response_note text, reply_token_hash text UNIQUE, replied_at timestamptz, emailed_at timestamptz)');
+  await db.query('CREATE TABLE IF NOT EXISTS con.open_line_messages (id uuid PRIMARY KEY, email text NOT NULL, alias text NOT NULL DEFAULT \'\', mime text NOT NULL, audio bytea NOT NULL, status text NOT NULL DEFAULT \'new\', created_at timestamptz NOT NULL DEFAULT now(), response_mime text, response_audio bytea, response_note text, cue_id text, reply_token_hash text UNIQUE, replied_at timestamptz, emailed_at timestamptz)');
   await db.query('CREATE TABLE IF NOT EXISTS con.open_line_cues (id text PRIMARY KEY, label text NOT NULL, mime text NOT NULL, audio bytea NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())');
   for(const table of ["open_line_codes","open_line_grants","open_line_messages","open_line_cues"]) {
     await db.query('ALTER TABLE con.'+table+' ENABLE ROW LEVEL SECURITY');
@@ -140,6 +140,56 @@ export default async function openLine(req,res) {
       const q=await db.query('SELECT id,response_mime AS mime,response_audio AS audio FROM con.open_line_messages WHERE reply_token_hash=$1 AND emailed_at IS NOT NULL',[digest(b.get("token")||"")]);
       if(!q.rows[0]?.audio)throw err(404,"Recording unavailable.");
       return audioResponse(res,q.rows[0]);
+    }
+    if(["list","cues","save-cue","reply","resend"].includes(action)) {
+      const staff=await requireStaff(req,res);if(!staff)return;
+      if(!staff.owner)throw err(403,"Only the owner can access Open Line.");
+      if(action==="list" && req.method==="GET") {
+        const q=await db.query('SELECT id,alias,email,status,mime,created_at,reply_token_hash IS NOT NULL AS has_reply,emailed_at FROM con.open_line_messages ORDER BY created_at DESC LIMIT 150');
+        return json(res,200,{messages:q.rows});
+      }
+      if(action==="cues" && req.method==="GET") {
+        const q=await db.query('SELECT id,label FROM con.open_line_cues');
+        return json(res,200,{cues:CUES.map(([id,label])=>({id,label,recorded:q.rows.some(x=>x.id===id)}))});
+      }
+      if(action==="save-cue" && req.method==="POST") {
+        const b=body(req),label=CUES.find(x=>x[0]===b.id)?.[1];
+        if(!label)throw err(400,"Invalid interlude");
+        const bytes=validAudio(b.audio);
+        await db.query('INSERT INTO con.open_line_cues(id,label,mime,audio) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET mime=$3,audio=$4,updated_at=now()',[b.id,label,b.audio.mime,bytes]);
+        return json(res,200,{ok:true});
+      }
+      if(action==="reply" && req.method==="POST") {
+        const b=body(req),bytes=validAudio(b.audio),id=String(b.id||"");
+        const publicToken=token();
+        const cueId=CUES.some(x=>x[0]===b.cueId)?b.cueId:null;
+        const r=await db.query('UPDATE con.open_line_messages SET response_mime=$2,response_audio=$3,response_note=$4,status=\'replied\',replied_at=now(),reply_token_hash=$5,emailed_at=NULL WHERE id=$1 RETURNING email',[id,b.audio.mime,bytes,String(b.note||"").slice(0,600),digest(publicToken),cueId]);
+        if(!r.rows[0])throw err(404,"Message not found.");
+        const link=ORIGIN+"/reply/"+encodeURIComponent(publicToken);
+        await emailSend(r.rows[0].email,"You have a reply from CBN",'<p>Your CBN Open Line message has a reply.</p><p><a href="'+link+'">Listen to your response</a></p><p>Keep this link private.</p>');
+        await db.query('UPDATE con.open_line_messages SET emailed_at=now(),status=\'sent\' WHERE id=$1',[id]);
+        return json(res,200,{ok:true,sent:true});
+      }
+      if(action==="resend" && req.method==="POST") throw err(501,"Re-send requires a fresh reply to rotate the private link.");
+    }
+    throw err(404,"Not found.");
+  } catch(e) {
+    console.error("Open Line error",e?.status || 500,e?.message);
+    return json(res,e?.status || 500,{error:e?.status ? e.message : "Open Line is temporarily unavailable."});
+  }
+}    if (action==="public-reply" && req.method==="GET") {
+      const b=new URL(req.url,ORIGIN).searchParams;
+      const q=await db.query('SELECT id,alias,mime,audio,response_mime,response_audio,cue_id FROM con.open_line_messages WHERE reply_token_hash=$1 AND emailed_at IS NOT NULL',[digest(b.get("token")||"")]);
+      const row=q.rows[0];if(!row?.response_audio)throw err(404,"Recording unavailable.");
+      const part=b.get("part");
+      if(!part)return json(res,200,{alias:row.alias,hasCue:!!row.cue_id});
+      if(part==="original")return audioResponse(res,row);
+      if(part==="reply")return audioResponse(res,{id:row.id,mime:row.response_mime,audio:row.response_audio});
+      if(part==="cue" && row.cue_id){
+        const clip=await db.query('SELECT id,mime,audio FROM con.open_line_cues WHERE id=$1',[row.cue_id]);
+        if(clip.rows[0])return audioResponse(res,clip.rows[0]);
+      }
+      throw err(404,"Audio not found.");
     }
     if(["list","cues","save-cue","reply","resend"].includes(action)) {
       const staff=await requireStaff(req,res);if(!staff)return;
