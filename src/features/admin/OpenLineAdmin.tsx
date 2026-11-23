@@ -21,7 +21,7 @@ export default function OpenLineAdmin(){
   const [error,setError]=useState(""),[success,setSuccess]=useState(""),[version,setVersion]=useState(0);
   const current=messages.find(x=>x.id===selected);
   useEffect(()=>{Promise.all([api("list"),api("cues")]).then(([m,c])=>{setMessages(m.messages);setCues(c.cues)}).catch(e=>setError(e.message))},[version]);
-  const src=(type:"original"|"reply"|"cue",id:string)=>"/api/open-line?action=listen&type="+type+"&id="+encodeURIComponent(id);
+  const src=(type:"original"|"reply"|"cue",id:string)=>"/api/feed?open_line=listen&type="+type+"&id="+encodeURIComponent(id);
   async function saveReply(audio:{data:string;mime:string}){
     if(!current)return;
     if(!confirm("Save this recording and email the listener a private reply link?"))return;
