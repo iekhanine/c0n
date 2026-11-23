@@ -28,7 +28,7 @@ const validAudio = input => {
   if (!input || typeof input.data !== "string" || input.data.length > Math.ceil(MAX_BYTES / 3) * 4 + 8) throw err(413,"Recording is too large (3 MB maximum).");
   if (!["audio/webm","audio/mp4","audio/wav","audio/ogg"].includes(input.mime)) throw err(400,"Unsupported audio format.");
   const bytes = Buffer.from(input.data,"base64");
-  if (!bytes.length || bytes.length > MAX_BYTES || bytes.toString("base64") !== input.data.replace(/=+$/,"").replace(/$/,"") && bytes.toString("base64").replace(/=+$/,"") !== input.data.replace(/=+$/,"")) throw err(400,"Invalid audio data.");
+  if (!bytes.length || bytes.length > MAX_BYTES || bytes.toString("base64").replace(/=+$/,"") !== input.data.replace(/=+$/,"")) throw err(400,"Invalid audio data.");
   const header = bytes.subarray(0,16);
   const webm = bytes.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3]));
   const mp4 = header.subarray(4,8).toString()==="ftyp";
@@ -166,7 +166,8 @@ export default async function openLine(req,res) {
         const r=await db.query('UPDATE con.open_line_messages SET response_mime=$2,response_audio=$3,response_note=$4,status=\'replied\',replied_at=now(),reply_token_hash=$5,emailed_at=NULL WHERE id=$1 RETURNING email',[id,b.audio.mime,bytes,String(b.note||"").slice(0,600),digest(publicToken),cueId]);
         if(!r.rows[0])throw err(404,"Message not found.");
         const link=ORIGIN+"/reply/"+encodeURIComponent(publicToken);
-        await emailSend(r.rows[0].email,"You have a reply from CBN",'<p>Your CBN Open Line message has a reply.</p><p><a href="'+link+'">Listen to your response</a></p><p>Keep this link private.</p>');
+        const note=String(b.note||"").slice(0,600).replace(/[&<>"\x27]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+        await emailSend(r.rows[0].email,"You have a reply from CBN",'<p>Your CBN Open Line message has a reply.</p>'+(note?'<p>'+note+'</p>':'')+'<p><a href="'+link+'">Listen to your response</a></p><p>Keep this link private.</p>');
         await db.query('UPDATE con.open_line_messages SET emailed_at=now(),status=\'sent\' WHERE id=$1',[id]);
         return json(res,200,{ok:true,sent:true});
       }
